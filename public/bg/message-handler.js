@@ -120,13 +120,18 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         if (typeof JSZip !== 'undefined') {
             const zip = new JSZip();
+            const canUseObjectUrl =
+                typeof document !== 'undefined' && typeof URL.createObjectURL === 'function';
 
             const fetchPromises = files.map(async (f) => {
                 if (f.content) {
                     zip.file(f.name, f.content);
                 } else if (f.url) {
                     try {
-                        const resp = await fetch(f.url);
+                        const resp = await fetch(f.url, {
+                            credentials: 'include',
+                            cache: 'no-store',
+                        });
                         if (!resp.ok) {
                             throw new Error(`HTTP error ${resp.status}`);
                         }
@@ -140,15 +145,47 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
 
             Promise.all(fetchPromises).then(() => {
-                zip.generateAsync({ type: 'base64' })
-                    .then((base64) => {
-                        const dataUrl = 'data:application/zip;base64,' + base64;
+                zip.generateAsync({ type: canUseObjectUrl ? 'blob' : 'base64' })
+                    .then((zipData) => {
+                        const downloadOptions = { filename, saveAs: true };
+                        let objectUrl = null;
+
+                        if (canUseObjectUrl) {
+                            objectUrl = URL.createObjectURL(zipData);
+                            downloadOptions.url = objectUrl;
+                        } else {
+                            downloadOptions.url = 'data:application/zip;base64,' + zipData;
+                        }
+
                         browserApi.downloads
-                            .download({ url: dataUrl, filename, saveAs: true })
-                            .then((downloadId) => sendResponse({ success: true, downloadId }))
-                            .catch((error) =>
-                                sendResponse({ success: false, error: error.message })
-                            );
+                            .download(downloadOptions)
+                            .then((downloadId) => {
+                                if (objectUrl) {
+                                    const cleanup = (delta) => {
+                                        if (
+                                            delta.id !== downloadId ||
+                                            !delta.state ||
+                                            (delta.state.current !== 'complete' &&
+                                                delta.state.current !== 'interrupted')
+                                        ) {
+                                            return;
+                                        }
+
+                                        browserApi.downloads.onChanged.removeListener(cleanup);
+                                        URL.revokeObjectURL(objectUrl);
+                                    };
+
+                                    browserApi.downloads.onChanged.addListener(cleanup);
+                                }
+
+                                sendResponse({ success: true, downloadId });
+                            })
+                            .catch((error) => {
+                                if (objectUrl) {
+                                    URL.revokeObjectURL(objectUrl);
+                                }
+                                sendResponse({ success: false, error: error.message });
+                            });
                     })
                     .catch((err) => {
                         console.error('ZIP Generation error:', err);

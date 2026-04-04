@@ -36,6 +36,23 @@ const EXPORT_ICON_SHIM_CSS = `
             }
 `;
 
+function getFilenameFromUrl(urlStr) {
+    try {
+        const u = new URL(urlStr);
+        const parts = u.pathname.split('/');
+        return parts.pop() || 'media_file';
+    } catch {
+        return 'media_file';
+    }
+}
+
+function sanitizeFile(name, fallback) {
+    if (!name) {
+        return fallback;
+    }
+    return name.replace(/[^\u0600-\u06FFa-zA-Z0-9.\-_ ]/g, '_').trim() || fallback;
+}
+
 function injectMessageExporter() {
     const targetPanel = document.querySelector('#message-meta');
     if (!targetPanel) {
@@ -203,16 +220,6 @@ async function executeExportAll() {
 
             let attachments = [];
 
-            const getFilenameFromUrl = (urlStr) => {
-                try {
-                    const u = new URL(urlStr);
-                    const parts = u.pathname.split('/');
-                    return parts.pop() || 'media_file';
-                } catch {
-                    return 'media_file';
-                }
-            };
-
             const processLink = (linkNode) => {
                 const url = linkNode.href;
                 let filename = linkNode.innerText.trim();
@@ -306,6 +313,86 @@ async function executeExportAll() {
         .substring(0, 50);
 
     const folderName = `mostaql_export_${discussionId}_${safeTitle}`;
+    const filesToZip = [];
+    const usedZipPaths = new Set();
+    const registeredAssets = new Map();
+
+    function getUniqueZipPath(folder, preferredName, fallbackName) {
+        const safeName = sanitizeFile(preferredName, fallbackName);
+        const extensionIndex = safeName.lastIndexOf('.');
+        const hasExtension = extensionIndex > 0;
+        const baseName = hasExtension ? safeName.slice(0, extensionIndex) : safeName;
+        const extension = hasExtension ? safeName.slice(extensionIndex) : '';
+
+        let suffix = 0;
+        let candidate = `${folder}/${safeName}`;
+
+        while (usedZipPaths.has(candidate)) {
+            suffix++;
+            candidate = `${folder}/${baseName}_${suffix}${extension}`;
+        }
+
+        usedZipPaths.add(candidate);
+        return candidate;
+    }
+
+    function registerZipAsset(folder, asset, fallbackName) {
+        if (!asset || !asset.url) {
+            return null;
+        }
+
+        const assetKey = `${folder}::${asset.url}`;
+        if (registeredAssets.has(assetKey)) {
+            return registeredAssets.get(assetKey);
+        }
+
+        const preferredName = asset.name || getFilenameFromUrl(asset.url);
+        const zipPath = getUniqueZipPath(folder, preferredName, fallbackName);
+
+        registeredAssets.set(assetKey, zipPath);
+        filesToZip.push({ name: zipPath, url: asset.url });
+
+        return zipPath;
+    }
+
+    chatData = chatData.map((message, messageIndex) => ({
+        ...message,
+        attachments: message.attachments.map((attachment, attachmentIndex) => ({
+            ...attachment,
+            localPath: registerZipAsset(
+                'chat_attachments',
+                attachment,
+                `chat_file_${messageIndex}_${attachmentIndex}`
+            ),
+        })),
+    }));
+
+    (pData.attachments || []).forEach((file, index) => {
+        registerZipAsset('client_attachments', file, `client_file_${index}`);
+    });
+
+    (propData.attachments || []).forEach((file, index) => {
+        registerZipAsset('bid_attachments', file, `bid_file_${index}`);
+    });
+
+    function renderAttachmentHtml(attachment) {
+        const attachmentUrl = attachment.localPath || attachment.url;
+        const attachmentName = attachment.name || 'مرفق';
+        const linkAttrs = attachment.localPath
+            ? ''
+            : ' target="_blank" rel="noopener noreferrer"';
+        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.name);
+        const isAudio = /\.(mp3|wav|ogg|m4a|aac)$/i.test(attachment.name);
+        const isVideo = /\.(mp4|webm|ogg)$/i.test(attachment.name);
+
+        return `
+                                        <div class="attachment-preview">
+                                            ${isImage ? `<img src="${attachmentUrl}" alt="${attachmentName}" onerror="this.style.display='none'">` : ''}
+                                            ${isAudio ? `<audio controls src="${attachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #f1f5f9;"></audio>` : ''}
+                                            ${isVideo ? `<video controls src="${attachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #000; max-height: 400px;"></video>` : ''}
+                                            <a href="${attachmentUrl}"${linkAttrs} class="attach-link"><i class="fa fa-paperclip"></i> ${attachmentName}</a>
+                                        </div>`;
+    }
 
     const html = `
     <html dir="rtl" lang="ar">
@@ -453,20 +540,7 @@ ${EXPORT_ICON_SHIM_CSS}
                             <div class="bubble">
                                 <span class="sender-name">${m.senderName}</span>
                                 <div class="text-content">${m.text.replace(/\n/g, '<br>')}</div>
-                                ${m.attachments
-                                    .map((a) => {
-                                        const isImg = a.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                                        const isAudio = a.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i);
-                                        const isVideo = a.name.match(/\.(mp4|webm|ogg)$/i);
-                                        return `
-                                        <div class="attachment-preview">
-                                            ${isImg ? `<img src="${a.url}" alt="${a.name}" onerror="this.style.display='none'">` : ''}
-                                            ${isAudio ? `<audio controls src="${a.url}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #f1f5f9;"></audio>` : ''}
-                                            ${isVideo ? `<video controls src="${a.url}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #000; max-height: 400px;"></video>` : ''}
-                                            <a href="${a.url}" target="_blank" class="attach-link"><i class="fa fa-paperclip"></i> ${a.name}</a>
-                                        </div>`;
-                                    })
-                                    .join('')}
+                                ${m.attachments.map((a) => renderAttachmentHtml(a)).join('')}
                                 <span class="time">${m.time}</span>
                             </div>
                         </div>
@@ -485,8 +559,6 @@ ${EXPORT_ICON_SHIM_CSS}
         </div>
     </body>
     </html>`;
-
-    const filesToZip = [];
 
     const hasAttachments =
         (pData.attachments && pData.attachments.length > 0) ||
@@ -540,47 +612,12 @@ ${EXPORT_ICON_SHIM_CSS}
         filesToZip.push({ name: `my_proposal.txt`, content: myProposalText });
     }
 
-    const sanitizeFile = (name, fallback) => {
-        if (!name) {
-            return fallback;
-        }
-        return name.replace(/[^\u0600-\u06FFa-zA-Z0-9.\-_ ]/g, '_').trim();
-    };
-
-    mediaUrls.forEach((media, index) => {
-        filesToZip.push({
-            name: `chat_attachments/${sanitizeFile(media.name, `chat_file_${index}`)}`,
-            url: media.url,
-        });
-    });
-
-    if (pData.attachments && pData.attachments.length > 0) {
-        pData.attachments.forEach((file, index) => {
-            filesToZip.push({
-                name: `client_attachments/${sanitizeFile(file.name, `client_file_${index}`)}`,
-                url: file.url,
-            });
-        });
-    }
-
-    if (propData.attachments && propData.attachments.length > 0) {
-        propData.attachments.forEach((file, index) => {
-            filesToZip.push({
-                name: `bid_attachments/${sanitizeFile(file.name, `bid_file_${index}`)}`,
-                url: file.url,
-            });
-        });
-    }
-
     if (browserApi.runtime && browserApi.runtime.id) {
         await browserApi.runtime.sendMessage({
             action: 'download_zip',
             filename: `${folderName}.zip`,
             files: filesToZip,
         });
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
         return;
     } else {
         alert(
