@@ -4,11 +4,11 @@
 
 ![Version](https://img.shields.io/badge/version-1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Platform](https://img.shields.io/badge/platform-Chrome-orange.svg)
+![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Firefox-orange.svg)
 
 **إضافة متصفح ذكية لتنبيهك فوراً بالمشاريع الجديدة على منصة مستقل مع إنشاء عروض احترافية بالذكاء الاصطناعي.**
 
-*A professional Chrome extension that instantly notifies you of new projects on Mostaql.com with AI-powered proposal generation.*
+*A professional cross-browser extension that instantly notifies you of new projects on Mostaql.com with AI-powered proposal generation.*
 
 [English](#-english-description) | [العربية](#-الوصف-بالعربية)
 
@@ -21,6 +21,7 @@
 **Frelancia** هي رفيقك المثالي كـ Freelancer على منصة مستقل. تضمن لك هذه الإضافة ألا يفوتك أي مشروع مهم، وتساعدك على كتابة عروض مقنعة في ثوانٍ معدودة.
 
 ### ✨ المميزات الرئيسية
+- 🌐 **تدعم Chrome و Firefox** بنفس الكفاءة
 - 🔔 **تنبيهات فورية** عبر SignalR مع احتياطي تلقائي للاستعلام الدوري
 - 🔌 **سيرفر مخصص** — ادعم سيرفر SignalR الخاص بك من إعدادات الإضافة
 - 🎯 **فلاتر متقدمة** — كلمات مفتاحية، ميزانية، معدل توظيف، مدة التنفيذ، تصنيفات، ساعات هدوء
@@ -40,6 +41,7 @@
 **Frelancia** is the ultimate companion for freelancers on Mostaql.com. This extension ensures you never miss a high-value project and helps you craft winning proposals using advanced AI technology.
 
 ### ✨ Key Features
+- 🌐 **Cross-browser support** — works seamlessly on Chrome and Firefox
 - 🔔 **Instant notifications** via SignalR with automatic polling fallback
 - 🔌 **Custom server** — point the extension at your own SignalR hub
 - 🎯 **Advanced filters** — keywords, budget, hiring rate, duration, categories, quiet hours
@@ -58,18 +60,21 @@
 
 ### 🛠️ Manual Installation (Recommended)
 
-1. **Clone the Repository**:
+#### For Google Chrome / Edge / Brave
+1. Clone the repository or download the ZIP.
    ```bash
    git clone https://github.com/Elaraby218/Frelancia.git
    ```
-2. **Open Chrome Extensions**:
-   Navigate to `chrome://extensions/` in your browser.
-3. **Enable Developer Mode**:
-   Toggle the **Developer mode** switch in the top right corner.
-4. **Load Unpacked**:
-   Click **Load unpacked** and select the `Frelancia` project directory.
-5. **Pin it**:
-   Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
+2. Navigate to `chrome://extensions/` in your browser.
+3. Toggle the **Developer mode** switch in the top right corner.
+4. Click **Load unpacked** and select the `Frelancia` directory.
+5. Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
+
+#### For Mozilla Firefox
+1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
+2. Click **Load Temporary Add-on...**
+3. Select any file inside the `Frelancia` directory (like `manifest.json`).
+4. Pin the extension from the extensions menu.
 
 ---
 
@@ -84,7 +89,7 @@
 
 ## 🛠️ Tech Stack / التقنيات المستخدمة
 
-- **Manifest V3**: The latest Chrome Extension standard.
+- **Manifest V3**: The latest Extension standard for both Chrome and Firefox.
 - **Vanilla JavaScript**: For high performance and responsiveness.
 - **CSS3 / Glassmorphism**: For a modern and premium dashboard look.
 - **Chrome Storage API**: Secure local data management.

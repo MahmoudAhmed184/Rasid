@@ -30,8 +30,7 @@ async function fetchJobs(url) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'ar,en;q=0.9',
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Pragma': 'no-cache'
       }
     });
 
@@ -65,8 +64,7 @@ async function fetchProjectDetails(url) {
       referrerPolicy: 'no-referrer',
       headers: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ar,en;q=0.9',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Accept-Language': 'ar,en;q=0.9'
       }
     });
 

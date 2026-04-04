@@ -3,6 +3,14 @@
   "name": "Mostaql Job Notifier + AI Proposal",
   "version": "1.0",
   "description": "تنبيهات فورية للمشاريع الجديدة على مستقل مع إنشاء عروض بالذكاء الاصطناعي",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "frelancia@mostaql-notifier",
+      "strict_min_version": "109.0"
+    }
+  },
+
   "permissions": [
     "notifications",
     "alarms",
@@ -10,12 +18,14 @@
     "offscreen",
     "downloads"
   ],
+
   "host_permissions": [
     "https://mostaql.com/*",
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
     "https://frelancia.runasp.net/*"
   ],
+
   "content_scripts": [
     {
       "matches": [
@@ -46,9 +56,30 @@
       ]
     }
   ],
+
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": [
+      "bg/constants.js",
+      "bg/html-parser.js",
+      "jszip.min.js",
+      "signalr.min.js",
+      "signalr-client.js",
+      "bg/filters.js",
+      "bg/offscreen.js",
+      "bg/audio.js",
+      "bg/notifications.js",
+      "bg/fetcher.js",
+      "bg/tracker.js",
+      "bg/job-checker.js",
+      "bg/signalr.js",
+      "bg/install.js",
+      "bg/alarm-handler.js",
+      "bg/message-handler.js",
+      "background-firefox.js"
+    ]
   },
+
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -57,6 +88,7 @@
       "128": "icons/icon128.png"
     }
   },
+
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
