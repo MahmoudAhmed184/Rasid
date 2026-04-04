@@ -19,6 +19,10 @@ The extension connects to these hosts:
 - `https://chatgpt.com/*` and `https://chat.openai.com/*` to hand off prompt text when the user explicitly opens AI drafting
 - `https://frelancia.runasp.net/*` for SignalR-based job notifications when enabled
 
+## Firefox Consent Category
+
+For the Firefox AMO package, the manifest declares `websiteContent` as required data collection because the extension reads Mostaql project content and can hand project details to AI chat pages when the user explicitly invokes AI drafting.
+
 ## What The Extension Does Not Do
 
 - It does not sell stored data.

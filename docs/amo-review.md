@@ -5,6 +5,8 @@
 - Firefox build output: `dist/firefox`
 - Shared manifest source: `manifests/base.json`
 - Firefox manifest overlay: `manifests/firefox.json`
+- Minimum Firefox version for the AMO package: `140.0`
+- Minimum Firefox for Android version if Android compatibility is enabled: `142.0`
 
 ## Third-Party Libraries
 
@@ -40,6 +42,7 @@ These files are intentionally committed in minified form for runtime use. The re
 - Firefox uses `background.scripts`; Chrome uses a service worker build.
 - Firefox does not support notification action buttons. The extension falls back to click-to-open notifications.
 - Firefox does not use the Chrome offscreen document path. HTML parsing runs directly in the background page.
+- The Firefox manifest declares `browser_specific_settings.gecko.data_collection_permissions.required = ["websiteContent"]`.
 
 ## Known Review-Sensitive Areas
 

@@ -9,6 +9,14 @@ const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const MANIFESTS_DIR = path.join(ROOT_DIR, 'manifests');
 
 const TARGETS = new Set(['chrome', 'firefox']);
+const TARGET_EXCLUDED_PATHS = {
+  chrome: new Set(),
+  firefox: new Set([
+    'bg/offscreen.js',
+    'offscreen.html',
+    'offscreen.js'
+  ])
+};
 const EXCLUDED_NAMES = new Set([
   '.git',
   '.github',
@@ -49,7 +57,7 @@ async function main() {
 async function buildTarget(target) {
   const outputDir = path.join(DIST_DIR, target);
   await mkdir(outputDir, { recursive: true });
-  await copyWorkspace(ROOT_DIR, outputDir);
+  await copyWorkspace(ROOT_DIR, outputDir, target);
 
   const baseManifest = await readJson(path.join(MANIFESTS_DIR, 'base.json'));
   const targetManifest = await readJson(path.join(MANIFESTS_DIR, `${target}.json`));
@@ -78,7 +86,7 @@ async function cleanDist() {
   await rm(DIST_DIR, { recursive: true, force: true });
 }
 
-async function copyWorkspace(sourceDir, targetDir) {
+async function copyWorkspace(sourceDir, targetDir, target) {
   const entries = await readdir(sourceDir, { withFileTypes: true });
 
   for (const entry of entries) {
@@ -92,10 +100,15 @@ async function copyWorkspace(sourceDir, targetDir) {
 
     const sourcePath = path.join(sourceDir, entry.name);
     const targetPath = path.join(targetDir, entry.name);
+    const relativePath = path.relative(ROOT_DIR, sourcePath).split(path.sep).join('/');
+
+    if (TARGET_EXCLUDED_PATHS[target] && TARGET_EXCLUDED_PATHS[target].has(relativePath)) {
+      continue;
+    }
 
     if (entry.isDirectory()) {
       await mkdir(targetPath, { recursive: true });
-      await copyWorkspace(sourcePath, targetPath);
+      await copyWorkspace(sourcePath, targetPath, target);
       continue;
     }
 

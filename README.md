@@ -80,7 +80,8 @@ npm run build
 1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
 2. Click **Load Temporary Add-on...**
 3. Select `dist/firefox/manifest.json`.
-4. Pin the extension from the extensions menu.
+4. Use Firefox 140 or newer for the packaged AMO-compatible build.
+5. Pin the extension from the extensions menu.
 
 ### 🔧 Development Build
 

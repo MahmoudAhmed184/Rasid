@@ -6,7 +6,8 @@
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click `Load Temporary Add-on...`.
 4. Select `dist/firefox/manifest.json`.
-5. Use the `Reload` button after rebuilding.
+5. Use Firefox 140 or newer.
+6. Use the `Reload` button after rebuilding.
 
 ## Suggested Smoke Test
 
