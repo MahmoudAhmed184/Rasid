@@ -17,9 +17,9 @@
 4. Trigger `فحص الإشعار` and `فحص الصوت` from the dashboard.
 5. Trigger `فحص الآن` from the popup.
 6. Open a project page and verify:
-   - `ذكاء` button opens ChatGPT.
-   - `سريع` autofill prepares bid data.
-   - `مراقبة` adds and removes tracked projects.
+    - `ذكاء` button opens ChatGPT.
+    - `سريع` autofill prepares bid data.
+    - `مراقبة` adds and removes tracked projects.
 7. Export a project or chat and confirm the generated HTML opens without external assets.
 
 ## Optional CLI

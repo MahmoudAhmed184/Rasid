@@ -28,14 +28,14 @@ These files are intentionally committed in minified form for runtime use. The re
 2. Open `https://mostaql.com/projects`.
 3. Open the popup and click `فحص الآن`.
 4. Open the dashboard and test:
-   - notification test
-   - audio test
-   - tracked projects list
-   - settings save
+    - notification test
+    - audio test
+    - tracked projects list
+    - settings save
 5. Open a Mostaql project page and verify:
-   - proposal helper buttons render
-   - tracked-project toggle works
-   - export button works
+    - proposal helper buttons render
+    - tracked-project toggle works
+    - export button works
 
 ## Firefox-Specific Notes
 

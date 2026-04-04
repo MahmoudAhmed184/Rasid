@@ -14,7 +14,7 @@ async function fetchBidTrackerPage(pageNumber) {
     const response = await fetch(url, {
         method: 'GET',
         headers: {
-            'Accept': 'application/json',
+            Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'include',
@@ -33,18 +33,24 @@ async function fetchBidTrackerPage(pageNumber) {
  * @returns {Object|null}
  */
 function extractBidTrackerRow(renderedHtml) {
-    if (typeof renderedHtml !== 'string') return null;
+    if (typeof renderedHtml !== 'string') {
+        return null;
+    }
 
     const template = document.createElement('template');
     template.innerHTML = renderedHtml.trim();
     const row = template.content.querySelector('tr.bid-row');
-    if (!row) return null;
+    if (!row) {
+        return null;
+    }
 
     const titleLink = row.querySelector('h2 a');
     const statusEl = row.querySelector('.label-prj-pending, .label');
     const timeEl = row.querySelector('time[datetime]');
-    const priceEl = row.querySelector('.project__meta li .fa-money')
-        ?.closest('li')?.querySelector('span');
+    const priceEl = row
+        .querySelector('.project__meta li .fa-money')
+        ?.closest('li')
+        ?.querySelector('span');
     const rawUrl = titleLink?.getAttribute('href') || '';
     const url = rawUrl.split('-')[0];
 
@@ -64,7 +70,9 @@ function extractBidTrackerRow(renderedHtml) {
  */
 function processBidTrackerPage(pageData) {
     const bids = [];
-    if (!pageData.collection || !Array.isArray(pageData.collection)) return bids;
+    if (!pageData.collection || !Array.isArray(pageData.collection)) {
+        return bids;
+    }
 
     pageData.collection.forEach((bidObject) => {
         const htmlString = bidObject.rendered || bidObject;

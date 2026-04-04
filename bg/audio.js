@@ -21,23 +21,23 @@
  * @param {number} duration   - length in seconds
  */
 function _playToneDirectly(audioContext, frequency, startTime, duration) {
-  const oscillator = audioContext.createOscillator();
-  const gainNode   = audioContext.createGain();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
 
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
 
-  oscillator.frequency.value = frequency;
-  oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    oscillator.type = 'sine';
 
-  const now = audioContext.currentTime;
-  gainNode.gain.setValueAtTime(0.3, now + startTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, now + startTime + duration);
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0.3, now + startTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + startTime + duration);
 
-  oscillator.start(now + startTime);
-  oscillator.stop(now + startTime + duration);
+    oscillator.start(now + startTime);
+    oscillator.stop(now + startTime + duration);
 
-  return oscillator;
+    return oscillator;
 }
 
 /**
@@ -45,20 +45,22 @@ function _playToneDirectly(audioContext, frequency, startTime, duration) {
  * Firefox only.
  */
 async function _playBeepDirectly() {
-  try {
-    const audioContext = new AudioContext();
-    if (audioContext.state === 'suspended') await audioContext.resume();
-    _playToneDirectly(audioContext, 800,  0,   0.15);
-    const lastOsc = _playToneDirectly(audioContext, 1000, 0.2, 0.15);
+    try {
+        const audioContext = new AudioContext();
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        _playToneDirectly(audioContext, 800, 0, 0.15);
+        const lastOsc = _playToneDirectly(audioContext, 1000, 0.2, 0.15);
 
-    lastOsc.onended = () => {
-      if (audioContext.state !== 'closed') {
-        audioContext.close().catch(console.error);
-      }
-    };
-  } catch (error) {
-    console.error('Firefox Audio Error (playBeepDirectly):', error);
-  }
+        lastOsc.onended = () => {
+            if (audioContext.state !== 'closed') {
+                audioContext.close().catch(console.error);
+            }
+        };
+    } catch (error) {
+        console.error('Firefox Audio Error (playBeepDirectly):', error);
+    }
 }
 
 /**
@@ -66,21 +68,23 @@ async function _playBeepDirectly() {
  * Firefox only.
  */
 async function _playTrackedBeepDirectly() {
-  try {
-    const audioContext = new AudioContext();
-    if (audioContext.state === 'suspended') await audioContext.resume();
-    _playToneDirectly(audioContext, 1200, 0,    0.1);
-    _playToneDirectly(audioContext, 1200, 0.15, 0.1);
-    const lastOsc = _playToneDirectly(audioContext, 1500, 0.3,  0.2);
+    try {
+        const audioContext = new AudioContext();
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        _playToneDirectly(audioContext, 1200, 0, 0.1);
+        _playToneDirectly(audioContext, 1200, 0.15, 0.1);
+        const lastOsc = _playToneDirectly(audioContext, 1500, 0.3, 0.2);
 
-    lastOsc.onended = () => {
-      if (audioContext.state !== 'closed') {
-        audioContext.close().catch(console.error);
-      }
-    };
-  } catch (error) {
-    console.error('Firefox Audio Error (playTrackedBeepDirectly):', error);
-  }
+        lastOsc.onended = () => {
+            if (audioContext.state !== 'closed') {
+                audioContext.close().catch(console.error);
+            }
+        };
+    } catch (error) {
+        console.error('Firefox Audio Error (playTrackedBeepDirectly):', error);
+    }
 }
 
 // ─── Chrome path: delegate to offscreen document (unchanged) ─────────────────
@@ -91,14 +95,14 @@ async function _playTrackedBeepDirectly() {
  * @param {string} action - 'playSound' | 'playTrackedSound'
  */
 async function triggerOffscreenAction(action) {
-  try {
-    await setupOffscreenDocument();
-    await new Promise(r => setTimeout(r, 200));
+    try {
+        await setupOffscreenDocument();
+        await new Promise((r) => setTimeout(r, 200));
 
-    await browserApi.runtime.sendMessage({ action: action });
-  } catch (error) {
-    console.error(`Error in triggerOffscreenAction (${action}):`, error);
-  }
+        await browserApi.runtime.sendMessage({ action: action });
+    } catch (error) {
+        console.error(`Error in triggerOffscreenAction (${action}):`, error);
+    }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -108,11 +112,11 @@ async function triggerOffscreenAction(action) {
  * Routes to the correct implementation based on browser.
  */
 async function playSound() {
-  if (_IS_FIREFOX) {
-    await _playBeepDirectly();
-  } else {
-    await triggerOffscreenAction('playSound');
-  }
+    if (_IS_FIREFOX) {
+        await _playBeepDirectly();
+    } else {
+        await triggerOffscreenAction('playSound');
+    }
 }
 
 /**
@@ -120,9 +124,9 @@ async function playSound() {
  * Routes to the correct implementation based on browser.
  */
 async function playTrackedSound() {
-  if (_IS_FIREFOX) {
-    await _playTrackedBeepDirectly();
-  } else {
-    await triggerOffscreenAction('playTrackedSound');
-  }
+    if (_IS_FIREFOX) {
+        await _playTrackedBeepDirectly();
+    } else {
+        await triggerOffscreenAction('playTrackedSound');
+    }
 }

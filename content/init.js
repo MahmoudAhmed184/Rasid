@@ -4,10 +4,12 @@
 // ==========================================
 
 function runInjectors() {
-    if (!isContextValid()) return;
+    if (!isContextValid()) {
+        return;
+    }
 
     const page = getPageType();
-    console.log("[DEBUG] page:", page);
+    console.log('[DEBUG] page:', page);
 
     if (page === 'project') {
         injectTrackButton();
@@ -30,7 +32,9 @@ function runInjectors() {
 }
 
 function startObserverOnce() {
-    if (observerStarted) return;
+    if (observerStarted) {
+        return;
+    }
     observerStarted = true;
 
     setInterval(() => {

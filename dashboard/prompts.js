@@ -4,14 +4,19 @@
 
 function renderPrompts(prompts) {
     const list = document.getElementById('promptsList');
-    if (!list) return;
-
-    if (prompts.length === 0) {
-        list.innerHTML = '<p class="help-text" style="grid-column: 1/-1; text-align: center; padding: 40px;">لا يوجد أوامر مضافة حالياً.</p>';
+    if (!list) {
         return;
     }
 
-    list.innerHTML = prompts.map((p, i) => `
+    if (prompts.length === 0) {
+        list.innerHTML =
+            '<p class="help-text" style="grid-column: 1/-1; text-align: center; padding: 40px;">لا يوجد أوامر مضافة حالياً.</p>';
+        return;
+    }
+
+    list.innerHTML = prompts
+        .map(
+            (p, i) => `
         <div class="prompt-card">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                 <h4 style="font-weight: 800; font-size: 16px; color: var(--text-title);">${p.title}</h4>
@@ -22,33 +27,44 @@ function renderPrompts(prompts) {
             </div>
             <p style="font-size: 13px; color: var(--text-body); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${p.content}</p>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 
     setupPromptListeners();
 }
 
 function setupPromptListeners() {
     const list = document.getElementById('promptsList');
-    if (!list || list.dataset.listenerSet) return;
+    if (!list || list.dataset.listenerSet) {
+        return;
+    }
 
     list.addEventListener('click', (e) => {
-        const editBtn   = e.target.closest('.btn-edit-prompt');
+        const editBtn = e.target.closest('.btn-edit-prompt');
         const deleteBtn = e.target.closest('.btn-delete-prompt');
 
-        if (editBtn)   editPrompt(parseInt(editBtn.dataset.index));
-        else if (deleteBtn) deletePrompt(parseInt(deleteBtn.dataset.index));
+        if (editBtn) {
+            editPrompt(parseInt(editBtn.dataset.index));
+        } else if (deleteBtn) {
+            deletePrompt(parseInt(deleteBtn.dataset.index));
+        }
     });
-    list.dataset.listenerSet = "true";
+    list.dataset.listenerSet = 'true';
 }
 
 async function editPrompt(index) {
     const data = await browserApi.storage.local.get(['prompts']);
     const p = (data.prompts || [])[index];
-    if (p) openPromptModal(p, index);
+    if (p) {
+        openPromptModal(p, index);
+    }
 }
 
 async function deletePrompt(index) {
-    if (!confirm('هل أنت متأكد من حذف هذا الأمر؟')) return;
+    if (!confirm('هل أنت متأكد من حذف هذا الأمر؟')) {
+        return;
+    }
     const data = await browserApi.storage.local.get(['prompts']);
     const prompts = data.prompts || [];
     prompts.splice(index, 1);
@@ -58,30 +74,30 @@ async function deletePrompt(index) {
 }
 
 function openPromptModal(prompt = null, index = -1) {
-    const modal   = document.getElementById('promptModal');
+    const modal = document.getElementById('promptModal');
     const titleEl = document.getElementById('promptTitle');
     const contentEl = document.getElementById('promptContent');
     const idField = document.getElementById('promptId');
 
     if (prompt) {
         document.getElementById('modalTitle').textContent = 'تعديل الأمر';
-        titleEl.value   = prompt.title;
+        titleEl.value = prompt.title;
         contentEl.value = prompt.content;
-        idField.value   = index;
+        idField.value = index;
     } else {
         document.getElementById('modalTitle').textContent = 'إضافة أمر جديد';
-        titleEl.value   = '';
+        titleEl.value = '';
         contentEl.value = '';
-        idField.value   = -1;
+        idField.value = -1;
     }
 
     modal.classList.remove('hidden');
 }
 
 async function savePromptFromModal() {
-    const title   = document.getElementById('promptTitle').value.trim();
+    const title = document.getElementById('promptTitle').value.trim();
     const content = document.getElementById('promptContent').value.trim();
-    const index   = parseInt(document.getElementById('promptId').value);
+    const index = parseInt(document.getElementById('promptId').value);
 
     if (!title || !content) {
         alert('يرجى ملء جميع الحقول');
@@ -97,7 +113,7 @@ async function savePromptFromModal() {
             id: crypto.randomUUID(),
             title,
             content,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
         });
     }
     await browserApi.storage.local.set({ prompts });

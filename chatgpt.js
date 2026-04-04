@@ -5,7 +5,9 @@
 console.log('Mostaql Job Notifier: ChatGPT script injected');
 
 function simulateTyping(element, text) {
-    if (!element) return;
+    if (!element) {
+        return;
+    }
 
     // 1. Focus the element
     element.focus();
@@ -33,7 +35,10 @@ function simulateTyping(element, text) {
         document.execCommand('insertText', false, text);
     } else {
         // Fallback for standard textareas
-        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            'value'
+        ).set;
         nativeTextAreaValueSetter.call(element, text);
 
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -46,12 +51,14 @@ function findChatInput() {
         '#prompt-textarea',
         '[contenteditable="true"]',
         'textarea[data-id="root"]',
-        'textarea'
+        'textarea',
     ];
 
     for (const selector of selectors) {
         const el = document.querySelector(selector);
-        if (el) return el;
+        if (el) {
+            return el;
+        }
     }
     return null;
 }
@@ -61,61 +68,65 @@ function findSendButton() {
     const selectors = [
         '[data-testid="send-button"]',
         'button[aria-label="Send prompt"]',
-        'button.mb-1.mr-1' // Sometimes used
+        'button.mb-1.mr-1', // Sometimes used
     ];
 
     for (const selector of selectors) {
         const el = document.querySelector(selector);
-        if (el && !el.disabled) return el;
+        if (el && !el.disabled) {
+            return el;
+        }
     }
     return null;
 }
 
 async function injectPrompt() {
     const data = await browserApi.storage.local.get(['pendingChatGptPrompt']);
-        const prompt = data.pendingChatGptPrompt;
+    const prompt = data.pendingChatGptPrompt;
 
-        if (!prompt) return; // No pending prompt
+    if (!prompt) {
+        return;
+    } // No pending prompt
 
-        console.log('Mostaql Job Notifier: Found pending prompt, attempting to inject...');
+    console.log('Mostaql Job Notifier: Found pending prompt, attempting to inject...');
 
-        // Try to find the input box. It might take a moment to load.
-        // We'll retry a few times.
-        let attempts = 0;
-        const maxAttempts = 20; // 10 seconds (500ms interval)
+    // Try to find the input box. It might take a moment to load.
+    // We'll retry a few times.
+    let attempts = 0;
+    const maxAttempts = 20; // 10 seconds (500ms interval)
 
-        const interval = setInterval(() => {
-            attempts++;
-            const inputField = findChatInput();
+    const interval = setInterval(() => {
+        attempts++;
+        const inputField = findChatInput();
 
-            if (inputField) {
-                clearInterval(interval);
+        if (inputField) {
+            clearInterval(interval);
 
-                // Focusing
-                inputField.focus();
+            // Focusing
+            inputField.focus();
 
-                // Small delay to ensure focus
-                setTimeout(() => {
-                    // Simulate typing/pasting
-                    // For modern ChatGPT, directly setting innerHTML/innerText on the contenteditable div often works best with input events.
+            // Small delay to ensure focus
+            setTimeout(() => {
+                // Simulate typing/pasting
+                // For modern ChatGPT, directly setting innerHTML/innerText on the contenteditable div often works best with input events.
 
-                    // Forcefully setting text
-                    inputField.innerHTML = `<p>${prompt.replace(/\n/g, '<br>')}</p>`;
+                // Forcefully setting text
+                inputField.innerHTML = `<p>${prompt.replace(/\n/g, '<br>')}</p>`;
 
-                    // Dispatch input event to trigger React state updates
-                    inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                // Dispatch input event to trigger React state updates
+                inputField.dispatchEvent(new Event('input', { bubbles: true }));
 
-                    // Alternative: Clipboard API (requires permission, maybe flaky)
-                    // document.execCommand('insertText', false, prompt);
+                // Alternative: Clipboard API (requires permission, maybe flaky)
+                // document.execCommand('insertText', false, prompt);
 
-                    console.log('Mostaql Job Notifier: Prompt injected');
+                console.log('Mostaql Job Notifier: Prompt injected');
 
-                    // Clear the prompt from storage so it doesn't run again on reload
-                    // chrome.storage.local.remove(['pendingChatGptPrompt']);
+                // Clear the prompt from storage so it doesn't run again on reload
+                // chrome.storage.local.remove(['pendingChatGptPrompt']);
 
-                    // Try to click send after a delay
-                    // MODIFICATION: Auto-send disabled as per user request.
-                    /*
+                // Try to click send after a delay
+                // MODIFICATION: Auto-send disabled as per user request.
+                /*
                     setTimeout(() => {
                         const sendButton = findSendButton();
                         if (sendButton) {
@@ -126,13 +137,14 @@ async function injectPrompt() {
                         }
                     }, 1000); 
                     */
-
-                }, 500);
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                console.error('Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.');
-            }
-        }, 500);
+            }, 500);
+        } else if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            console.error(
+                'Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.'
+            );
+        }
+    }, 500);
 }
 
 // Listen for changes in storage (for when tab is reused/focused without reload)
@@ -150,8 +162,12 @@ browserApi.storage.onChanged.addListener((changes, namespace) => {
 // Run injection logic
 // We wait a bit for the page to be fully interactive
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { void injectPrompt(); });
+    document.addEventListener('DOMContentLoaded', () => {
+        void injectPrompt();
+    });
 } else {
     // If loaded, wait a split second just in case
-    setTimeout(() => { void injectPrompt(); }, 1000);
+    setTimeout(() => {
+        void injectPrompt();
+    }, 1000);
 }

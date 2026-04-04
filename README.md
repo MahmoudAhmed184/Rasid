@@ -8,7 +8,7 @@
 
 **إضافة متصفح ذكية لتنبيهك فوراً بالمشاريع الجديدة على منصة مستقل مع إنشاء عروض احترافية بالذكاء الاصطناعي.**
 
-*A professional cross-browser extension that instantly notifies you of new projects on Mostaql.com with AI-powered proposal generation.*
+_A professional cross-browser extension that instantly notifies you of new projects on Mostaql.com with AI-powered proposal generation._
 
 [English](#-english-description) | [العربية](#-الوصف-بالعربية)
 
@@ -21,6 +21,7 @@
 **Frelancia** هي رفيقك المثالي كـ Freelancer على منصة مستقل. تضمن لك هذه الإضافة ألا يفوتك أي مشروع مهم، وتساعدك على كتابة عروض مقنعة في ثوانٍ معدودة.
 
 ### ✨ المميزات الرئيسية
+
 - 🌐 **تدعم Chrome و Firefox** بنفس الكفاءة
 - 🔔 **تنبيهات فورية** عبر SignalR مع احتياطي تلقائي للاستعلام الدوري
 - 🔌 **سيرفر مخصص** — ادعم سيرفر SignalR الخاص بك من إعدادات الإضافة
@@ -41,6 +42,7 @@
 **Frelancia** is the ultimate companion for freelancers on Mostaql.com. This extension ensures you never miss a high-value project and helps you craft winning proposals using advanced AI technology.
 
 ### ✨ Key Features
+
 - 🌐 **Cross-browser support** — works seamlessly on Chrome and Firefox
 - 🔔 **Instant notifications** via SignalR with automatic polling fallback
 - 🔌 **Custom server** — point the extension at your own SignalR hub
@@ -67,16 +69,18 @@ npm run build
 ```
 
 #### For Google Chrome / Edge / Brave
+
 1. Clone the repository or download the ZIP.
-   ```bash
-   git clone https://github.com/Elaraby218/Frelancia.git
-   ```
+    ```bash
+    git clone https://github.com/Elaraby218/Frelancia.git
+    ```
 2. Navigate to `chrome://extensions/` in your browser.
 3. Toggle the **Developer mode** switch in the top right corner.
 4. Click **Load unpacked** and select the `dist/chrome` directory.
 5. Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
 
 #### For Mozilla Firefox
+
 1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
 2. Click **Load Temporary Add-on...**
 3. Select `dist/firefox/manifest.json`.
@@ -159,6 +163,6 @@ See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for branch naming, code
 <div align="center">
 
 **صنع بـ ❤️ للمستقلين العرب**  
-*Made with ❤️ for Arab Freelancers*
+_Made with ❤️ for Arab Freelancers_
 
 </div>

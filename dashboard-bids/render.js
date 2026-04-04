@@ -5,10 +5,15 @@
 
 /** Status display configuration: icon, color, and Arabic label. */
 const BID_STATUS_CONFIG = {
-    'بانتظار الموافقة': { icon: 'fa-clock',        color: '#f59e0b', bg: '#fef3c7', label: 'بانتظار الموافقة' },
-    'مكتمل':           { icon: 'fa-check-circle',  color: '#10b981', bg: '#d1fae5', label: 'مكتملة' },
-    'مستبعد':          { icon: 'fa-times-circle',   color: '#ef4444', bg: '#fee2e2', label: 'مستبعدة' },
-    'مُغلق':           { icon: 'fa-ban',            color: '#6b7280', bg: '#f3f4f6', label: 'مُغلقة' },
+    'بانتظار الموافقة': {
+        icon: 'fa-clock',
+        color: '#f59e0b',
+        bg: '#fef3c7',
+        label: 'بانتظار الموافقة',
+    },
+    مكتمل: { icon: 'fa-check-circle', color: '#10b981', bg: '#d1fae5', label: 'مكتملة' },
+    مستبعد: { icon: 'fa-times-circle', color: '#ef4444', bg: '#fee2e2', label: 'مستبعدة' },
+    مُغلق: { icon: 'fa-ban', color: '#6b7280', bg: '#f3f4f6', label: 'مُغلقة' },
 };
 
 /**
@@ -17,10 +22,18 @@ const BID_STATUS_CONFIG = {
  * @returns {string} CSS color
  */
 function getBidCountdownColor(percentage) {
-    if (percentage >= 90) return '#22c55e';
-    if (percentage >= 70) return '#84cc16';
-    if (percentage >= 50) return '#eab308';
-    if (percentage >= 30) return '#f97316';
+    if (percentage >= 90) {
+        return '#22c55e';
+    }
+    if (percentage >= 70) {
+        return '#84cc16';
+    }
+    if (percentage >= 50) {
+        return '#eab308';
+    }
+    if (percentage >= 30) {
+        return '#f97316';
+    }
     return '#ef4444';
 }
 
@@ -30,7 +43,9 @@ function getBidCountdownColor(percentage) {
  * @returns {string}
  */
 function formatBidCountdown(msLeft) {
-    if (msLeft <= 0) return 'متاح الآن!';
+    if (msLeft <= 0) {
+        return 'متاح الآن!';
+    }
 
     const totalSeconds = Math.floor(msLeft / 1000);
     const days = Math.floor(totalSeconds / 86400);
@@ -50,10 +65,18 @@ function formatBidCountdown(msLeft) {
  * @returns {string}
  */
 function getStatusCssClass(status) {
-    if (!status) return 'bid-status-pending';
-    if (status.includes('مكتمل')) return 'bid-status-completed';
-    if (status.includes('مستبعد') || status.includes('مُغلق')) return 'bid-status-rejected';
-    if (status.includes('انتظار')) return 'bid-status-pending';
+    if (!status) {
+        return 'bid-status-pending';
+    }
+    if (status.includes('مكتمل')) {
+        return 'bid-status-completed';
+    }
+    if (status.includes('مستبعد') || status.includes('مُغلق')) {
+        return 'bid-status-rejected';
+    }
+    if (status.includes('انتظار')) {
+        return 'bid-status-pending';
+    }
     return 'bid-status-pending';
 }
 
@@ -63,31 +86,38 @@ function getStatusCssClass(status) {
  * @param {Object} homepageStats - Stats fetched from Mostaql homepage
  */
 function renderBidTrackerSummary(stats, homepageStats) {
-    const totalEl     = document.getElementById('bids-total-30d');
+    const totalEl = document.getElementById('bids-total-30d');
     const availableEl = document.getElementById('bids-available-slots');
-    const planEl      = document.getElementById('bids-plan-usage');
-    const additionalEl= document.getElementById('bids-additional');
-    const nextEl      = document.getElementById('bids-next-available');
-    const todayEl     = document.getElementById('bids-today-count');
+    const planEl = document.getElementById('bids-plan-usage');
+    const additionalEl = document.getElementById('bids-additional');
+    const nextEl = document.getElementById('bids-next-available');
+    const todayEl = document.getElementById('bids-today-count');
 
-    if (totalEl) totalEl.textContent = stats.total30d;
-    if (todayEl) todayEl.textContent = stats.todayCount;
+    if (totalEl) {
+        totalEl.textContent = stats.total30d;
+    }
+    if (todayEl) {
+        todayEl.textContent = stats.todayCount;
+    }
 
-    if (availableEl) availableEl.textContent = homepageStats.available;
-    if (additionalEl) additionalEl.textContent = homepageStats.additional;
+    if (availableEl) {
+        availableEl.textContent = homepageStats.available;
+    }
+    if (additionalEl) {
+        additionalEl.textContent = homepageStats.additional;
+    }
     if (planEl) {
         const used = homepageStats.planUsed;
         const total = homepageStats.planTotal;
-        planEl.textContent = (used !== '-' && total !== '-') ? `${used} / ${total}` : '-';
+        planEl.textContent = used !== '-' && total !== '-' ? `${used} / ${total}` : '-';
     }
 
     if (nextEl && stats.nextAvailable) {
         const hoursLeft = Math.floor(stats.nextAvailable.msLeft / (1000 * 60 * 60));
         const daysLeft = Math.floor(hoursLeft / 24);
         const remainingHours = hoursLeft % 24;
-        nextEl.textContent = daysLeft > 0
-            ? `${daysLeft} يوم ${remainingHours} ساعة`
-            : `${remainingHours} ساعة`;
+        nextEl.textContent =
+            daysLeft > 0 ? `${daysLeft} يوم ${remainingHours} ساعة` : `${remainingHours} ساعة`;
     } else if (nextEl) {
         nextEl.textContent = 'متاح الآن!';
     }
@@ -100,26 +130,30 @@ function renderBidTrackerSummary(stats, homepageStats) {
  */
 function renderBidStatusCards(byStatus, total) {
     const container = document.getElementById('bidsStatusGrid');
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     const statusKeys = Object.keys(byStatus);
 
     if (statusKeys.length === 0) {
-        container.innerHTML = '<p class="help-text" style="text-align:center; padding:20px;">لا توجد بيانات حالات.</p>';
+        container.innerHTML =
+            '<p class="help-text" style="text-align:center; padding:20px;">لا توجد بيانات حالات.</p>';
         return;
     }
 
-    container.innerHTML = statusKeys.map(statusKey => {
-        const count = byStatus[statusKey];
-        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        const config = BID_STATUS_CONFIG[statusKey] || {
-            icon: 'fa-question-circle',
-            color: '#6b7280',
-            bg: '#f3f4f6',
-            label: statusKey,
-        };
+    container.innerHTML = statusKeys
+        .map((statusKey) => {
+            const count = byStatus[statusKey];
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            const config = BID_STATUS_CONFIG[statusKey] || {
+                icon: 'fa-question-circle',
+                color: '#6b7280',
+                bg: '#f3f4f6',
+                label: statusKey,
+            };
 
-        return `
+            return `
             <div class="bid-status-card">
                 <div class="bid-status-icon" style="background: ${config.bg}; color: ${config.color};">
                     <i class="fas ${config.icon}"></i>
@@ -131,7 +165,8 @@ function renderBidStatusCards(byStatus, total) {
                 <span class="bid-status-pct" style="color: ${config.color};">${pct}%</span>
             </div>
         `;
-    }).join('');
+        })
+        .join('');
 }
 
 /**
@@ -140,7 +175,9 @@ function renderBidStatusCards(byStatus, total) {
  */
 function renderBidTimeline(bids) {
     const container = document.getElementById('bidsTimelineList');
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     if (bids.length === 0) {
         container.innerHTML = `
@@ -153,19 +190,25 @@ function renderBidTimeline(bids) {
         return;
     }
 
-    container.innerHTML = bids.map((bid, index) => {
-        const pct = Math.min(100, Math.round((bid.ageMs / THIRTY_DAYS_MS) * 100));
-        const color = getBidCountdownColor(pct);
-        const appliedDate = bid.published.toLocaleDateString('ar-EG', {
-            day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
-        });
-        const appliedTime = bid.published.toLocaleTimeString('ar-EG', {
-            hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
-        });
-        const statusClass = getStatusCssClass(bid.status);
-        const displayStatus = bid.status || 'بانتظار';
+    container.innerHTML = bids
+        .map((bid, index) => {
+            const pct = Math.min(100, Math.round((bid.ageMs / THIRTY_DAYS_MS) * 100));
+            const color = getBidCountdownColor(pct);
+            const appliedDate = bid.published.toLocaleDateString('ar-EG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                timeZone: 'UTC',
+            });
+            const appliedTime = bid.published.toLocaleTimeString('ar-EG', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'UTC',
+            });
+            const statusClass = getStatusCssClass(bid.status);
+            const displayStatus = bid.status || 'بانتظار';
 
-        return `
+            return `
             <div class="bid-timeline-item" data-index="${index}">
                 <div class="bid-timeline-marker" style="background: ${color};"></div>
                 <div class="bid-timeline-content">
@@ -196,5 +239,6 @@ function renderBidTimeline(bids) {
                 </div>
             </div>
         `;
-    }).join('');
+        })
+        .join('');
 }

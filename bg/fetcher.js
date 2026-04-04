@@ -4,76 +4,80 @@
 // ==========================================
 
 function cleanTitle(text) {
-  if (!text) return 'مشروع جديد';
-  return text
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    if (!text) {
+        return 'مشروع جديد';
+    }
+    return text
+        .replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 async function fetchJobs(url) {
-  try {
-    const fetchUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-    console.log(`Fetching: ${fetchUrl}`);
+    try {
+        const fetchUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+        console.log(`Fetching: ${fetchUrl}`);
 
-    const response = await fetch(fetchUrl, {
-      method: 'GET',
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ar,en;q=0.9',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
+        const response = await fetch(fetchUrl, {
+            method: 'GET',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'ar,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                Pragma: 'no-cache',
+            },
+        });
 
-    if (!response.ok) {
-      console.error(`HTTP Error: ${response.status}`);
-      return [];
+        if (!response.ok) {
+            console.error(`HTTP Error: ${response.status}`);
+            return [];
+        }
+
+        const html = await response.text();
+        console.log(`Received HTML length: ${html.length}`);
+
+        if (html.includes('Cloudflare') || html.includes('challenge-platform')) {
+            console.error('Cloudflare challenge detected. Please open Mostaql.com in a tab first.');
+            return [];
+        }
+
+        const jobs = await parseJobsOffscreen(html);
+        console.log(`Parsed ${jobs.length} jobs from fetched HTML`);
+        return jobs;
+    } catch (error) {
+        console.error('Error fetching jobs:', error);
+        return [];
     }
-
-    const html = await response.text();
-    console.log(`Received HTML length: ${html.length}`);
-
-    if (html.includes('Cloudflare') || html.includes('challenge-platform')) {
-      console.error('Cloudflare challenge detected. Please open Mostaql.com in a tab first.');
-      return [];
-    }
-
-    const jobs = await parseJobsOffscreen(html);
-    console.log(`Parsed ${jobs.length} jobs from fetched HTML`);
-    return jobs;
-  } catch (error) {
-    console.error('Error fetching jobs:', error);
-    return [];
-  }
 }
 
 async function fetchProjectDetails(url) {
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ar,en;q=0.9'
-      }
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'ar,en;q=0.9',
+            },
+        });
 
-    if (!response.ok) return null;
+        if (!response.ok) {
+            return null;
+        }
 
-    const html = await response.text();
-    return await parseProjectDetailsOffscreen(html);
-  } catch (error) {
-    console.error('Error fetching project details:', error);
-    return null;
-  }
+        const html = await response.text();
+        return await parseProjectDetailsOffscreen(html);
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        return null;
+    }
 }

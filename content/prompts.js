@@ -18,7 +18,7 @@ function loadPrompts(callback) {
         }
 
         const response = await browserApi.runtime.sendMessage({ action: 'getDefaultPrompts' });
-        const defaults = (response && response.prompts) ? response.prompts : [];
+        const defaults = response && response.prompts ? response.prompts : [];
         await browserApi.storage.local.set({ prompts: defaults });
         callback(defaults);
     })().catch((error) => {
@@ -37,7 +37,7 @@ function savePrompt(promptData, callback) {
         let savedId = promptData.id;
 
         if (savedId) {
-            const index = prompts.findIndex(p => p.id === savedId);
+            const index = prompts.findIndex((p) => p.id === savedId);
             if (index !== -1) {
                 prompts[index] = { ...prompts[index], ...promptData };
             } else {
@@ -49,20 +49,24 @@ function savePrompt(promptData, callback) {
                 id: savedId,
                 title: promptData.title,
                 content: promptData.content,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
             };
             prompts.push(newPrompt);
         }
 
         await browserApi.storage.local.set({ prompts });
-        if (callback) callback(savedId);
+        if (callback) {
+            callback(savedId);
+        }
     })().catch((error) => {
         console.error('Error saving prompt:', error);
     });
 }
 
 function createPromptModal(onSave, existingPrompt = null) {
-    if (document.getElementById('mostaql-prompt-modal')) return;
+    if (document.getElementById('mostaql-prompt-modal')) {
+        return;
+    }
 
     const modalOverlay = document.createElement('div');
     modalOverlay.id = 'mostaql-prompt-modal';
@@ -80,7 +84,9 @@ function createPromptModal(onSave, existingPrompt = null) {
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
     titleInput.className = 'mostaql-form-input';
-    if (existingPrompt) titleInput.value = existingPrompt.title;
+    if (existingPrompt) {
+        titleInput.value = existingPrompt.title;
+    }
 
     groupTitle.appendChild(titleLabel);
     groupTitle.appendChild(titleInput);
@@ -94,12 +100,15 @@ function createPromptModal(onSave, existingPrompt = null) {
 
     const contentHelp = document.createElement('div');
     contentHelp.className = 'mostaql-form-help';
-    contentHelp.textContent = 'المتغيرات المتاحة: {title}, {description}, {url}, {tags}, {client_name}, {client_type}, {budget}, {duration}, {publish_date}, {project_id}, {project_status}, {category}, {hiring_rate}, {open_projects}, {underway_projects}, {client_joined}';
+    contentHelp.textContent =
+        'المتغيرات المتاحة: {title}, {description}, {url}, {tags}, {client_name}, {client_type}, {budget}, {duration}, {publish_date}, {project_id}, {project_status}, {category}, {hiring_rate}, {open_projects}, {underway_projects}, {client_joined}';
 
     const contentInput = document.createElement('textarea');
     contentInput.className = 'mostaql-form-textarea';
     contentInput.rows = '6';
-    if (existingPrompt) contentInput.value = existingPrompt.content;
+    if (existingPrompt) {
+        contentInput.value = existingPrompt.content;
+    }
 
     groupContent.appendChild(contentLabel);
     groupContent.appendChild(contentInput);
@@ -119,11 +128,15 @@ function createPromptModal(onSave, existingPrompt = null) {
             saveBtn.disabled = true;
 
             const promptData = { title: t, content: c };
-            if (existingPrompt) promptData.id = existingPrompt.id;
+            if (existingPrompt) {
+                promptData.id = existingPrompt.id;
+            }
 
             savePrompt(promptData, (savedId) => {
                 document.body.removeChild(modalOverlay);
-                if (onSave) onSave(savedId);
+                if (onSave) {
+                    onSave(savedId);
+                }
             });
         } else {
             alert('يرجى ملء جميع الحقول');

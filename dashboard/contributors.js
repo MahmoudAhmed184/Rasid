@@ -4,21 +4,28 @@
 
 async function loadContributors() {
     const listEl = document.getElementById('contributors-list');
-    if (!listEl) return;
+    if (!listEl) {
+        return;
+    }
 
     try {
-        const response = await fetch('https://api.github.com/repos/Elaraby218/Frelancia/contributors');
-        if (!response.ok) throw new Error('Failed to fetch contributors');
+        const response = await fetch(
+            'https://api.github.com/repos/Elaraby218/Frelancia/contributors'
+        );
+        if (!response.ok) {
+            throw new Error('Failed to fetch contributors');
+        }
 
         const contributors = await response.json();
         listEl.innerHTML = '';
 
         if (contributors.length === 0) {
-            listEl.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">لا يوجد مساهمون حالياً.</p>';
+            listEl.innerHTML =
+                '<p style="grid-column: 1/-1; text-align: center;">لا يوجد مساهمون حالياً.</p>';
             return;
         }
 
-        contributors.forEach(user => {
+        contributors.forEach((user) => {
             const card = document.createElement('div');
             card.className = 'about-card';
             card.innerHTML = `
@@ -52,9 +59,13 @@ async function loadContributors() {
 
 function setupContributorsListeners() {
     const list = document.getElementById('contributors-list');
-    if (!list || list.dataset.listenerSet) return;
+    if (!list || list.dataset.listenerSet) {
+        return;
+    }
     list.addEventListener('click', (e) => {
-        if (e.target.closest('.btn-retry-contributors')) loadContributors();
+        if (e.target.closest('.btn-retry-contributors')) {
+            loadContributors();
+        }
     });
-    list.dataset.listenerSet = "true";
+    list.dataset.listenerSet = 'true';
 }

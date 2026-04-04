@@ -4,270 +4,271 @@
  */
 
 :root {
-  --icon-shim-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+    --icon-shim-font:
+        system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
 .fa,
 .fas,
 .fab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1em;
-  line-height: 1;
-  font-style: normal;
-  font-weight: 700;
-  font-family: var(--icon-shim-font);
-  vertical-align: -0.125em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1em;
+    line-height: 1;
+    font-style: normal;
+    font-weight: 700;
+    font-family: var(--icon-shim-font);
+    vertical-align: -0.125em;
 }
 
 .fa::before,
 .fas::before,
 .fab::before {
-  display: inline-block;
-  line-height: 1;
-  font-size: 0.92em;
-  text-align: center;
+    display: inline-block;
+    line-height: 1;
+    font-size: 0.92em;
+    text-align: center;
 }
 
 .fa-fw {
-  width: 1.25em;
+    width: 1.25em;
 }
 
 .fa-2x {
-  font-size: 2em;
+    font-size: 2em;
 }
 
 .fa-3x {
-  font-size: 3em;
+    font-size: 3em;
 }
 
 .fa-spin::before {
-  animation: icon-shim-spin 1s linear infinite;
-  transform-origin: center;
+    animation: icon-shim-spin 1s linear infinite;
+    transform-origin: center;
 }
 
 @keyframes icon-shim-spin {
-  from {
-    transform: rotate(0deg);
-  }
+    from {
+        transform: rotate(0deg);
+    }
 
-  to {
-    transform: rotate(360deg);
-  }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .fa-home::before {
-  content: "\2302";
+    content: '\2302';
 }
 
 .fa-chart-line::before {
-  content: "\2197";
+    content: '\2197';
 }
 
 .fa-filter::before {
-  content: "\25BE";
+    content: '\25BE';
 }
 
 .fa-terminal::before {
-  content: ">_";
-  font-size: 0.72em;
+    content: '>_';
+    font-size: 0.72em;
 }
 
 .fa-file-contract::before {
-  content: "DOC";
-  font-size: 0.56em;
-  letter-spacing: 0.04em;
+    content: 'DOC';
+    font-size: 0.56em;
+    letter-spacing: 0.04em;
 }
 
 .fa-cog::before {
-  content: "\2699";
+    content: '\2699';
 }
 
 .fa-users::before {
-  content: "\1F465";
+    content: '\1F465';
 }
 
 .fa-info-circle::before {
-  content: "i";
+    content: 'i';
 }
 
 .fa-briefcase::before {
-  content: "\1F4BC";
+    content: '\1F4BC';
 }
 
 .fa-check-circle::before,
 .fa-check-double::before {
-  content: "\2713";
+    content: '\2713';
 }
 
 .fa-check-double::before {
-  letter-spacing: -0.08em;
+    letter-spacing: -0.08em;
 }
 
 .fa-clock::before,
 .fa-clock-o::before {
-  content: "\23F2";
+    content: '\23F2';
 }
 
 .fa-wifi::before {
-  content: "\1F4F6";
+    content: '\1F4F6';
 }
 
 .fa-eye::before {
-  content: "\25C9";
+    content: '\25C9';
 }
 
 .fa-sync-alt::before,
 .fa-refresh::before,
 .fa-spinner::before {
-  content: "\21BB";
+    content: '\21BB';
 }
 
 .fa-file-signature::before,
 .fa-pencil::before,
 .fa-edit::before {
-  content: "\270E";
+    content: '\270E';
 }
 
 .fa-hourglass-half::before {
-  content: "\23F3";
+    content: '\23F3';
 }
 
 .fa-calendar::before,
 .fa-calendar-day::before {
-  content: "\1F4C5";
+    content: '\1F4C5';
 }
 
 .fa-chart-pie::before {
-  content: "\25D4";
+    content: '\25D4';
 }
 
 .fa-stream::before,
 .fa-list-ul::before {
-  content: "\2630";
+    content: '\2630';
 }
 
 .fa-search::before {
-  content: "\1F50D";
+    content: '\1F50D';
 }
 
 .fa-dollar-sign::before,
 .fa-money::before {
-  content: "$";
+    content: '$';
 }
 
 .fa-tags::before {
-  content: "#";
+    content: '#';
 }
 
 .fa-plus::before {
-  content: "+";
+    content: '+';
 }
 
 .fa-robot::before {
-  content: "AI";
-  font-size: 0.62em;
-  letter-spacing: 0.04em;
+    content: 'AI';
+    font-size: 0.62em;
+    letter-spacing: 0.04em;
 }
 
 .fa-satellite-dish::before {
-  content: "\1F4E1";
+    content: '\1F4E1';
 }
 
 .fa-bell::before {
-  content: "\1F514";
+    content: '\1F514';
 }
 
 .fa-bell-slash::before {
-  content: "\1F507";
+    content: '\1F507';
 }
 
 .fa-vial::before {
-  content: "\2697";
+    content: '\2697';
 }
 
 .fa-volume-up::before {
-  content: "\1F50A";
+    content: '\1F50A';
 }
 
 .fa-code::before {
-  content: "</>";
-  font-size: 0.68em;
+    content: '</>';
+    font-size: 0.68em;
 }
 
 .fa-linkedin::before {
-  content: "in";
-  font-size: 0.76em;
-  font-weight: 800;
+    content: 'in';
+    font-size: 0.76em;
+    font-weight: 800;
 }
 
 .fa-github::before {
-  content: "GH";
-  font-size: 0.62em;
-  font-weight: 800;
+    content: 'GH';
+    font-size: 0.62em;
+    font-weight: 800;
 }
 
 .fa-rocket::before {
-  content: "\1F680";
+    content: '\1F680';
 }
 
 .fa-heart::before {
-  content: "\2665";
+    content: '\2665';
 }
 
 .fa-save::before {
-  content: "\1F4BE";
+    content: '\1F4BE';
 }
 
 .fa-trash::before {
-  content: "\1F5D1";
+    content: '\1F5D1';
 }
 
 .fa-user::before,
 .fa-user-circle::before {
-  content: "\1F464";
+    content: '\1F464';
 }
 
 .fa-handshake::before,
 .fa-handshake-o::before {
-  content: "\1F91D";
+    content: '\1F91D';
 }
 
 .fa-paper-plane::before {
-  content: "\27A6";
+    content: '\27A6';
 }
 
 .fa-paperclip::before {
-  content: "\1F4CE";
+    content: '\1F4CE';
 }
 
 .fa-file-pdf-o::before {
-  content: "PDF";
-  font-size: 0.5em;
-  letter-spacing: 0.04em;
+    content: 'PDF';
+    font-size: 0.5em;
+    letter-spacing: 0.04em;
 }
 
 .fa-bolt::before {
-  content: "\26A1";
+    content: '\26A1';
 }
 
 .fa-magic::before {
-  content: "\2728";
+    content: '\2728';
 }
 
 .fa-caret-down::before {
-  content: "\25BE";
+    content: '\25BE';
 }
 
 .fa-plug::before {
-  content: "\1F50C";
+    content: '\1F50C';
 }
 
 .fa-desktop::before {
-  content: "\1F5A5";
+    content: '\1F5A5';
 }
 
 .fa-download::before {
-  content: "\2B07";
+    content: '\2B07';
 }

@@ -52,7 +52,9 @@ async function loadBidTrackerData() {
  * Called lazily when the bids-tracker tab is clicked.
  */
 function initBidTracker() {
-    if (bidTrackerLoaded) return;
+    if (bidTrackerLoaded) {
+        return;
+    }
     bidTrackerLoaded = true;
     loadBidTrackerData();
 }

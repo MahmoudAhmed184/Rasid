@@ -41,21 +41,25 @@ class SignalRClient {
             this.connection = new signalR.HubConnectionBuilder()
                 .withUrl(this.serverUrl, {
                     skipNegotiation: false,
-                    transport: signalR.HttpTransportType.WebSockets
-                        | signalR.HttpTransportType.ServerSentEvents
-                        | signalR.HttpTransportType.LongPolling
+                    transport:
+                        signalR.HttpTransportType.WebSockets |
+                        signalR.HttpTransportType.ServerSentEvents |
+                        signalR.HttpTransportType.LongPolling,
                 })
                 .withAutomaticReconnect({
                     nextRetryDelayInMilliseconds: (retryContext) => {
                         if (retryContext.elapsedMilliseconds < 60000) {
-                            return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 60000);
+                            return Math.min(
+                                1000 * Math.pow(2, retryContext.previousRetryCount),
+                                60000
+                            );
                         }
                         return 60000;
-                    }
+                    },
                 })
                 .configureLogging(signalR.LogLevel.Information)
                 .build();
-                
+
             // Increase timeouts to prevent dropping during Service Worker suspension/wake cycles
             this.connection.serverTimeoutInMilliseconds = 120000; // 2 minutes (default is 30s)
             this.connection.keepAliveIntervalInMilliseconds = 15000; // 15 seconds (default is 15s)
@@ -69,13 +73,12 @@ class SignalRClient {
 
             await browserApi.storage.local.set({
                 signalRConnected: true,
-                signalRFallbackActive: false
+                signalRFallbackActive: false,
             });
 
             if (this.onReconnectedCallback) {
                 this.onReconnectedCallback();
             }
-
         } catch (error) {
             console.error('SignalR: Connection failed', error);
             this.isConnected = false;
@@ -97,7 +100,9 @@ class SignalRClient {
         });
 
         this.connection.on('NewJobsDetected', async (data) => {
-            if (this.connection !== conn) return; // stale — ignore
+            if (this.connection !== conn) {
+                return;
+            } // stale — ignore
             console.log('SignalR: New jobs detected', data);
 
             if (!data || !Array.isArray(data.jobs)) {
@@ -117,26 +122,32 @@ class SignalRClient {
         });
 
         this.connection.onclose((error) => {
-            if (this.connection !== conn) return; // stale — new connection already active
+            if (this.connection !== conn) {
+                return;
+            } // stale — new connection already active
             console.log('SignalR: Connection closed', error);
             this.isConnected = false;
             browserApi.storage.local.set({ signalRConnected: false });
         });
 
         this.connection.onreconnecting((error) => {
-            if (this.connection !== conn) return; // stale
+            if (this.connection !== conn) {
+                return;
+            } // stale
             console.log('SignalR: Reconnecting...', error);
             this.isConnected = false;
             browserApi.storage.local.set({ signalRConnected: false });
         });
 
         this.connection.onreconnected((connectionId) => {
-            if (this.connection !== conn) return; // stale
+            if (this.connection !== conn) {
+                return;
+            } // stale
             console.log('SignalR: Reconnected', connectionId);
             this.isConnected = true;
             browserApi.storage.local.set({
                 signalRConnected: true,
-                signalRFallbackActive: false
+                signalRFallbackActive: false,
             });
 
             if (this.onReconnectedCallback) {
@@ -151,7 +162,13 @@ class SignalRClient {
     async handleNewJobs(jobs) {
         console.log(`SignalR: Processing ${jobs.length} new job(s) [ZERO HTTP REQUESTS]`);
 
-        const data = await browserApi.storage.local.get(['seenJobs', 'recentJobs', 'stats', 'settings', 'notificationsEnabled']);
+        const data = await browserApi.storage.local.get([
+            'seenJobs',
+            'recentJobs',
+            'stats',
+            'settings',
+            'notificationsEnabled',
+        ]);
         let seenJobs = data.seenJobs || [];
         let recentJobs = data.recentJobs || [];
         let stats = data.stats || { todayCount: 0, todayDate: new Date().toDateString() };
@@ -182,7 +199,7 @@ class SignalRClient {
                 continue;
             }
 
-            const existingIdx = recentJobs.findIndex(rj => rj.id === job.id);
+            const existingIdx = recentJobs.findIndex((rj) => rj.id === job.id);
             if (existingIdx !== -1) {
                 recentJobs[existingIdx] = { ...recentJobs[existingIdx], ...job };
             } else {
@@ -216,9 +233,11 @@ class SignalRClient {
 
             // Check if notifications are globally enabled
             const isEnabled = data.notificationsEnabled !== false;
-            
+
             if (isEnabled) {
-                console.log(`SignalR: Showing notifications for ${validJobs.length} job(s) [NO HTTP REQUESTS MADE]`);
+                console.log(
+                    `SignalR: Showing notifications for ${validJobs.length} job(s) [NO HTTP REQUESTS MADE]`
+                );
                 await showNotification(validJobs);
 
                 if (settings.sound) {
@@ -270,7 +289,9 @@ class SignalRClient {
 
         this.reconnectAttempts++;
         const delayMinutes = Math.max(this.reconnectAttempts * 0.5, 0.5);
-        console.log(`SignalR: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMinutes} min`);
+        console.log(
+            `SignalR: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMinutes} min`
+        );
 
         browserApi.alarms.create('signalRReconnect', { delayInMinutes: delayMinutes });
     }
@@ -279,7 +300,9 @@ class SignalRClient {
      * Disconnect from the hub.
      */
     async disconnect() {
-        if (!this.connection) return;
+        if (!this.connection) {
+            return;
+        }
 
         // Null this.connection FIRST so any in-flight onclose/onreconnecting
         // callbacks triggered by stop() see a null reference and bail out.
@@ -318,7 +341,7 @@ class SignalRClient {
         return {
             isConnected: this.isConnected,
             state: this.connection?.state || 'Disconnected',
-            reconnectAttempts: this.reconnectAttempts
+            reconnectAttempts: this.reconnectAttempts,
         };
     }
 }

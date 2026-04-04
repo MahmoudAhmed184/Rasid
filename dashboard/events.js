@@ -33,7 +33,9 @@ function setupEventListeners() {
 
     // Prompt modal — open
     const addPromptBtn = document.getElementById('addPromptBtn');
-    if (addPromptBtn) addPromptBtn.addEventListener('click', () => openPromptModal());
+    if (addPromptBtn) {
+        addPromptBtn.addEventListener('click', () => openPromptModal());
+    }
 
     // Prompt modal — close
     const closeModalBtn = document.getElementById('closeModalBtn');
@@ -45,7 +47,9 @@ function setupEventListeners() {
 
     // Prompt modal — confirm save
     const confirmSaveBtn = document.getElementById('confirmSavePrompt');
-    if (confirmSaveBtn) confirmSaveBtn.addEventListener('click', savePromptFromModal);
+    if (confirmSaveBtn) {
+        confirmSaveBtn.addEventListener('click', savePromptFromModal);
+    }
 
     // Diagnostic: test notification
     const testNotifyBtn = document.getElementById('testNotificationBtn');
@@ -68,10 +72,10 @@ function setupEventListeners() {
     if (systemToggle) {
         systemToggle.addEventListener('change', async () => {
             const data = await browserApi.storage.local.get(['settings']);
-                const s = data.settings || {};
-                s.systemEnabled = systemToggle.checked;
-                await browserApi.storage.local.set({ settings: s });
-                showSaveStatus();
+            const s = data.settings || {};
+            s.systemEnabled = systemToggle.checked;
+            await browserApi.storage.local.set({ settings: s });
+            showSaveStatus();
         });
     }
 }

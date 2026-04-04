@@ -7,10 +7,12 @@ let observerStarted = false;
 
 function isContextValid() {
     try {
-        return typeof browserApi !== 'undefined' &&
+        return (
+            typeof browserApi !== 'undefined' &&
             !!browserApi.runtime &&
             !!browserApi.runtime.id &&
-            !!browserApi.storage;
+            !!browserApi.storage
+        );
     } catch (e) {
         return false;
     }
@@ -18,11 +20,21 @@ function isContextValid() {
 
 function getPageType() {
     const path = location.pathname;
-    if (/\/project[s]?\/\d+/.test(path)) return 'project';
-    if (/\/message\//.test(path)) return 'message';
-    if (/\/messages/.test(path)) return 'messages';
-    if (/\/profile/.test(path)) return 'profile';
-    if (path === '/' || path === "") return 'home';
+    if (/\/project[s]?\/\d+/.test(path)) {
+        return 'project';
+    }
+    if (/\/message\//.test(path)) {
+        return 'message';
+    }
+    if (/\/messages/.test(path)) {
+        return 'messages';
+    }
+    if (/\/profile/.test(path)) {
+        return 'profile';
+    }
+    if (path === '/' || path === '') {
+        return 'home';
+    }
     return 'other';
 }
 
