@@ -51,7 +51,7 @@ function setupEventListeners() {
     const testNotifyBtn = document.getElementById('testNotificationBtn');
     if (testNotifyBtn) {
         testNotifyBtn.addEventListener('click', () => {
-            chrome.runtime.sendMessage({ action: 'testNotification' });
+            browserApi.runtime.sendMessage({ action: 'testNotification' }).catch(console.error);
         });
     }
 
@@ -59,19 +59,19 @@ function setupEventListeners() {
     const testSoundBtn = document.getElementById('testSoundBtn');
     if (testSoundBtn) {
         testSoundBtn.addEventListener('click', () => {
-            chrome.runtime.sendMessage({ action: 'testSound' });
+            browserApi.runtime.sendMessage({ action: 'testSound' }).catch(console.error);
         });
     }
 
     // System toggle — auto-save immediately on change
     const systemToggle = document.getElementById('systemToggle');
     if (systemToggle) {
-        systemToggle.addEventListener('change', () => {
-            chrome.storage.local.get(['settings'], (data) => {
+        systemToggle.addEventListener('change', async () => {
+            const data = await browserApi.storage.local.get(['settings']);
                 const s = data.settings || {};
                 s.systemEnabled = systemToggle.checked;
-                chrome.storage.local.set({ settings: s }, showSaveStatus);
-            });
+                await browserApi.storage.local.set({ settings: s });
+                showSaveStatus();
         });
     }
 }

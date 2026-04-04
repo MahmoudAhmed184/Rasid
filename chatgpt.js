@@ -71,8 +71,8 @@ function findSendButton() {
     return null;
 }
 
-function injectPrompt() {
-    chrome.storage.local.get(['pendingChatGptPrompt'], (data) => {
+async function injectPrompt() {
+    const data = await browserApi.storage.local.get(['pendingChatGptPrompt']);
         const prompt = data.pendingChatGptPrompt;
 
         if (!prompt) return; // No pending prompt
@@ -133,11 +133,10 @@ function injectPrompt() {
                 console.error('Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.');
             }
         }, 500);
-    });
 }
 
 // Listen for changes in storage (for when tab is reused/focused without reload)
-chrome.storage.onChanged.addListener((changes, namespace) => {
+browserApi.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.pendingChatGptPrompt) {
         const newValue = changes.pendingChatGptPrompt.newValue;
         if (newValue) {
@@ -151,8 +150,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 // Run injection logic
 // We wait a bit for the page to be fully interactive
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectPrompt);
+    document.addEventListener('DOMContentLoaded', () => { void injectPrompt(); });
 } else {
     // If loaded, wait a split second just in case
-    setTimeout(injectPrompt, 1000);
+    setTimeout(() => { void injectPrompt(); }, 1000);
 }

@@ -41,23 +41,20 @@ function setupPromptListeners() {
     list.dataset.listenerSet = "true";
 }
 
-function editPrompt(index) {
-    chrome.storage.local.get(['prompts'], (data) => {
-        const p = (data.prompts || [])[index];
-        if (p) openPromptModal(p, index);
-    });
+async function editPrompt(index) {
+    const data = await browserApi.storage.local.get(['prompts']);
+    const p = (data.prompts || [])[index];
+    if (p) openPromptModal(p, index);
 }
 
-function deletePrompt(index) {
+async function deletePrompt(index) {
     if (!confirm('هل أنت متأكد من حذف هذا الأمر؟')) return;
-    chrome.storage.local.get(['prompts'], (data) => {
-        const prompts = data.prompts || [];
-        prompts.splice(index, 1);
-        chrome.storage.local.set({ prompts }, () => {
-            renderPrompts(prompts);
-            showSaveStatus();
-        });
-    });
+    const data = await browserApi.storage.local.get(['prompts']);
+    const prompts = data.prompts || [];
+    prompts.splice(index, 1);
+    await browserApi.storage.local.set({ prompts });
+    renderPrompts(prompts);
+    showSaveStatus();
 }
 
 function openPromptModal(prompt = null, index = -1) {
@@ -81,7 +78,7 @@ function openPromptModal(prompt = null, index = -1) {
     modal.classList.remove('hidden');
 }
 
-function savePromptFromModal() {
+async function savePromptFromModal() {
     const title   = document.getElementById('promptTitle').value.trim();
     const content = document.getElementById('promptContent').value.trim();
     const index   = parseInt(document.getElementById('promptId').value);
@@ -91,22 +88,20 @@ function savePromptFromModal() {
         return;
     }
 
-    chrome.storage.local.get(['prompts'], (data) => {
-        const prompts = data.prompts || [];
-        if (index >= 0) {
-            prompts[index] = { ...prompts[index], title, content };
-        } else {
-            prompts.push({
-                id: crypto.randomUUID(),
-                title,
-                content,
-                createdAt: new Date().toISOString()
-            });
-        }
-        chrome.storage.local.set({ prompts }, () => {
-            document.getElementById('promptModal').classList.add('hidden');
-            renderPrompts(prompts);
-            showSaveStatus();
+    const data = await browserApi.storage.local.get(['prompts']);
+    const prompts = data.prompts || [];
+    if (index >= 0) {
+        prompts[index] = { ...prompts[index], title, content };
+    } else {
+        prompts.push({
+            id: crypto.randomUUID(),
+            title,
+            content,
+            createdAt: new Date().toISOString()
         });
-    });
+    }
+    await browserApi.storage.local.set({ prompts });
+    document.getElementById('promptModal').classList.add('hidden');
+    renderPrompts(prompts);
+    showSaveStatus();
 }

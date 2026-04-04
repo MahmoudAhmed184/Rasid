@@ -11,7 +11,7 @@ function checkForAutofill() {
 function handleAutofillSequence() {
     if (!isContextValid()) return;
 
-    chrome.storage.local.get(['mostaql_pending_autofill'], (data) => {
+    browserApi.storage.local.get(['mostaql_pending_autofill']).then((data) => {
         const autofill = data.mostaql_pending_autofill;
         if (!autofill) return;
 
@@ -23,7 +23,7 @@ function handleAutofillSequence() {
 
         if (Date.now() - autofill.timestamp > 5 * 60 * 1000) {
             console.log('Autofill data expired, skipping.');
-            chrome.storage.local.remove(['mostaql_pending_autofill']);
+            browserApi.storage.local.remove(['mostaql_pending_autofill']);
             return;
         }
 
@@ -47,7 +47,7 @@ function handleAutofillSequence() {
                 clearInterval(interval);
                 amountInput.focus();
                 durationInput.focus();
-                fillForm(amountInput, durationInput, autofill);
+                void fillForm(amountInput, durationInput, autofill);
             } else {
                 attempts++;
                 if (attempts >= maxAttempts) {
@@ -56,10 +56,10 @@ function handleAutofillSequence() {
                 }
             }
         }, 500);
-    });
+    }).catch(console.error);
 }
 
-function fillForm(amountInput, durationInput, data) {
+async function fillForm(amountInput, durationInput, data) {
     console.log(`Filling form: Amount=${data.amount}, Duration=${data.duration}`);
 
     const triggerEvents = (el) => {
@@ -129,10 +129,10 @@ function fillForm(amountInput, durationInput, data) {
         }, 5000);
     }
 
-    chrome.storage.local.remove(['mostaql_pending_autofill']);
+    await browserApi.storage.local.remove(['mostaql_pending_autofill']);
 }
 
-function handleQuickBidClick() {
+async function handleQuickBidClick() {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -142,31 +142,29 @@ function handleQuickBidClick() {
     const projectId = getProjectId();
     if (!projectId) return;
 
-    chrome.storage.local.get(['proposalTemplate'], (data) => {
-        const proposal = data.proposalTemplate || `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
+    const data = await browserApi.storage.local.get(['proposalTemplate']);
+    const proposal = data.proposalTemplate || `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
 
 متحمس لبدء التعاون معك، واذاك بتنفيذ العمل بشكل سلس ومرتب. في انتظار تواصلك لترتيب التفاصيل والانطلاق مباشرة.`;
 
-        const minBudget = getBudgetFromPage();
-        const projectData = extractProjectData();
+    const minBudget = getBudgetFromPage();
+    const projectData = extractProjectData();
 
-        let durationDays = 0;
-        if (projectData.duration) {
-            const match = projectData.duration.match(/\d+/);
-            if (match) durationDays = parseInt(match[0]);
-            else if (projectData.duration.includes("يوم واحد")) durationDays = 1;
-        }
+    let durationDays = 0;
+    if (projectData.duration) {
+        const match = projectData.duration.match(/\d+/);
+        if (match) durationDays = parseInt(match[0]);
+        else if (projectData.duration.includes("يوم واحد")) durationDays = 1;
+    }
 
-        const autofillData = {
-            projectId: projectId,
-            amount: minBudget,
-            duration: durationDays,
-            proposal: proposal,
-            timestamp: Date.now()
-        };
+    const autofillData = {
+        projectId: projectId,
+        amount: minBudget,
+        duration: durationDays,
+        proposal: proposal,
+        timestamp: Date.now()
+    };
 
-        chrome.storage.local.set({ 'mostaql_pending_autofill': autofillData }, () => {
-            handleAutofillSequence();
-        });
-    });
+    await browserApi.storage.local.set({ 'mostaql_pending_autofill': autofillData });
+    handleAutofillSequence();
 }

@@ -4,47 +4,44 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize minimal UI
-  loadStats();
+  void loadStats();
   setupEventListeners();
   
   // Refresh stats every 30 seconds while popup is open
-  setInterval(loadStats, 30000);
+  setInterval(() => { void loadStats(); }, 30000);
 });
 
 // ==========================================
 // Load Stats
 // ==========================================
-function loadStats() {
-  chrome.storage.local.get(['stats', 'seenJobs'], (data) => {
-    const stats = data.stats || {};
-    const seenJobs = data.seenJobs || [];
+async function loadStats() {
+  const data = await browserApi.storage.local.get(['stats', 'seenJobs']);
+  const stats = data.stats || {};
+  const seenJobs = data.seenJobs || [];
 
-    // Last check time formatting
-    if (stats.lastCheck) {
-      const lastCheck = new Date(stats.lastCheck);
-      const now = new Date();
-      const diffMinutes = Math.floor((now - lastCheck) / 60000);
+  if (stats.lastCheck) {
+    const lastCheck = new Date(stats.lastCheck);
+    const now = new Date();
+    const diffMinutes = Math.floor((now - lastCheck) / 60000);
 
-      let timeText;
-      if (diffMinutes < 1) {
-        timeText = 'الآن';
-      } else if (diffMinutes < 60) {
-        timeText = `منذ ${diffMinutes} دقيقة`;
-      } else if (diffMinutes < 1440) {
-        timeText = `منذ ${Math.floor(diffMinutes / 60)} ساعة`;
-      } else {
-        timeText = lastCheck.toLocaleDateString('ar-SA');
-      }
-
-      document.getElementById('lastCheck').textContent = `آخر فحص: ${timeText}`;
+    let timeText;
+    if (diffMinutes < 1) {
+      timeText = 'الآن';
+    } else if (diffMinutes < 60) {
+      timeText = `منذ ${diffMinutes} دقيقة`;
+    } else if (diffMinutes < 1440) {
+      timeText = `منذ ${Math.floor(diffMinutes / 60)} ساعة`;
     } else {
-      document.getElementById('lastCheck').textContent = 'لم يتم الفحص بعد';
+      timeText = lastCheck.toLocaleDateString('ar-SA');
     }
 
-    // Update counts
-    document.getElementById('todayCount').textContent = stats.todayCount || 0;
-    document.getElementById('totalSeen').textContent = seenJobs.length;
-  });
+    document.getElementById('lastCheck').textContent = `آخر فحص: ${timeText}`;
+  } else {
+    document.getElementById('lastCheck').textContent = 'لم يتم الفحص بعد';
+  }
+
+  document.getElementById('todayCount').textContent = stats.todayCount || 0;
+  document.getElementById('totalSeen').textContent = seenJobs.length;
 }
 
 // ==========================================
@@ -54,25 +51,27 @@ function setupEventListeners() {
   // Open Dashboard
   const dashboardBtn = document.getElementById('open-dashboard-btn');
   if (dashboardBtn) {
-    dashboardBtn.addEventListener('click', (e) => {
+    dashboardBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      chrome.tabs.create({ url: 'dashboard.html' });
+      await browserApi.tabs.create({ url: 'dashboard.html' });
     });
   }
 
   // Check Now
   const checkBtn = document.getElementById('checkNowBtn');
   if (checkBtn) {
-    checkBtn.addEventListener('click', () => {
+    checkBtn.addEventListener('click', async () => {
       const originalContent = checkBtn.innerHTML;
       checkBtn.disabled = true;
       checkBtn.innerHTML = '<span>جاري الفحص...</span>';
-      
-      chrome.runtime.sendMessage({ action: 'checkNow' }, (response) => {
+
+      try {
+        await browserApi.runtime.sendMessage({ action: 'checkNow' });
+        await loadStats();
+      } finally {
         checkBtn.disabled = false;
         checkBtn.innerHTML = originalContent;
-        loadStats();
-      });
+      }
     });
   }
 
@@ -80,13 +79,15 @@ function setupEventListeners() {
   const connBtn = document.getElementById('checkConnectionBtn');
   const connReport = document.getElementById('connectionReport');
   if (connBtn) {
-    connBtn.addEventListener('click', () => {
+    connBtn.addEventListener('click', async () => {
       const originalContent = connBtn.innerHTML;
       connBtn.disabled = true;
       connBtn.textContent = 'جاري التشخيص...';
       connReport.classList.add('hidden');
 
-      chrome.runtime.sendMessage({ action: 'debugFetch' }, (response) => {
+      try {
+        const response = await browserApi.runtime.sendMessage({ action: 'debugFetch' });
+
         connBtn.disabled = false;
         connBtn.innerHTML = originalContent;
         connReport.classList.remove('hidden');
@@ -98,28 +99,31 @@ function setupEventListeners() {
           connReport.className = 'connection-report error';
           connReport.textContent = `✗ فشل الاتصال: ${response?.error || 'خطأ غير معروف'}. حاول فتح Mostaql.com أولاً.`;
         }
-      });
+      } catch (error) {
+        connBtn.disabled = false;
+        connBtn.innerHTML = originalContent;
+        connReport.className = 'connection-report error';
+        connReport.classList.remove('hidden');
+        connReport.textContent = `✗ فشل الاتصال: ${error.message}. حاول فتح Mostaql.com أولاً.`;
+      }
     });
   }
 
   // Toggle Notifications
   const toggleBtn = document.getElementById('toggleNotificationsBtn');
   if (toggleBtn) {
-    // Load initial state
-    chrome.storage.local.get(['notificationsEnabled'], (data) => {
+    browserApi.storage.local.get(['notificationsEnabled']).then((data) => {
       const isEnabled = data.notificationsEnabled !== false; // Default to true
       updateToggleUI(toggleBtn, isEnabled);
     });
 
-    toggleBtn.addEventListener('click', () => {
-      chrome.storage.local.get(['notificationsEnabled'], (data) => {
+    toggleBtn.addEventListener('click', async () => {
+      const data = await browserApi.storage.local.get(['notificationsEnabled']);
         const isEnabled = data.notificationsEnabled !== false;
         const newState = !isEnabled;
-        
-        chrome.storage.local.set({ notificationsEnabled: newState }, () => {
-          updateToggleUI(toggleBtn, newState);
-        });
-      });
+
+        await browserApi.storage.local.set({ notificationsEnabled: newState });
+        updateToggleUI(toggleBtn, newState);
     });
   }
 }

@@ -166,14 +166,13 @@ function _openMonitoredModal() {
     _loadMonitoredData();
 }
 
-function _loadMonitoredData() {
+async function _loadMonitoredData() {
     const listEl = document.getElementById('frelancia-monitored-modal-body');
     if (!listEl) return;
 
     listEl.innerHTML = `<div style="text-align:center; padding:40px; color:#999;"><i class="fa fa-spinner fa-spin fa-2x"></i></div>`;
 
-    chrome.storage.local.get(['trackedProjects'], (data) => {
-        if (chrome.runtime.lastError) return;
+    const data = await browserApi.storage.local.get(['trackedProjects']);
 
         const tracked = data.trackedProjects || {};
         const jobs = Object.values(tracked)
@@ -206,7 +205,6 @@ function _loadMonitoredData() {
                     ${meta ? `<ul class="project__meta list-meta text-zeta clr-gray-dark">${meta}</ul>` : ''}
                 </div>`;
         }).join('') + `</div>`;
-    });
 }
 
 function _extractBidRow(renderedHtml) {

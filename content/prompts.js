@@ -8,27 +8,21 @@ function loadPrompts(callback) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
     }
-    chrome.storage.local.get(['prompts'], (data) => {
-        if (chrome.runtime.lastError) {
-            console.error('Error loading prompts:', chrome.runtime.lastError);
-            return;
-        }
+    (async () => {
+        const data = await browserApi.storage.local.get(['prompts']);
         const storedPrompts = data.prompts || [];
 
         if (storedPrompts.length > 0) {
             callback(storedPrompts);
-        } else {
-            chrome.runtime.sendMessage({ action: 'getDefaultPrompts' }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('Error fetching default prompts:', chrome.runtime.lastError);
-                    return;
-                }
-                const defaults = (response && response.prompts) ? response.prompts : [];
-                chrome.storage.local.set({ prompts: defaults }, () => {
-                    callback(defaults);
-                });
-            });
+            return;
         }
+
+        const response = await browserApi.runtime.sendMessage({ action: 'getDefaultPrompts' });
+        const defaults = (response && response.prompts) ? response.prompts : [];
+        await browserApi.storage.local.set({ prompts: defaults });
+        callback(defaults);
+    })().catch((error) => {
+        console.error('Error loading prompts:', error);
     });
 }
 
@@ -37,7 +31,8 @@ function savePrompt(promptData, callback) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
     }
-    chrome.storage.local.get(['prompts'], (data) => {
+    (async () => {
+        const data = await browserApi.storage.local.get(['prompts']);
         let prompts = data.prompts || [];
         let savedId = promptData.id;
 
@@ -59,9 +54,10 @@ function savePrompt(promptData, callback) {
             prompts.push(newPrompt);
         }
 
-        chrome.storage.local.set({ prompts }, () => {
-            if (callback) callback(savedId);
-        });
+        await browserApi.storage.local.set({ prompts });
+        if (callback) callback(savedId);
+    })().catch((error) => {
+        console.error('Error saving prompt:', error);
     });
 }
 

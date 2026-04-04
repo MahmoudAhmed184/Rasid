@@ -54,7 +54,7 @@ function setupAutofillListeners() {
     const list = document.getElementById('recentProjectsList');
     if (!list || list.dataset.listenerSet) return;
 
-    list.addEventListener('click', (e) => {
+    list.addEventListener('click', async (e) => {
         const btn = e.target.closest('.btn-apply-autofill');
         if (!btn) return;
 
@@ -64,19 +64,17 @@ function setupAutofillListeners() {
         const durationText = btn.dataset.duration;
         const url = btn.href;
 
-        chrome.storage.local.get(['proposalTemplate'], (data) => {
-            const autofillData = {
-                projectId,
-                amount:   parseMinBudgetValue(budgetText),
-                duration: parseDurationDays(durationText),
-                proposal: data.proposalTemplate || '',
-                timestamp: Date.now()
-            };
-            chrome.storage.local.set({ 'mostaql_pending_autofill': autofillData }, () => {
-                const urlWithFlag = url + (url.includes('?') ? '&' : '?') + 'mostaql_autofill=true';
-                window.open(urlWithFlag, '_blank');
-            });
-        });
+        const data = await browserApi.storage.local.get(['proposalTemplate']);
+        const autofillData = {
+            projectId,
+            amount:   parseMinBudgetValue(budgetText),
+            duration: parseDurationDays(durationText),
+            proposal: data.proposalTemplate || '',
+            timestamp: Date.now()
+        };
+        await browserApi.storage.local.set({ 'mostaql_pending_autofill': autofillData });
+        const urlWithFlag = url + (url.includes('?') ? '&' : '?') + 'mostaql_autofill=true';
+        window.open(urlWithFlag, '_blank');
     });
     list.dataset.listenerSet = "true";
 }

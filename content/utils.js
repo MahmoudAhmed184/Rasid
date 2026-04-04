@@ -7,10 +7,10 @@ let observerStarted = false;
 
 function isContextValid() {
     try {
-        return typeof chrome !== 'undefined' &&
-            !!chrome.runtime &&
-            !!chrome.runtime.id &&
-            !!chrome.storage;
+        return typeof browserApi !== 'undefined' &&
+            !!browserApi.runtime &&
+            !!browserApi.runtime.id &&
+            !!browserApi.storage;
     } catch (e) {
         return false;
     }

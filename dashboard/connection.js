@@ -2,8 +2,8 @@
 // dashboard/connection.js — SignalR / polling connection status
 // ==========================================
 
-function loadConnectionStatus() {
-    chrome.storage.local.get(['signalRConnected', 'signalRFallbackActive', 'settings'], (data) => {
+async function loadConnectionStatus() {
+    const data = await browserApi.storage.local.get(['signalRConnected', 'signalRFallbackActive', 'settings']);
         const statusEl = document.getElementById('stat-connection');
         const iconEl = document.getElementById('connection-status-icon');
         if (!statusEl || !iconEl) return;
@@ -27,5 +27,4 @@ function loadConnectionStatus() {
             iconEl.className = 'stat-icon purple';
             iconEl.innerHTML = '<i class="fas fa-plug"></i>';
         }
-    });
 }

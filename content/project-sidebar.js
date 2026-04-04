@@ -41,13 +41,12 @@ function injectTrackButton() {
 
         const projectId = getProjectId();
         if (isContextValid()) {
-            chrome.storage.local.get(['trackedProjects'], (data) => {
-                if (chrome.runtime.lastError) return;
+            browserApi.storage.local.get(['trackedProjects']).then((data) => {
                 const tracked = data.trackedProjects || {};
                 if (tracked[projectId]) {
                     setButtonTracked(trackBtn);
                 }
-            });
+            }).catch(console.error);
         }
 
         trackBtn.addEventListener('click', () => {
@@ -206,7 +205,7 @@ function injectTrackButton() {
     }
 }
 
-function handleTrackClick(btn) {
+async function handleTrackClick(btn) {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -214,18 +213,17 @@ function handleTrackClick(btn) {
     const projectId = getProjectId();
     if (!projectId) return;
 
-    chrome.storage.local.get(['trackedProjects'], (data) => {
-        let tracked = data.trackedProjects || {};
-        if (tracked[projectId]) {
-            delete tracked[projectId];
-            setButtonUntracked(btn);
-        } else {
-            tracked[projectId] = extractProjectData();
-            tracked[projectId].id = projectId;
-            setButtonTracked(btn);
-        }
-        chrome.storage.local.set({ trackedProjects: tracked });
-    });
+    const data = await browserApi.storage.local.get(['trackedProjects']);
+    let tracked = data.trackedProjects || {};
+    if (tracked[projectId]) {
+        delete tracked[projectId];
+        setButtonUntracked(btn);
+    } else {
+        tracked[projectId] = extractProjectData();
+        tracked[projectId].id = projectId;
+        setButtonTracked(btn);
+    }
+    await browserApi.storage.local.set({ trackedProjects: tracked });
 }
 
 function setButtonTracked(btn) {
@@ -286,7 +284,7 @@ function handleChatGptClick(promptId) {
             processTemplate(templateContent);
         } else if (promptId === 'default_proposal') {
             console.warn('Default prompt not modified/found locally, fetching original default.');
-            chrome.runtime.sendMessage({ action: 'getDefaultPrompts' }, (response) => {
+            browserApi.runtime.sendMessage({ action: 'getDefaultPrompts' }).then((response) => {
                 const defaults = (response && response.prompts) ? response.prompts : [];
                 const def = defaults.find(d => d.id === 'default_proposal');
                 if (def) {
@@ -294,6 +292,9 @@ function handleChatGptClick(promptId) {
                 } else {
                     alert('خطأ: تعذر تحميل القالب الافتراضي.');
                 }
+            }).catch((error) => {
+                console.error('Error loading default prompts:', error);
+                alert('خطأ: تعذر تحميل القالب الافتراضي.');
             });
             return;
         } else {
@@ -302,7 +303,7 @@ function handleChatGptClick(promptId) {
             return;
         }
 
-        function processTemplate(content) {
+        async function processTemplate(content) {
             let prompt = content
                 .replace(/{title}/g, projectData.title)
                 .replace(/{url}/g, projectData.url)
@@ -321,13 +322,11 @@ function handleChatGptClick(promptId) {
                 .replace(/{client_joined}/g, projectData.clientJoined)
                 .replace(/{client_type}/g, projectData.clientType);
 
-            chrome.storage.local.set({ 'pendingChatGptPrompt': prompt }, () => {
-                chrome.storage.local.get(['settings'], (result) => {
-                    const settings = result.settings || {};
-                    const url = settings.aiChatUrl || 'https://chatgpt.com/';
-                    window.open(url, 'mostaql_ai_chat');
-                });
-            });
+            await browserApi.storage.local.set({ 'pendingChatGptPrompt': prompt });
+            const result = await browserApi.storage.local.get(['settings']);
+            const settings = result.settings || {};
+            const url = settings.aiChatUrl || 'https://chatgpt.com/';
+            window.open(url, 'mostaql_ai_chat');
         }
     });
 }

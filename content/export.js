@@ -465,19 +465,16 @@ async function executeExportAll() {
         });
     }
 
-    if (chrome.runtime && chrome.runtime.id) {
-        return new Promise((resolve) => {
-            chrome.runtime.sendMessage({
+    if (browserApi.runtime && browserApi.runtime.id) {
+        await browserApi.runtime.sendMessage({
                 action: 'download_zip',
                 filename: `${folderName}.zip`,
                 files: filesToZip
-            }, () => {
-                const blob = new Blob([html], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
-                resolve();
             });
-        });
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        return;
     } else {
         alert("انتهت صلاحية جلسة الإضافة بسبب تحديثها. يرجى تحديث الصفحة (Refresh) والمحاولة مرة أخرى.");
         throw new Error("Context invalidated");

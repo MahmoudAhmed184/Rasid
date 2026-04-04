@@ -2,7 +2,7 @@
 // dashboard/settings.js — Settings read/write & save status toast
 // ==========================================
 
-function saveAllSettings() {
+async function saveAllSettings() {
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? (el.type === 'checkbox' ? el.checked : el.value) : null;
@@ -29,15 +29,14 @@ function saveAllSettings() {
 
     const proposalTemplate = document.getElementById('proposalTemplate').value;
 
-    chrome.storage.local.set({ settings, proposalTemplate }, () => {
-        showSaveStatus();
-        chrome.runtime.sendMessage({ action: 'updateAlarm', interval: settings.interval });
-        if (settings.notificationMode === 'polling') {
-            chrome.runtime.sendMessage({ action: 'disconnectSignalR' });
-        } else {
-            chrome.runtime.sendMessage({ action: 'reconnectSignalR' });
-        }
-    });
+    await browserApi.storage.local.set({ settings, proposalTemplate });
+    showSaveStatus();
+    await browserApi.runtime.sendMessage({ action: 'updateAlarm', interval: settings.interval });
+    if (settings.notificationMode === 'polling') {
+        await browserApi.runtime.sendMessage({ action: 'disconnectSignalR' });
+    } else {
+        await browserApi.runtime.sendMessage({ action: 'reconnectSignalR' });
+    }
 }
 
 function showSaveStatus() {
