@@ -1,9 +1,9 @@
 // ==========================================
-// bg/message-handler.js — Chrome runtime message dispatcher
+// bg/message-handler.js — Cross-browser runtime message dispatcher
 // Depends on: constants.js, filters.js, notifications.js, job-checker.js, audio.js
 // ==========================================
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'checkNow') {
         checkForNewJobs()
             .then((result) => sendResponse(result))

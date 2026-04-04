@@ -1,6 +1,0 @@
-{
-    "permissions": ["notifications", "alarms", "storage", "downloads", "offscreen"],
-    "background": {
-        "service_worker": "background.js"
-    }
-}

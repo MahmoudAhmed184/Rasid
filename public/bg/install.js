@@ -3,7 +3,7 @@
 // Depends on: constants.js (DEFAULT_PROMPTS)
 // ==========================================
 
-chrome.runtime.onInstalled.addListener(async () => {
+browser.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed');
 
     const data = await browserApi.storage.local.get([

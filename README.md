@@ -76,14 +76,14 @@ npm run build
     ```
 2. Navigate to `chrome://extensions/` in your browser.
 3. Toggle the **Developer mode** switch in the top right corner.
-4. Click **Load unpacked** and select the `dist/chrome` directory.
+4. Click **Load unpacked** and select the `dist/chrome-mv3` directory.
 5. Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
 
 #### For Mozilla Firefox
 
 1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
 2. Click **Load Temporary Add-on...**
-3. Select `dist/firefox/manifest.json`.
+3. Select `dist/firefox-mv3/manifest.json`.
 4. Use Firefox 140 or newer for the packaged AMO-compatible build.
 5. Pin the extension from the extensions menu.
 
@@ -102,14 +102,8 @@ npm run build:chrome
 npm run build:firefox
 ```
 
-Clean generated output:
-
-```bash
-npm run clean
-```
-
-The build script treats `manifests/base.json` as the shared manifest source and writes browser-specific manifests to `dist/chrome/manifest.json` and `dist/firefox/manifest.json`.
-The workspace root [`manifest.json`](manifest.json) is kept in sync with the Chrome build for local development convenience; use `dist/firefox/manifest.json` for Firefox testing.
+The extension now builds through [`wxt.config.ts`](wxt.config.ts), targeting `dist/chrome-mv3` and `dist/firefox-mv3`.
+Static runtime assets live under `public/`, while WXT generates the browser-specific MV3 manifests at build time.
 
 Firefox testing instructions are available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
 

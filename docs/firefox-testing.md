@@ -5,7 +5,7 @@
 1. Run `npm run build`.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click `Load Temporary Add-on...`.
-4. Select `dist/firefox/manifest.json`.
+4. Select `dist/firefox-mv3/manifest.json`.
 5. Use Firefox 140 or newer.
 6. Use the `Reload` button after rebuilding.
 
@@ -27,6 +27,6 @@
 If `web-ext` is installed locally or globally:
 
 ```bash
-web-ext run --source-dir dist/firefox
-web-ext lint --source-dir dist/firefox
+web-ext run --source-dir dist/firefox-mv3
+web-ext lint --source-dir dist/firefox-mv3
 ```

@@ -1,11 +1,11 @@
 // ==========================================
-// bg/alarm-handler.js — Chrome alarms listener
+// bg/alarm-handler.js — Cross-browser alarms listener
 // Depends on: signalr.js, job-checker.js, tracker.js, constants.js
 // ==========================================
 
 /* global signalRClient */
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'checkJobs') {
         const data = await browserApi.storage.local.get(['settings']);
         const notificationMode = (data.settings || {}).notificationMode || 'auto';

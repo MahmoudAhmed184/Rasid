@@ -5,7 +5,7 @@
 //
 // Firefox differences:
 //   - notifications.create() does NOT support `buttons` or `requireInteraction`
-//   - chrome.notifications.onButtonClicked does NOT exist
+//   - browser.notifications.onButtonClicked does NOT exist
 //   - notification body clicks (onClicked) work identically on both browsers
 //
 // Strategy: build a base options object, then conditionally add Chrome-only
@@ -95,7 +95,7 @@ function parseMinBudgetValue(budgetText) {
 // Body click - supported identically on Chrome and Firefox.
 // On Firefox this is the ONLY way to interact with a notification
 // (no action buttons), so we ensure it always opens the project URL.
-chrome.notifications.onClicked.addListener(async (notificationId) => {
+browser.notifications.onClicked.addListener(async (notificationId) => {
     const data = await browserApi.storage.local.get([`notification_${notificationId}`]);
     const job = data[`notification_${notificationId}`];
     if (job) {
@@ -106,9 +106,9 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 
 // Button clicks - Chrome-only feature.
 // Guard with typeof to avoid a ReferenceError on Firefox where
-// chrome.notifications.onButtonClicked is undefined.
-if (typeof chrome.notifications.onButtonClicked !== 'undefined') {
-    chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+// browser.notifications.onButtonClicked is undefined.
+if (typeof browser.notifications.onButtonClicked !== 'undefined') {
+    browser.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
         const data = await browserApi.storage.local.get([`notification_${notificationId}`]);
         const job = data[`notification_${notificationId}`];
         if (!job) {

@@ -2,7 +2,7 @@
 // Background Service Worker - Entry Point
 // ==========================================
 
-importScripts('lib/browser-api.js');
+importScripts('vendor/browser-polyfill.js', 'lib/browser-api.js');
 
 // Load constants first (declares SIGNALR_AVAILABLE)
 importScripts('bg/constants.js');
