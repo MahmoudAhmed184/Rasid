@@ -3,7 +3,6 @@
 //               or Web Audio API directly (Firefox)
 //
 // Depends on: bg/offscreen.js (_IS_FIREFOX, setupOffscreenDocument)
-//             bg/html-parser.js loaded before this file
 //
 // Firefox event pages have full access to AudioContext, so we play
 // the notification beeps directly without any offscreen document.
@@ -37,6 +36,8 @@ function _playToneDirectly(audioContext, frequency, startTime, duration) {
 
   oscillator.start(now + startTime);
   oscillator.stop(now + startTime + duration);
+
+  return oscillator;
 }
 
 /**
@@ -48,7 +49,13 @@ async function _playBeepDirectly() {
     const audioContext = new AudioContext();
     if (audioContext.state === 'suspended') await audioContext.resume();
     _playToneDirectly(audioContext, 800,  0,   0.15);
-    _playToneDirectly(audioContext, 1000, 0.2, 0.15);
+    const lastOsc = _playToneDirectly(audioContext, 1000, 0.2, 0.15);
+
+    lastOsc.onended = () => {
+      if (audioContext.state !== 'closed') {
+        audioContext.close().catch(console.error);
+      }
+    };
   } catch (error) {
     console.error('Firefox Audio Error (playBeepDirectly):', error);
   }
@@ -64,7 +71,13 @@ async function _playTrackedBeepDirectly() {
     if (audioContext.state === 'suspended') await audioContext.resume();
     _playToneDirectly(audioContext, 1200, 0,    0.1);
     _playToneDirectly(audioContext, 1200, 0.15, 0.1);
-    _playToneDirectly(audioContext, 1500, 0.3,  0.2);
+    const lastOsc = _playToneDirectly(audioContext, 1500, 0.3,  0.2);
+
+    lastOsc.onended = () => {
+      if (audioContext.state !== 'closed') {
+        audioContext.close().catch(console.error);
+      }
+    };
   } catch (error) {
     console.error('Firefox Audio Error (playTrackedBeepDirectly):', error);
   }

@@ -72,7 +72,7 @@ function showTrackedNotification(project, changeMsg) {
   }
 
   chrome.notifications.create(options, (notificationId) => {
-    chrome.storage.local.set({ [`notification_${notificationId}`]: project.url });
+    chrome.storage.local.set({ [`notification_${notificationId}`]: { url: project.url } });
   });
 }
 

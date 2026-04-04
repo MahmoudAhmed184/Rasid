@@ -2,7 +2,7 @@
 // background-firefox.js — Firefox MV3 Entry Point
 //
 // Firefox MV3 uses event pages (NOT service workers), so all files listed
-// in manifest.firefox.json "background.scripts" are loaded automatically
+// in manifest.json "background.scripts" are loaded automatically
 // in order. This file is listed LAST and handles startup logic only.
 //
 // Key differences from background.js (Chrome):
