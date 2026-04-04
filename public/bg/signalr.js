@@ -3,14 +3,13 @@
 // Depends on: constants.js (SIGNALR_AVAILABLE), signalr-client.js (signalRClient global)
 // ==========================================
 
-/* global signalR, signalRClient */
+/* global signalRClient */
 
 const DEFAULT_SIGNALR_URL = 'https://frelancia.runasp.net/jobNotificationHub';
 
 async function initializeSignalR() {
     try {
         if (!SIGNALR_AVAILABLE) {
-            console.log('⚠️ SignalR not available. Using polling mode.');
             return;
         }
 
@@ -28,18 +27,11 @@ async function initializeSignalR() {
             return;
         }
 
-        console.log('Initializing SignalR connection...');
-
         signalRClient.onFallbackActivated(() => {
             console.warn('🔄 SignalR fallback activated — polling will handle new jobs.');
         });
 
-        signalRClient.onReconnected(() => {
-            console.log('✅ SignalR reconnected — polling fallback deactivated.');
-        });
-
         await signalRClient.connect();
-        console.log('SignalR connection established');
     } catch (error) {
         console.error('Error initializing SignalR:', error);
     }
@@ -56,7 +48,6 @@ async function reconnectSignalR() {
         signalRClient.reconnectAttempts = 0;
 
         await initializeSignalR();
-        console.log('SignalR: Reconnected with new settings.');
     } catch (error) {
         console.error('Error reconnecting SignalR:', error);
     }

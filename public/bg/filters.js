@@ -6,9 +6,6 @@ function applyFilters(job, settings) {
     if (settings.minBudget > 0 && job.budget) {
         const budgetValue = parseBudgetValue(job.budget);
         if (budgetValue > 0 && budgetValue < settings.minBudget) {
-            console.log(
-                `Filtering out job ${job.id} due to low budget: ${job.budget} -> ${budgetValue} < ${settings.minBudget}`
-            );
             return false;
         }
     }
@@ -16,9 +13,6 @@ function applyFilters(job, settings) {
     if (settings.minHiringRate > 0 && job.hiringRate) {
         const hiringRateValue = parseHiringRate(job.hiringRate);
         if (hiringRateValue < settings.minHiringRate) {
-            console.log(
-                `Filtering out job ${job.id} due to low hiring rate: ${job.hiringRate} -> ${hiringRateValue}% < ${settings.minHiringRate}%`
-            );
             return false;
         }
     }
@@ -30,7 +24,6 @@ function applyFilters(job, settings) {
             .map((k) => k.trim());
         const jobContent = (job.title + ' ' + (job.description || '')).toLowerCase();
         if (!includes.some((k) => jobContent.includes(k))) {
-            console.log(`Filtering out job ${job.id} because it doesn't match include keywords`);
             return false;
         }
     }
@@ -42,7 +35,6 @@ function applyFilters(job, settings) {
             .map((k) => k.trim());
         const jobContent = (job.title + ' ' + (job.description || '')).toLowerCase();
         if (excludes.some((k) => jobContent.includes(k))) {
-            console.log(`Filtering out job ${job.id} because it matches exclude keywords`);
             return false;
         }
     }
@@ -50,9 +42,6 @@ function applyFilters(job, settings) {
     if (settings.maxDuration > 0 && job.duration) {
         const days = parseDurationDays(job.duration);
         if (days > 0 && days > settings.maxDuration) {
-            console.log(
-                `Filtering out job ${job.id} due to long duration: ${job.duration} -> ${days} days > ${settings.maxDuration}`
-            );
             return false;
         }
     }
@@ -60,9 +49,6 @@ function applyFilters(job, settings) {
     if (settings.minClientAge > 0 && job.registrationDate) {
         const ageDays = calculateClientAgeDays(job.registrationDate);
         if (ageDays >= 0 && ageDays < settings.minClientAge) {
-            console.log(
-                `Filtering out job ${job.id} due to young account: ${job.registrationDate} -> ${ageDays} days < ${settings.minClientAge}`
-            );
             return false;
         }
     }

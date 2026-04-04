@@ -36,9 +36,7 @@ async function checkForNewJobs() {
 
         for (const [category, url] of Object.entries(MOSTAQL_URLS)) {
             if (settings[category] !== false) {
-                console.log(`Checking category: ${category}`);
                 const jobs = await fetchJobs(url);
-                console.log(`Found ${jobs.length} total jobs in ${category}`);
 
                 jobs.forEach((job) => {
                     if (applyFilters(job, settings)) {
@@ -57,7 +55,6 @@ async function checkForNewJobs() {
                     }
                     return applyFilters(job, settings);
                 });
-                console.log(`Found ${newJobs.length} NEW jobs in ${category}`);
 
                 allNewJobs = allNewJobs.concat(newJobs);
                 newJobs.forEach((job) => {
@@ -84,13 +81,11 @@ async function checkForNewJobs() {
         recentJobs = recentJobs.slice(0, 50);
 
         await browserApi.storage.local.set({ seenJobs, stats, recentJobs });
-        console.log(`Phase 1 Commit: Saved ${allNewJobs.length} new jobs to dashboard.`);
 
         // Phase 2: Enrich top 10
         const top10 = recentJobs.slice(0, 10);
         for (const job of top10) {
             if (!job.description || !job.hiringRate || job.hiringRate === 'غير محدد') {
-                console.log(`Enriching top project ${job.id} for dashboard...`);
                 try {
                     const projectDetails = await fetchProjectDetails(job.url);
                     if (projectDetails) {
@@ -117,21 +112,16 @@ async function checkForNewJobs() {
         }
 
         if (allNewJobs.length === 0) {
-            console.log(
-                `✓ Check completed at ${new Date().toLocaleTimeString()}, found 0 new jobs`
-            );
             return { success: true, newJobs: 0, totalChecked: seenJobs.length };
         }
 
         if (settings.quietHoursEnabled && isQuietHour(settings)) {
-            console.log('Quiet Hours active, suppressing notifications/sounds');
             return { success: true, newJobs: 0, suppressed: allNewJobs.length };
         }
 
         // Phase 3: Deep filter
         const qualityJobs = [];
         for (const job of allNewJobs) {
-            console.log(`Deep checking job ${job.id} for details...`);
             try {
                 const projectDetails = await fetchProjectDetails(job.url);
                 if (projectDetails) {
@@ -147,7 +137,6 @@ async function checkForNewJobs() {
                     }
 
                     if (!applyFilters(job, settings)) {
-                        console.log(`Filtering out job ${job.id} after deep check`);
                         continue;
                     }
                 }
@@ -171,14 +160,9 @@ async function checkForNewJobs() {
                 if (settings.sound) {
                     await playSound();
                 }
-            } else {
-                console.log('Notifications are toggled off. Skipping alert for new jobs.');
             }
         }
 
-        console.log(
-            `✓ Check completed at ${new Date().toLocaleTimeString()}, found ${allNewJobs.length} new jobs`
-        );
         return { success: true, newJobs: allNewJobs.length, totalChecked: seenJobs.length };
     } catch (error) {
         console.error('Error checking jobs:', error);

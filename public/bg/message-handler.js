@@ -42,7 +42,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             .clear('checkJobs')
             .then(() => {
                 browserApi.alarms.create('checkJobs', { periodInMinutes: interval });
-                console.log(`Alarm 'checkJobs' updated to ${interval} minutes.`);
                 sendResponse({ success: true, interval: interval });
             })
             .catch((error) => {
@@ -87,11 +86,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'debugFetch') {
         fetch(MOSTAQL_URLS.all)
             .then((r) => r.text())
-            .then((html) => {
-                console.log('HTML Preview (first 2000 chars):');
-                console.log(html.substring(0, 2000));
-                sendResponse({ success: true, length: html.length });
-            })
+            .then((html) => sendResponse({ success: true, length: html.length }))
             .catch((e) => sendResponse({ success: false, error: e.message }));
         return true;
     }

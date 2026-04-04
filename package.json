@@ -19,9 +19,6 @@
         "lint:fix": "eslint . --fix",
         "lint:firefox": "web-ext lint --source-dir dist/firefox-mv3"
     },
-    "dependencies": {
-        "webextension-polyfill": "^0.12.0"
-    },
     "devDependencies": {
         "@wxt-dev/webextension-polyfill": "^1.0.0",
         "eslint": "^9.38.0",

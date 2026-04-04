@@ -48,7 +48,7 @@ const firefoxBackgroundScripts = [
     'signalr.min.js',
     'signalr-client.js',
     'bg/filters.js',
-    'bg/offscreen-firefox.js',
+    'bg/offscreen.js',
     'bg/audio.js',
     'bg/notifications.js',
     'bg/fetcher.js',
@@ -68,18 +68,18 @@ export default defineConfig({
     modules: ['@wxt-dev/webextension-polyfill'],
     hooks: {
         'build:publicAssets': (wxt, files) => {
-            if (wxt.config.browser !== 'firefox') {
-                return;
-            }
+            const excludedFiles =
+                wxt.config.browser === 'firefox'
+                    ? ['background.js', 'offscreen.html', 'offscreen.js']
+                    : wxt.config.browser === 'chrome'
+                      ? ['background-firefox.js']
+                      : [];
 
-            const firefoxSafeFiles = files.filter(
-                (file) =>
-                    !['bg/offscreen.js', 'offscreen.html', 'offscreen.js'].includes(
-                        file.relativeDest
-                    )
+            const safeFiles = files.filter(
+                (file) => !excludedFiles.includes(file.relativeDest)
             );
 
-            files.splice(0, files.length, ...firefoxSafeFiles);
+            files.splice(0, files.length, ...safeFiles);
         },
     },
     manifest: ({ browser }) => ({

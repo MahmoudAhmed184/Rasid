@@ -17,8 +17,6 @@ async function checkTrackedProjects() {
         return;
     }
 
-    console.log(`Checking ${projectIds.length} tracked projects...`);
-
     for (const id of projectIds) {
         const project = trackedProjects[id];
         try {
@@ -54,7 +52,6 @@ async function checkTrackedProjects() {
                 }
 
                 if (changed) {
-                    console.log(`Update for project ${id}: ${changeMsg}`);
                     const isEnabled = data.notificationsEnabled !== false;
 
                     if (isEnabled) {
@@ -62,10 +59,6 @@ async function checkTrackedProjects() {
                         if (settings.sound) {
                             await playTrackedSound();
                         }
-                    } else {
-                        console.log(
-                            'Notifications are toggled off. Skipping alert for tracked project update.'
-                        );
                     }
 
                     trackedProjects[id].status = currentData.status;

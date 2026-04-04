@@ -256,30 +256,9 @@ function handleChatGptClick(promptId) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
     }
-    console.log('handleChatGptClick called with ID:', promptId);
 
     const projectData = extractProjectData();
     const description = getProjectDescription();
-
-    console.log('--- Mostaql Ext Data Debug ---');
-    console.log('Title:', projectData.title);
-    console.log('URL:', projectData.url);
-    console.log('Description:', description);
-    console.log('Tags:', projectData.tags);
-    console.log('Client Name:', projectData.clientName);
-    console.log('Budget:', projectData.budget);
-    console.log('Duration:', projectData.duration);
-    console.log('Publish Date:', projectData.publishDate);
-    console.log('Status:', projectData.status);
-    console.log('Project ID:', projectData.id);
-    console.log('Category:', projectData.category);
-    console.log('Hiring Rate:', projectData.hiringRate);
-    console.log('Open Projects:', projectData.openProjects);
-    console.log('Underway Projects:', projectData.underwayProjects);
-    console.log('Client Joined:', projectData.clientJoined);
-    console.log('Client Type:', projectData.clientType);
-    console.log('Communications:', projectData.communications);
-    console.log('------------------------------');
 
     if (!description) {
         alert('لم يتم العثور على وصف المشروع.');
@@ -289,8 +268,6 @@ function handleChatGptClick(promptId) {
     loadPrompts((prompts) => {
         let templateContent = '';
         const selectedPrompt = prompts.find((p) => p.id === promptId);
-        console.log('Prompts loaded:', prompts.length);
-        console.log('Selected prompt found:', !!selectedPrompt);
 
         if (selectedPrompt) {
             templateContent = selectedPrompt.content;

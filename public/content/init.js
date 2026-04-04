@@ -9,7 +9,6 @@ function runInjectors() {
     }
 
     const page = getPageType();
-    console.log('[DEBUG] page:', page);
 
     if (page === 'project') {
         injectTrackButton();

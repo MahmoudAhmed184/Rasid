@@ -275,12 +275,6 @@ function _extractBidRow(renderedHtml) {
         ?.querySelector('span');
     const url = (titleLink?.getAttribute('href') || null).split('-')[0];
 
-    let publishedText = null;
-    if (timeEl) {
-        const li = timeEl.closest('li');
-        publishedText = li ? li.textContent.replace(/\s+/g, ' ').trim() : null;
-    }
-
     return {
         title: titleLink?.textContent?.trim() || null,
         url,
@@ -409,15 +403,11 @@ async function _fetchAllBids() {
     const allBids = [];
 
     const firstData = await _fetchBidPage(1);
-    console.log('all bids count:', firstData.count);
-
     const totalPages = Math.ceil(firstData.count / itemsPerPage);
-    console.log('total pages:', totalPages);
 
     allBids.push(..._processBidsFromPage(firstData));
 
     for (let page = 2; page <= totalPages; page++) {
-        console.log(`Fetching page ${page}...`);
         try {
             const data = await _fetchBidPage(page);
             allBids.push(..._processBidsFromPage(data));
@@ -670,7 +660,6 @@ function _startSlotCountdowns() {
 async function _loadBidStats() {
     try {
         const stats = await _fetchAllBids();
-        console.log('Final stats:', stats);
         _renderBidStats(stats);
     } catch (err) {
         console.error('Error fetching bids:', err);

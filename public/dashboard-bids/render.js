@@ -88,8 +88,6 @@ function getStatusCssClass(status) {
 function renderBidTrackerSummary(stats, homepageStats) {
     const totalEl = document.getElementById('bids-total-30d');
     const availableEl = document.getElementById('bids-available-slots');
-    const planEl = document.getElementById('bids-plan-usage');
-    const additionalEl = document.getElementById('bids-additional');
     const nextEl = document.getElementById('bids-next-available');
     const todayEl = document.getElementById('bids-today-count');
 
@@ -102,14 +100,6 @@ function renderBidTrackerSummary(stats, homepageStats) {
 
     if (availableEl) {
         availableEl.textContent = homepageStats.available;
-    }
-    if (additionalEl) {
-        additionalEl.textContent = homepageStats.additional;
-    }
-    if (planEl) {
-        const used = homepageStats.planUsed;
-        const total = homepageStats.planTotal;
-        planEl.textContent = used !== '-' && total !== '-' ? `${used} / ${total}` : '-';
     }
 
     if (nextEl && stats.nextAvailable) {

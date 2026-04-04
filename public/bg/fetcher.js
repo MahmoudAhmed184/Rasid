@@ -3,27 +3,9 @@
 // Depends on: offscreen.js (parseJobsOffscreen, parseProjectDetailsOffscreen)
 // ==========================================
 
-function cleanTitle(text) {
-    if (!text) {
-        return 'مشروع جديد';
-    }
-    return text
-        .replace(/<[^>]*>/g, '')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
 async function fetchJobs(url) {
     try {
         const fetchUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-        console.log(`Fetching: ${fetchUrl}`);
-
         const response = await fetch(fetchUrl, {
             method: 'GET',
             credentials: 'omit',
@@ -42,16 +24,12 @@ async function fetchJobs(url) {
         }
 
         const html = await response.text();
-        console.log(`Received HTML length: ${html.length}`);
-
         if (html.includes('Cloudflare') || html.includes('challenge-platform')) {
             console.error('Cloudflare challenge detected. Please open Mostaql.com in a tab first.');
             return [];
         }
 
-        const jobs = await parseJobsOffscreen(html);
-        console.log(`Parsed ${jobs.length} jobs from fetched HTML`);
-        return jobs;
+        return await parseJobsOffscreen(html);
     } catch (error) {
         console.error('Error fetching jobs:', error);
         return [];

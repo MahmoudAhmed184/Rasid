@@ -117,7 +117,6 @@ if (typeof browser.notifications.onButtonClicked !== 'undefined') {
 
         if (buttonIndex === 0) {
             // "قدّم الآن" - open project with autofill flag
-            console.log(`Apply Now clicked for job ${job.id}`);
             const settingsData = await browserApi.storage.local.get(['proposalTemplate']);
             const minBudget = parseMinBudgetValue(job.budget);
             const durationDays = parseDurationDays(job.duration || '');

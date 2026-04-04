@@ -24,7 +24,6 @@ class SignalRClient {
     async connect() {
         try {
             if (this.connection && this.isConnected) {
-                console.log('SignalR: Already connected, skipping...');
                 return;
             }
 
@@ -35,8 +34,6 @@ class SignalRClient {
                     console.warn('SignalR: Error stopping existing connection', e);
                 }
             }
-
-            console.log('SignalR: Initializing connection to', this.serverUrl);
 
             this.connection = new signalR.HubConnectionBuilder()
                 .withUrl(this.serverUrl, {
@@ -69,7 +66,6 @@ class SignalRClient {
             await this.connection.start();
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            console.log('SignalR: Connected successfully');
 
             await browserApi.storage.local.set({
                 signalRConnected: true,
@@ -95,15 +91,10 @@ class SignalRClient {
         // connections don't bleed state into a newly-established connection.
         const conn = this.connection;
 
-        this.connection.on('Connected', (data) => {
-            console.log('SignalR: Connection confirmed', data);
-        });
-
         this.connection.on('NewJobsDetected', async (data) => {
             if (this.connection !== conn) {
                 return;
             } // stale — ignore
-            console.log('SignalR: New jobs detected', data);
 
             if (!data || !Array.isArray(data.jobs)) {
                 console.warn('SignalR: Invalid payload received, expected data.jobs array');
@@ -121,29 +112,26 @@ class SignalRClient {
             }
         });
 
-        this.connection.onclose((error) => {
+        this.connection.onclose(() => {
             if (this.connection !== conn) {
                 return;
             } // stale — new connection already active
-            console.log('SignalR: Connection closed', error);
             this.isConnected = false;
             browserApi.storage.local.set({ signalRConnected: false });
         });
 
-        this.connection.onreconnecting((error) => {
+        this.connection.onreconnecting(() => {
             if (this.connection !== conn) {
                 return;
             } // stale
-            console.log('SignalR: Reconnecting...', error);
             this.isConnected = false;
             browserApi.storage.local.set({ signalRConnected: false });
         });
 
-        this.connection.onreconnected((connectionId) => {
+        this.connection.onreconnected(() => {
             if (this.connection !== conn) {
                 return;
             } // stale
-            console.log('SignalR: Reconnected', connectionId);
             this.isConnected = true;
             browserApi.storage.local.set({
                 signalRConnected: true,
@@ -160,8 +148,6 @@ class SignalRClient {
      * Default handler for new jobs (NO HTTP REQUESTS - just process received data).
      */
     async handleNewJobs(jobs) {
-        console.log(`SignalR: Processing ${jobs.length} new job(s) [ZERO HTTP REQUESTS]`);
-
         const data = await browserApi.storage.local.get([
             'seenJobs',
             'recentJobs',
@@ -175,7 +161,6 @@ class SignalRClient {
         const settings = data.settings || {};
 
         if (settings.systemEnabled === false) {
-            console.log('SignalR: System is paused via Dashboard toggle. Ignoring jobs.');
             return;
         }
 
@@ -188,14 +173,12 @@ class SignalRClient {
 
         for (const job of jobs) {
             if (seenJobs.includes(job.id)) {
-                console.log(`SignalR: Skipping already seen job ${job.id}`);
                 continue;
             }
 
             seenJobs.push(job.id);
 
             if (!applyFilters(job, settings)) {
-                console.log(`SignalR: Filtering out job ${job.id}`);
                 continue;
             }
 
@@ -227,7 +210,6 @@ class SignalRClient {
 
         if (validJobs.length > 0) {
             if (settings.quietHoursEnabled && isQuietHour(settings)) {
-                console.log('SignalR: Quiet Hours active, suppressing notifications');
                 return;
             }
 
@@ -235,19 +217,12 @@ class SignalRClient {
             const isEnabled = data.notificationsEnabled !== false;
 
             if (isEnabled) {
-                console.log(
-                    `SignalR: Showing notifications for ${validJobs.length} job(s) [NO HTTP REQUESTS MADE]`
-                );
                 await showNotification(validJobs);
 
                 if (settings.sound) {
                     await playSound();
                 }
-            } else {
-                console.log('SignalR: Notifications are toggled off. Skipping alert.');
             }
-        } else {
-            console.log('SignalR: No valid jobs to notify after filtering');
         }
     }
 
@@ -289,10 +264,6 @@ class SignalRClient {
 
         this.reconnectAttempts++;
         const delayMinutes = Math.max(this.reconnectAttempts * 0.5, 0.5);
-        console.log(
-            `SignalR: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMinutes} min`
-        );
-
         browserApi.alarms.create('signalRReconnect', { delayInMinutes: delayMinutes });
     }
 
@@ -312,37 +283,11 @@ class SignalRClient {
 
         try {
             await conn.stop();
-            console.log('SignalR: Disconnected');
         } catch (error) {
             console.error('SignalR: Error disconnecting', error);
         }
 
         await browserApi.storage.local.set({ signalRConnected: false });
-    }
-
-    /**
-     * Send a ping to the server (for testing).
-     */
-    async ping() {
-        if (this.isConnected && this.connection) {
-            try {
-                await this.connection.invoke('Ping');
-                console.log('SignalR: Ping sent');
-            } catch (error) {
-                console.error('SignalR: Ping failed', error);
-            }
-        }
-    }
-
-    /**
-     * Get connection status.
-     */
-    getStatus() {
-        return {
-            isConnected: this.isConnected,
-            state: this.connection?.state || 'Disconnected',
-            reconnectAttempts: this.reconnectAttempts,
-        };
     }
 }
 

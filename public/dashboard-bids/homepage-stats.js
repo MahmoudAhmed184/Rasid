@@ -3,11 +3,11 @@
 // ==========================================
 
 /**
- * Scrapes the Mostaql homepage to get available bids, plan usage, and additional bids.
- * @returns {Promise<Object>} - { available, planUsed, planTotal, additional }
+ * Scrapes the Mostaql homepage to get the currently available bid count.
+ * @returns {Promise<Object>} - { available }
  */
 async function fetchMostaqlHomepageStats() {
-    const defaults = { available: '-', planUsed: '-', planTotal: '-', additional: '-' };
+    const defaults = { available: '-' };
 
     try {
         const response = await fetch('https://mostaql.com/', {
@@ -42,33 +42,6 @@ function parseHomepageBidStats(doc, defaults) {
     if (availableLink) {
         result.available = parseInt(availableLink.textContent.trim(), 10) || 0;
     }
-
-    const progressBars = doc.querySelectorAll('.progress__bar');
-    progressBars.forEach((bar) => {
-        const labelEl = bar.querySelector('.pull-right');
-        if (!labelEl) {
-            return;
-        }
-        const label = labelEl.textContent.trim();
-
-        if (label.includes('عروض من الخطة')) {
-            const valueEl = bar.querySelector('.pull-left span, .pull-left');
-            if (valueEl) {
-                const parts = valueEl.textContent.trim().split('/');
-                if (parts.length === 2) {
-                    result.planTotal = parseInt(parts[0].trim(), 10) || 0;
-                    result.planUsed = parseInt(parts[1].trim(), 10) || 0;
-                }
-            }
-        }
-
-        if (label.includes('عروض') && label.includes('إضافية')) {
-            const valueEl = bar.querySelector('.pull-left');
-            if (valueEl) {
-                result.additional = parseInt(valueEl.textContent.trim(), 10) || 0;
-            }
-        }
-    });
 
     return result;
 }

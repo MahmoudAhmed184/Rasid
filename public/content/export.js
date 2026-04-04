@@ -142,13 +142,6 @@ function injectProjectExporter() {
 }
 
 async function executeExportAll() {
-    console.log('Starting export...');
-
-    const myName =
-        document.querySelector('.user-menu__name')?.innerText.trim() ||
-        document.querySelector('#user-menu bdi')?.innerText.trim() ||
-        'غير معروف';
-
     const messages = document.querySelectorAll("#chat-root [id^='message-'], .message-item");
 
     let chatData = [];
@@ -292,8 +285,6 @@ async function executeExportAll() {
             }
         });
     }
-
-    console.log('Extracted Chat Data:', chatData);
 
     const projectDetailsResult = await extractProjectDetailsFull();
     const myProposalResult = extractMyProposalFull(projectDetailsResult?.data);

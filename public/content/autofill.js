@@ -4,7 +4,6 @@
 // ==========================================
 
 function checkForAutofill() {
-    console.log('Mostaql Ext: Checking for pending autofill...');
     handleAutofillSequence();
 }
 
@@ -23,17 +22,13 @@ function handleAutofillSequence() {
 
             const currentProjectId = getProjectId();
             if (autofill.projectId !== currentProjectId) {
-                console.log('Autofill project ID mismatch, skipping.');
                 return;
             }
 
             if (Date.now() - autofill.timestamp > 5 * 60 * 1000) {
-                console.log('Autofill data expired, skipping.');
                 browserApi.storage.local.remove(['mostaql_pending_autofill']);
                 return;
             }
-
-            console.log('Found pending autofill data:', autofill);
 
             let attempts = 0;
             const maxAttempts = 20;
@@ -60,7 +55,6 @@ function handleAutofillSequence() {
                     attempts++;
                     if (attempts >= maxAttempts) {
                         clearInterval(interval);
-                        console.log('Mostaql Ext: Bid form elements not found after 10 seconds.');
                     }
                 }
             }, 500);
@@ -69,8 +63,6 @@ function handleAutofillSequence() {
 }
 
 async function fillForm(amountInput, durationInput, data) {
-    console.log(`Filling form: Amount=${data.amount}, Duration=${data.duration}`);
-
     const triggerEvents = (el) => {
         el.dispatchEvent(new Event('focus', { bubbles: true }));
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -87,9 +79,6 @@ async function fillForm(amountInput, durationInput, data) {
 
     if (!amountToFill || amountToFill === 0) {
         amountToFill = getBudgetFromPage();
-        if (amountToFill > 0) {
-            console.log('Mostaql Ext: Autofill budget fallback used:', amountToFill);
-        }
     }
 
     if (amountToFill > 0) {
@@ -151,7 +140,6 @@ async function handleQuickBidClick() {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
     }
-    console.log('Mostaql Ext: Fast Apply (Quick) clicked.');
 
     const projectId = getProjectId();
     if (!projectId) {

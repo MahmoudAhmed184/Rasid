@@ -15,7 +15,6 @@
 // signalr.min.js declares `signalR` global; signalr-client.js declares `signalRClient`.
 if (typeof signalR !== 'undefined' && typeof signalRClient !== 'undefined') {
     SIGNALR_AVAILABLE = true;
-    console.log('✅ SignalR libraries loaded successfully');
 } else {
     // SIGNALR_AVAILABLE is already false (set in bg/constants.js)
     console.warn('⚠️ SignalR libraries not available. Real-time notifications disabled.');
@@ -25,12 +24,10 @@ if (typeof signalR !== 'undefined' && typeof signalRClient !== 'undefined') {
 
 // Background event page startup
 (async function initOnStartup() {
-    console.log('🦊 Firefox background event page started');
     const data = await browserApi.storage.local.get(['settings']);
     const mode = (data.settings || {}).notificationMode || 'auto';
 
     if (mode === 'polling') {
-        console.log('📡 Notification mode: polling — skipping SignalR init');
         return;
     }
     await initializeSignalR();

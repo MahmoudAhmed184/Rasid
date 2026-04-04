@@ -12,7 +12,7 @@
 // Detection: chrome.offscreen is only defined in Chrome MV3.
 // ==========================================
 
-const _IS_FIREFOX = typeof chrome.offscreen === 'undefined';
+const _IS_FIREFOX = typeof chrome === 'undefined' || typeof chrome.offscreen === 'undefined';
 
 // ─── Chrome-only: setup the offscreen document ────────────────────────────────
 

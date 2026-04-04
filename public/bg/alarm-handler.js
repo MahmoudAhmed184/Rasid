@@ -10,11 +10,10 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
         const data = await browserApi.storage.local.get(['settings']);
         const notificationMode = (data.settings || {}).notificationMode || 'auto';
 
-        checkTrackedProjects();
+        void checkTrackedProjects();
 
         if (notificationMode === 'polling') {
-            console.log('📡 Notification mode: polling — checking for new jobs');
-            checkForNewJobs();
+            void checkForNewJobs();
         } else if (notificationMode === 'signalr') {
             await initializeSignalR();
         } else {
@@ -26,14 +25,12 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
                 signalRClient.isConnected;
 
             if (!isSignalRActive) {
-                console.log('⚠️ SignalR not connected, using polling fallback for new jobs');
-                checkForNewJobs();
+                void checkForNewJobs();
             }
         }
     }
 
     if (alarm.name === 'signalRReconnect') {
-        console.log('SignalR: Reconnect alarm fired, attempting to reconnect...');
         const d = await browserApi.storage.local.get(['settings']);
         const mode = (d.settings || {}).notificationMode || 'auto';
         if (mode !== 'polling') {

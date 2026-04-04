@@ -7,8 +7,6 @@
 
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log(`Offscreen: Received action: ${message.action}`);
-
     if (message.action === 'playSound') {
         playNotificationSound().then(() => sendResponse({ success: true }));
         return true;

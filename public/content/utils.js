@@ -13,7 +13,7 @@ function isContextValid() {
             !!browserApi.runtime.id &&
             !!browserApi.storage
         );
-    } catch (e) {
+    } catch {
         return false;
     }
 }
