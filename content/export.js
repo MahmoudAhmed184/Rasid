@@ -3,6 +3,39 @@
 // Depends on: utils.js, data.js (extractProjectDetailsFull, extractMyProposalFull)
 // ==========================================
 
+const EXPORT_ICON_SHIM_CSS = `
+            .fa {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 1em;
+                line-height: 1;
+                font-style: normal;
+                font-weight: 700;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+                vertical-align: -0.125em;
+            }
+            .fa::before {
+                display: inline-block;
+                line-height: 1;
+                text-align: center;
+            }
+            .fa-3x {
+                font-size: 3em;
+            }
+            .fa-user-circle::before {
+                content: "\\1F464";
+            }
+            .fa-paperclip::before {
+                content: "\\1F4CE";
+            }
+            .fa-file-pdf-o::before {
+                content: "PDF";
+                font-size: 0.5em;
+                letter-spacing: 0.04em;
+            }
+`;
+
 function injectMessageExporter() {
     const targetPanel = document.querySelector("#message-meta");
     if (!targetPanel) return;
@@ -235,12 +268,9 @@ async function executeExportAll() {
     <head>
         <meta charset="UTF-8">
         <title>تقرير مشروع مستقل - ${discussionId}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
         <style>
             :root {
+                --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
                 --primary: #2386c8;
                 --primary-light: #e3f2fd;
                 --text-main: #2c3e50;
@@ -252,7 +282,7 @@ async function executeExportAll() {
                 --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             }
             * { box-sizing: border-box; }
-            body { font-family: 'Cairo', sans-serif; background: var(--bg-body); padding: 40px 20px; line-height: 1.6; color: var(--text-main); margin: 0; font-size: 14px; }
+            body { font-family: var(--font-ui); background: var(--bg-body); padding: 40px 20px; line-height: 1.6; color: var(--text-main); margin: 0; font-size: 14px; }
             .container { max-width: 950px; margin: auto; background: var(--bg-card); padding: 40px; border-radius: var(--radius); box-shadow: var(--shadow); }
             header { text-align: center; margin-bottom: 50px; padding-bottom: 25px; border-bottom: 2px solid var(--primary-light); }
             h1 { margin: 0; color: var(--primary); font-size: 28px; font-weight: 700; }
@@ -289,6 +319,7 @@ async function executeExportAll() {
             .container { counter-reset: section; }
             section h2::before { counter-increment: section; content: counter(section) ". "; }
             .page-break { page-break-before: always; }
+${EXPORT_ICON_SHIM_CSS}
             @media print {
                 body { background: #fff !important; padding: 0 !important; }
                 .container { box-shadow: none !important; border: none !important; width: 100% !important; max-width: none !important; padding: 0 !important; }
@@ -388,7 +419,7 @@ async function executeExportAll() {
             </section>
             ` : ''}
 
-            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:40px; left:40px; padding: 20px 40px; background: var(--primary); color:#fff; border:none; border-radius: 50px; cursor:pointer; font-family: 'Cairo', sans-serif; font-weight:700; font-size:18px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4); display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
+            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:40px; left:40px; padding: 20px 40px; background: var(--primary); color:#fff; border:none; border-radius: 50px; cursor:pointer; font-family: var(--font-ui); font-weight:700; font-size:18px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4); display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
                 <i class="fa fa-file-pdf-o"></i> حفظ وحفظ كـ PDF
             </button>
         </div>
