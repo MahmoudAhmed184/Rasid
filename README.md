@@ -104,6 +104,7 @@ npm run clean
 ```
 
 The build script treats `manifests/base.json` as the shared manifest source and writes browser-specific manifests to `dist/chrome/manifest.json` and `dist/firefox/manifest.json`.
+The workspace root [`manifest.json`](manifest.json) is kept in sync with the Chrome build for local development convenience; use `dist/firefox/manifest.json` for Firefox testing.
 
 Firefox testing instructions are available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
 

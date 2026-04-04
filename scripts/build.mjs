@@ -41,6 +41,8 @@ async function main() {
     await buildTarget(target);
   }
 
+  await syncWorkspaceManifest();
+
   console.log(`Built targets: ${targets.join(', ')}`);
 }
 
@@ -55,6 +57,18 @@ async function buildTarget(target) {
 
   await writeFile(
     path.join(outputDir, 'manifest.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8'
+  );
+}
+
+async function syncWorkspaceManifest() {
+  const baseManifest = await readJson(path.join(MANIFESTS_DIR, 'base.json'));
+  const chromeManifest = await readJson(path.join(MANIFESTS_DIR, 'chrome.json'));
+  const manifest = mergeManifest(baseManifest, chromeManifest);
+
+  await writeFile(
+    path.join(ROOT_DIR, 'manifest.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8'
   );
