@@ -60,6 +60,12 @@
 
 ### 🛠️ Manual Installation (Recommended)
 
+Build the browser-specific packages first:
+
+```bash
+npm run build
+```
+
 #### For Google Chrome / Edge / Brave
 1. Clone the repository or download the ZIP.
    ```bash
@@ -67,14 +73,37 @@
    ```
 2. Navigate to `chrome://extensions/` in your browser.
 3. Toggle the **Developer mode** switch in the top right corner.
-4. Click **Load unpacked** and select the `Frelancia` directory.
+4. Click **Load unpacked** and select the `dist/chrome` directory.
 5. Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
 
 #### For Mozilla Firefox
 1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
 2. Click **Load Temporary Add-on...**
-3. Select any file inside the `Frelancia` directory (like `manifest.json`).
+3. Select `dist/firefox/manifest.json`.
 4. Pin the extension from the extensions menu.
+
+### 🔧 Development Build
+
+Generate both browser packages:
+
+```bash
+npm run build
+```
+
+Generate only one target:
+
+```bash
+npm run build:chrome
+npm run build:firefox
+```
+
+Clean generated output:
+
+```bash
+npm run clean
+```
+
+The build script treats `manifests/base.json` as the shared manifest source and writes browser-specific manifests to `dist/chrome/manifest.json` and `dist/firefox/manifest.json`.
 
 ---
 
@@ -125,4 +154,3 @@ See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for branch naming, code
 *Made with ❤️ for Arab Freelancers*
 
 </div>
-

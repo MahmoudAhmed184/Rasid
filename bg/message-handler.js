@@ -22,23 +22,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       budget: '500 $',
       url: 'https://mostaql.com/projects'
     }];
-    showNotification(testJobs);
-    sendResponse({ success: true });
+    showNotification(testJobs)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   if (message.action === 'testSound') {
-    playSound();
-    sendResponse({ success: true });
+    playSound()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   if (message.action === 'updateAlarm') {
     const interval = parseInt(message.interval) || 1;
-    chrome.alarms.clear('checkJobs');
-    chrome.alarms.create('checkJobs', { periodInMinutes: interval });
-    console.log(`Alarm 'checkJobs' updated to ${interval} minutes.`);
-    sendResponse({ success: true, interval: interval });
+    browserApi.alarms.clear('checkJobs')
+      .then(() => {
+        browserApi.alarms.create('checkJobs', { periodInMinutes: interval });
+        console.log(`Alarm 'checkJobs' updated to ${interval} minutes.`);
+        sendResponse({ success: true, interval: interval });
+      })
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
     return true;
   }
 
@@ -61,7 +68,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'clearHistory') {
-    chrome.storage.local.set({
+    browserApi.storage.local.set({
       seenJobs: [],
       stats: {
         lastCheck: null,
@@ -94,22 +101,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (content) {
       const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
-      chrome.downloads.download({ url: dataUrl, filename, saveAs: false }, (downloadId) => {
-        if (chrome.runtime.lastError) {
-          sendResponse({ success: false, error: chrome.runtime.lastError.message });
-        } else {
-          sendResponse({ success: true, downloadId });
-        }
-      });
+      browserApi.downloads.download({ url: dataUrl, filename, saveAs: false })
+        .then((downloadId) => sendResponse({ success: true, downloadId }))
+        .catch((error) => sendResponse({ success: false, error: error.message }));
       return true;
     } else if (url) {
-      chrome.downloads.download({ url, filename, saveAs: false }, (downloadId) => {
-        if (chrome.runtime.lastError) {
-          sendResponse({ success: false, error: chrome.runtime.lastError.message });
-        } else {
-          sendResponse({ success: true, downloadId });
-        }
-      });
+      browserApi.downloads.download({ url, filename, saveAs: false })
+        .then((downloadId) => sendResponse({ success: true, downloadId }))
+        .catch((error) => sendResponse({ success: false, error: error.message }));
       return true;
     }
   }
@@ -139,13 +138,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       Promise.all(fetchPromises).then(() => {
         zip.generateAsync({ type: "base64" }).then((base64) => {
           const dataUrl = 'data:application/zip;base64,' + base64;
-          chrome.downloads.download({ url: dataUrl, filename, saveAs: true }, (downloadId) => {
-            if (chrome.runtime.lastError) {
-              sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-              sendResponse({ success: true, downloadId });
-            }
-          });
+          browserApi.downloads.download({ url: dataUrl, filename, saveAs: true })
+            .then((downloadId) => sendResponse({ success: true, downloadId }))
+            .catch((error) => sendResponse({ success: false, error: error.message }));
         }).catch(err => {
           console.error("ZIP Generation error:", err);
           sendResponse({ success: false, error: err.message });

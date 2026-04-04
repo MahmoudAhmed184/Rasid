@@ -3,49 +3,56 @@
 // Depends on: constants.js (DEFAULT_PROMPTS)
 // ==========================================
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('Extension installed');
 
-  chrome.storage.local.get(['settings', 'seenJobs', 'stats', 'trackedProjects', 'prompts', 'recentJobs', 'proposalTemplate'], (data) => {
-    const changes = {};
+  const data = await browserApi.storage.local.get([
+    'settings',
+    'seenJobs',
+    'stats',
+    'trackedProjects',
+    'prompts',
+    'recentJobs',
+    'proposalTemplate'
+  ]);
+  const changes = {};
 
-    if (!data.settings) {
-      changes.settings = {
-        development: true,
-        ai: true,
-        all: true,
-        sound: true,
-        interval: 1
-      };
-    }
+  if (!data.settings) {
+    changes.settings = {
+      development: true,
+      ai: true,
+      all: true,
+      sound: true,
+      interval: 1
+    };
+  }
 
-    if (!data.seenJobs) changes.seenJobs = [];
-    if (!data.recentJobs) changes.recentJobs = [];
+  if (!data.seenJobs) changes.seenJobs = [];
+  if (!data.recentJobs) changes.recentJobs = [];
 
-    if (!data.stats) {
-      changes.stats = {
-        lastCheck: null,
-        todayCount: 0,
-        todayDate: new Date().toDateString()
-      };
-    }
+  if (!data.stats) {
+    changes.stats = {
+      lastCheck: null,
+      todayCount: 0,
+      todayDate: new Date().toDateString()
+    };
+  }
 
-    if (!data.trackedProjects) changes.trackedProjects = {};
+  if (!data.trackedProjects) changes.trackedProjects = {};
 
-    if (!data.prompts) {
-      changes.prompts = DEFAULT_PROMPTS;
-    }
+  if (!data.prompts) {
+    changes.prompts = DEFAULT_PROMPTS;
+  }
 
-    if (!data.proposalTemplate) {
-      changes.proposalTemplate = `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
+  if (!data.proposalTemplate) {
+    changes.proposalTemplate = `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
 
 متحمس لبدء التعاون معك، واذاك بتنفيذ العمل بشكل سلس ومرتب. في انتظار تواصلك لترتيب التفاصيل والانطلاق مباشرة.`;
-    }
+  }
 
-    if (Object.keys(changes).length > 0) {
-      chrome.storage.local.set(changes);
-    }
-  });
+  if (Object.keys(changes).length > 0) {
+    await browserApi.storage.local.set(changes);
+  }
 
-  chrome.alarms.create('checkJobs', { periodInMinutes: 1 });
+  browserApi.alarms.create('checkJobs', { periodInMinutes: 1 });
 });

@@ -4,7 +4,7 @@
 
 /**
  * Manages the SignalR connection lifecycle, including connection,
- * reconnection via chrome.alarms, and fallback event dispatching.
+ * reconnection via extension alarms, and fallback event dispatching.
  */
 class SignalRClient {
     constructor() {
@@ -67,7 +67,7 @@ class SignalRClient {
             this.reconnectAttempts = 0;
             console.log('SignalR: Connected successfully');
 
-            await chrome.storage.local.set({
+            await browserApi.storage.local.set({
                 signalRConnected: true,
                 signalRFallbackActive: false
             });
@@ -79,7 +79,7 @@ class SignalRClient {
         } catch (error) {
             console.error('SignalR: Connection failed', error);
             this.isConnected = false;
-            await chrome.storage.local.set({ signalRConnected: false });
+            await browserApi.storage.local.set({ signalRConnected: false });
             this.scheduleReconnect();
         }
     }
@@ -120,21 +120,21 @@ class SignalRClient {
             if (this.connection !== conn) return; // stale — new connection already active
             console.log('SignalR: Connection closed', error);
             this.isConnected = false;
-            chrome.storage.local.set({ signalRConnected: false });
+            browserApi.storage.local.set({ signalRConnected: false });
         });
 
         this.connection.onreconnecting((error) => {
             if (this.connection !== conn) return; // stale
             console.log('SignalR: Reconnecting...', error);
             this.isConnected = false;
-            chrome.storage.local.set({ signalRConnected: false });
+            browserApi.storage.local.set({ signalRConnected: false });
         });
 
         this.connection.onreconnected((connectionId) => {
             if (this.connection !== conn) return; // stale
             console.log('SignalR: Reconnected', connectionId);
             this.isConnected = true;
-            chrome.storage.local.set({
+            browserApi.storage.local.set({
                 signalRConnected: true,
                 signalRFallbackActive: false
             });
@@ -151,7 +151,7 @@ class SignalRClient {
     async handleNewJobs(jobs) {
         console.log(`SignalR: Processing ${jobs.length} new job(s) [ZERO HTTP REQUESTS]`);
 
-        const data = await chrome.storage.local.get(['seenJobs', 'recentJobs', 'stats', 'settings', 'notificationsEnabled']);
+        const data = await browserApi.storage.local.get(['seenJobs', 'recentJobs', 'stats', 'settings', 'notificationsEnabled']);
         let seenJobs = data.seenJobs || [];
         let recentJobs = data.recentJobs || [];
         let stats = data.stats || { todayCount: 0, todayDate: new Date().toDateString() };
@@ -206,7 +206,7 @@ class SignalRClient {
         });
         recentJobs = recentJobs.slice(0, 50);
 
-        await chrome.storage.local.set({ seenJobs, stats, recentJobs });
+        await browserApi.storage.local.set({ seenJobs, stats, recentJobs });
 
         if (validJobs.length > 0) {
             if (settings.quietHoursEnabled && isQuietHour(settings)) {
@@ -219,10 +219,10 @@ class SignalRClient {
             
             if (isEnabled) {
                 console.log(`SignalR: Showing notifications for ${validJobs.length} job(s) [NO HTTP REQUESTS MADE]`);
-                showNotification(validJobs);
+                await showNotification(validJobs);
 
                 if (settings.sound) {
-                    playSound();
+                    await playSound();
                 }
             } else {
                 console.log('SignalR: Notifications are toggled off. Skipping alert.');
@@ -254,13 +254,13 @@ class SignalRClient {
     }
 
     /**
-     * Schedule a reconnection attempt using chrome.alarms (MV3-safe).
+     * Schedule a reconnection attempt using extension alarms (MV3-safe).
      * setTimeout is unreliable in service workers that can be suspended.
      */
     scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error('SignalR: Max reconnect attempts reached. Activating polling fallback.');
-            chrome.storage.local.set({ signalRFallbackActive: true });
+            browserApi.storage.local.set({ signalRFallbackActive: true });
 
             if (this.onFallbackActivatedCallback) {
                 this.onFallbackActivatedCallback();
@@ -272,7 +272,7 @@ class SignalRClient {
         const delayMinutes = Math.max(this.reconnectAttempts * 0.5, 0.5);
         console.log(`SignalR: Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delayMinutes} min`);
 
-        chrome.alarms.create('signalRReconnect', { delayInMinutes: delayMinutes });
+        browserApi.alarms.create('signalRReconnect', { delayInMinutes: delayMinutes });
     }
 
     /**
@@ -294,7 +294,7 @@ class SignalRClient {
             console.error('SignalR: Error disconnecting', error);
         }
 
-        await chrome.storage.local.set({ signalRConnected: false });
+        await browserApi.storage.local.set({ signalRConnected: false });
     }
 
     /**

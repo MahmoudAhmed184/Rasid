@@ -26,7 +26,7 @@ if (typeof signalR !== 'undefined' && typeof signalRClient !== 'undefined') {
 // Background event page startup
 (async function initOnStartup() {
   console.log('🦊 Firefox background event page started');
-  const data = await chrome.storage.local.get(['settings']);
+  const data = await browserApi.storage.local.get(['settings']);
   const mode = (data.settings || {}).notificationMode || 'auto';
 
   if (mode === 'polling') {

@@ -7,7 +7,7 @@
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'checkJobs') {
-    const data = await chrome.storage.local.get(['settings']);
+    const data = await browserApi.storage.local.get(['settings']);
     const notificationMode = (data.settings || {}).notificationMode || 'auto';
 
     checkTrackedProjects();
@@ -35,7 +35,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   if (alarm.name === 'signalRReconnect') {
     console.log('SignalR: Reconnect alarm fired, attempting to reconnect...');
-    const d = await chrome.storage.local.get(['settings']);
+    const d = await browserApi.storage.local.get(['settings']);
     const mode = (d.settings || {}).notificationMode || 'auto';
     if (mode !== 'polling') {
       await initializeSignalR();

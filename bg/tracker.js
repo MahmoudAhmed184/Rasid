@@ -4,7 +4,7 @@
 // ==========================================
 
 async function checkTrackedProjects() {
-  const data = await chrome.storage.local.get(['trackedProjects', 'settings', 'notificationsEnabled']);
+  const data = await browserApi.storage.local.get(['trackedProjects', 'settings', 'notificationsEnabled']);
   const trackedProjects = data.trackedProjects || {};
   const settings = data.settings || {};
 
@@ -50,9 +50,9 @@ async function checkTrackedProjects() {
           const isEnabled = data.notificationsEnabled !== false;
 
           if (isEnabled) {
-            showTrackedNotification(project, changeMsg);
+            await showTrackedNotification(project, changeMsg);
             if (settings.sound) {
-              playTrackedSound();
+              await playTrackedSound();
             }
           } else {
             console.log('Notifications are toggled off. Skipping alert for tracked project update.');
@@ -61,7 +61,7 @@ async function checkTrackedProjects() {
           trackedProjects[id].status = currentData.status;
           trackedProjects[id].communications = currentData.communications;
           trackedProjects[id].lastChecked = new Date().toISOString();
-          await chrome.storage.local.set({ trackedProjects });
+          await browserApi.storage.local.set({ trackedProjects });
         }
       }
     } catch (error) {

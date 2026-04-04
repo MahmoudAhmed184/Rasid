@@ -2,6 +2,8 @@
 // Background Service Worker - Entry Point
 // ==========================================
 
+importScripts('lib/browser-api.js');
+
 // Load constants first (declares SIGNALR_AVAILABLE)
 importScripts('bg/constants.js');
 
@@ -41,7 +43,7 @@ importScripts(
 // Service worker startup
 (async function initOnStartup() {
   console.log('Service worker started');
-  const data = await chrome.storage.local.get(['settings']);
+  const data = await browserApi.storage.local.get(['settings']);
   const mode = (data.settings || {}).notificationMode || 'auto';
 
   if (mode === 'polling') {

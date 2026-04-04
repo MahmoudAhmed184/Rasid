@@ -1,0 +1,30 @@
+{
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "frelancia@mostaql-notifier",
+      "strict_min_version": "109.0"
+    }
+  },
+  "background": {
+    "scripts": [
+      "lib/browser-api.js",
+      "bg/constants.js",
+      "bg/html-parser.js",
+      "jszip.min.js",
+      "signalr.min.js",
+      "signalr-client.js",
+      "bg/filters.js",
+      "bg/offscreen.js",
+      "bg/audio.js",
+      "bg/notifications.js",
+      "bg/fetcher.js",
+      "bg/tracker.js",
+      "bg/job-checker.js",
+      "bg/signalr.js",
+      "bg/install.js",
+      "bg/alarm-handler.js",
+      "bg/message-handler.js",
+      "background-firefox.js"
+    ]
+  }
+}

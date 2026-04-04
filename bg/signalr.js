@@ -20,7 +20,7 @@ async function initializeSignalR() {
     }
 
     // Apply custom server URL from settings if set
-    const data = await chrome.storage.local.get(['settings']);
+    const data = await browserApi.storage.local.get(['settings']);
     const customUrl = data.settings?.signalrServerUrl?.trim();
     signalRClient.serverUrl = customUrl || DEFAULT_SIGNALR_URL;
 

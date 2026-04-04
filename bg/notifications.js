@@ -15,7 +15,7 @@
 
 // --- showNotification ---
 
-function showNotification(jobs) {
+async function showNotification(jobs) {
   const job   = jobs[0];
   const title = jobs.length === 1
     ? 'مشروع جديد على مستقل'
@@ -50,14 +50,13 @@ function showNotification(jobs) {
     ];
   }
 
-  chrome.notifications.create(options, (notificationId) => {
-    chrome.storage.local.set({ [`notification_${notificationId}`]: job });
-  });
+  const notificationId = await browserApi.notifications.create(options);
+  await browserApi.storage.local.set({ [`notification_${notificationId}`]: job });
 }
 
 // --- showTrackedNotification ---
 
-function showTrackedNotification(project, changeMsg) {
+async function showTrackedNotification(project, changeMsg) {
   const options = {
     type:     'basic',
     iconUrl:  'icons/icon128.png',
@@ -71,9 +70,8 @@ function showTrackedNotification(project, changeMsg) {
     options.requireInteraction = true;
   }
 
-  chrome.notifications.create(options, (notificationId) => {
-    chrome.storage.local.set({ [`notification_${notificationId}`]: { url: project.url } });
-  });
+  const notificationId = await browserApi.notifications.create(options);
+  await browserApi.storage.local.set({ [`notification_${notificationId}`]: { url: project.url } });
 }
 
 // --- Helpers ---
@@ -90,51 +88,47 @@ function parseMinBudgetValue(budgetText) {
 // Body click - supported identically on Chrome and Firefox.
 // On Firefox this is the ONLY way to interact with a notification
 // (no action buttons), so we ensure it always opens the project URL.
-chrome.notifications.onClicked.addListener((notificationId) => {
-  chrome.storage.local.get([`notification_${notificationId}`], (data) => {
-    const job = data[`notification_${notificationId}`];
-    if (job) {
-      chrome.tabs.create({ url: job.url });
-      chrome.storage.local.remove([`notification_${notificationId}`]);
-    }
-  });
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+  const data = await browserApi.storage.local.get([`notification_${notificationId}`]);
+  const job = data[`notification_${notificationId}`];
+  if (job) {
+    await browserApi.tabs.create({ url: job.url });
+    await browserApi.storage.local.remove([`notification_${notificationId}`]);
+  }
 });
 
 // Button clicks - Chrome-only feature.
 // Guard with typeof to avoid a ReferenceError on Firefox where
 // chrome.notifications.onButtonClicked is undefined.
 if (typeof chrome.notifications.onButtonClicked !== 'undefined') {
-  chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
-    chrome.storage.local.get([`notification_${notificationId}`], (data) => {
-      const job = data[`notification_${notificationId}`];
-      if (!job) return;
+  chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+    const data = await browserApi.storage.local.get([`notification_${notificationId}`]);
+    const job = data[`notification_${notificationId}`];
+    if (!job) return;
 
-      if (buttonIndex === 0) {
-        // "قدّم الآن" - open project with autofill flag
-        console.log(`Apply Now clicked for job ${job.id}`);
-        chrome.storage.local.get(['proposalTemplate'], (settingsData) => {
-          const minBudget    = parseMinBudgetValue(job.budget);
-          const durationDays = parseDurationDays(job.duration || '');
+    if (buttonIndex === 0) {
+      // "قدّم الآن" - open project with autofill flag
+      console.log(`Apply Now clicked for job ${job.id}`);
+      const settingsData = await browserApi.storage.local.get(['proposalTemplate']);
+      const minBudget    = parseMinBudgetValue(job.budget);
+      const durationDays = parseDurationDays(job.duration || '');
 
-          const autofillData = {
-            projectId: job.id,
-            amount:    minBudget,
-            duration:  durationDays,
-            proposal:  settingsData.proposalTemplate || '',
-            timestamp: Date.now()
-          };
+      const autofillData = {
+        projectId: job.id,
+        amount:    minBudget,
+        duration:  durationDays,
+        proposal:  settingsData.proposalTemplate || '',
+        timestamp: Date.now()
+      };
 
-          chrome.storage.local.set({ 'mostaql_pending_autofill': autofillData }, () => {
-            const urlWithFlag = job.url + (job.url.includes('?') ? '&' : '?') + 'mostaql_autofill=true';
-            chrome.tabs.create({ url: urlWithFlag });
-          });
-        });
-      } else {
-        // "فتح المشروع" - open project directly
-        chrome.tabs.create({ url: job.url });
-      }
+      await browserApi.storage.local.set({ 'mostaql_pending_autofill': autofillData });
+      const urlWithFlag = job.url + (job.url.includes('?') ? '&' : '?') + 'mostaql_autofill=true';
+      await browserApi.tabs.create({ url: urlWithFlag });
+    } else {
+      // "فتح المشروع" - open project directly
+      await browserApi.tabs.create({ url: job.url });
+    }
 
-      chrome.storage.local.remove([`notification_${notificationId}`]);
-    });
+    await browserApi.storage.local.remove([`notification_${notificationId}`]);
   });
 }

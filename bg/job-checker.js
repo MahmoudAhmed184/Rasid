@@ -5,7 +5,7 @@
 
 async function checkForNewJobs() {
   try {
-    const data = await chrome.storage.local.get(['settings', 'seenJobs', 'stats', 'recentJobs', 'notificationsEnabled']);
+    const data = await browserApi.storage.local.get(['settings', 'seenJobs', 'stats', 'recentJobs', 'notificationsEnabled']);
     const settings = data.settings || {};
     let seenJobs = data.seenJobs || [];
     let recentJobs = data.recentJobs || [];
@@ -65,7 +65,7 @@ async function checkForNewJobs() {
     });
     recentJobs = recentJobs.slice(0, 50);
 
-    await chrome.storage.local.set({ seenJobs, stats, recentJobs });
+    await browserApi.storage.local.set({ seenJobs, stats, recentJobs });
     console.log(`Phase 1 Commit: Saved ${allNewJobs.length} new jobs to dashboard.`);
 
     // Phase 2: Enrich top 10
@@ -87,7 +87,7 @@ async function checkForNewJobs() {
             const rjIdx = recentJobs.findIndex(rj => rj.id === job.id);
             if (rjIdx !== -1) {
               recentJobs[rjIdx] = { ...recentJobs[rjIdx], ...job };
-              chrome.storage.local.set({ recentJobs });
+              await browserApi.storage.local.set({ recentJobs });
             }
           }
         } catch (e) {
@@ -138,15 +138,15 @@ async function checkForNewJobs() {
       const rjIdx = recentJobs.findIndex(rj => rj.id === job.id);
       if (rjIdx !== -1) {
         recentJobs[rjIdx] = { ...recentJobs[rjIdx], ...job };
-        chrome.storage.local.set({ recentJobs });
+        await browserApi.storage.local.set({ recentJobs });
       }
     }
 
     if (qualityJobs.length > 0) {
       const isEnabled = data.notificationsEnabled !== false;
       if (isEnabled) {
-        showNotification(qualityJobs);
-        if (settings.sound) playSound();
+        await showNotification(qualityJobs);
+        if (settings.sound) await playSound();
       } else {
         console.log('Notifications are toggled off. Skipping alert for new jobs.');
       }
