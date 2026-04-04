@@ -48,6 +48,9 @@ async function showNotification(jobs) {
       { title: 'قدّم الآن' },
       { title: 'فتح المشروع' }
     ];
+  } else {
+    message += '\n\nاضغط الإشعار لفتح المشروع.';
+    options.message = message;
   }
 
   const notificationId = await browserApi.notifications.create(options);
@@ -68,6 +71,8 @@ async function showTrackedNotification(project, changeMsg) {
   // Chrome-only
   if (!_IS_FIREFOX) {
     options.requireInteraction = true;
+  } else {
+    options.message = `${changeMsg}\n\nاضغط الإشعار لفتح المشروع.`;
   }
 
   const notificationId = await browserApi.notifications.create(options);

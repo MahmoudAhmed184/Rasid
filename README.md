@@ -105,6 +105,8 @@ npm run clean
 
 The build script treats `manifests/base.json` as the shared manifest source and writes browser-specific manifests to `dist/chrome/manifest.json` and `dist/firefox/manifest.json`.
 
+Firefox testing instructions are available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
+
 ---
 
 ## 🚀 كيفية الاستخدام / How to Use
@@ -129,8 +131,12 @@ The build script treats `manifests/base.json` as the shared manifest source and 
 ## 🔒 Privacy & Security
 
 - **Local Storage**: All your settings and data are stored locally on your device.
-- **Direct API Calls**: Your API keys are used directly to communicate with AI providers; no data is sent to intermediate servers.
+- **Declared Remote Hosts**: The extension connects to Mostaql, AI chat pages, and the optional SignalR backend declared in the manifest.
 - **Transparency**: Open-source code for full auditability.
+
+Detailed disclosure draft: [`PRIVACY.md`](PRIVACY.md)
+
+AMO reviewer notes: [`docs/amo-review.md`](docs/amo-review.md)
 
 ---
 
