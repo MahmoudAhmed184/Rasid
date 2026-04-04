@@ -34,6 +34,33 @@ async function setupOffscreenDocument() {
   }
 }
 
+async function sendOffscreenRequest(message, fallbackValue, transformResponse) {
+  try {
+    await setupOffscreenDocument();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const response = await Promise.race([
+      browserApi.runtime.sendMessage(message),
+      new Promise((resolve) => setTimeout(() => resolve(null), 3000))
+    ]);
+
+    return transformResponse(response);
+  } catch (error) {
+    console.error(`Offscreen request failed for ${message.action}:`, error);
+    return fallbackValue;
+  }
+}
+
+function parseHtmlInBackground(html, parser, errorLabel, fallbackValue) {
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return parser(doc);
+  } catch (error) {
+    console.error(errorLabel, error);
+    return fallbackValue;
+  }
+}
+
 // ─── parseJobsOffscreen ───────────────────────────────────────────────────────
 
 /**
@@ -47,39 +74,20 @@ async function setupOffscreenDocument() {
 async function parseJobsOffscreen(html) {
   // ── Firefox path ──────────────────────────────────────────────────────────
   if (_IS_FIREFOX) {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      // _parseMostaqlHTML is defined in bg/html-parser.js (loaded first)
-      return _parseMostaqlHTML(doc);
-    } catch (e) {
-      console.error('Firefox Parse Error (parseJobsOffscreen):', e);
-      return [];
-    }
+    return parseHtmlInBackground(
+      html,
+      _parseMostaqlHTML,
+      'Firefox Parse Error (parseJobsOffscreen):',
+      []
+    );
   }
 
   // ── Chrome path (unchanged) ───────────────────────────────────────────────
-  try {
-    await setupOffscreenDocument();
-    await new Promise(r => setTimeout(r, 100));
-
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'parseJobs', html: html }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('Parse Error:', chrome.runtime.lastError);
-          resolve([]);
-        } else if (response && response.success) {
-          resolve(response.jobs);
-        } else {
-          resolve([]);
-        }
-      });
-      setTimeout(() => resolve([]), 3000);
-    });
-  } catch (e) {
-    console.error('Offscreen Parse Error:', e);
-    return [];
-  }
+  return sendOffscreenRequest(
+    { action: 'parseJobs', html },
+    [],
+    (response) => (response && response.success ? response.jobs : [])
+  );
 }
 
 // ─── parseTrackedDataOffscreen ────────────────────────────────────────────────
@@ -95,31 +103,45 @@ async function parseJobsOffscreen(html) {
 async function parseTrackedDataOffscreen(html) {
   // ── Firefox path ──────────────────────────────────────────────────────────
   if (_IS_FIREFOX) {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      // _parseProjectDetails is defined in bg/html-parser.js
-      return _parseProjectDetails(doc);
-    } catch (e) {
-      console.error('Firefox Parse Error (parseTrackedDataOffscreen):', e);
-      return null;
-    }
+    return parseHtmlInBackground(
+      html,
+      _parseProjectDetails,
+      'Firefox Parse Error (parseTrackedDataOffscreen):',
+      null
+    );
   }
 
   // ── Chrome path (unchanged) ───────────────────────────────────────────────
-  try {
-    await setupOffscreenDocument();
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'parseTrackedData', html: html }, (response) => {
-        if (response && response.success) {
-          resolve(response.data);
-        } else {
-          resolve(null);
-        }
-      });
-      setTimeout(() => resolve(null), 3000);
-    });
-  } catch (e) {
-    return null;
+  return sendOffscreenRequest(
+    { action: 'parseTrackedData', html },
+    null,
+    (response) => (response && response.success ? response.data : null)
+  );
+}
+
+// ─── parseProjectDetailsOffscreen ─────────────────────────────────────────────
+
+/**
+ * Parse project details from raw HTML.
+ * Firefox: parses directly in the background event page.
+ * Chrome: delegates to the Offscreen Document.
+ *
+ * @param {string} html - Raw HTML from a Mostaql project page
+ * @returns {Promise<Object|null>} Parsed project details, or null on failure
+ */
+async function parseProjectDetailsOffscreen(html) {
+  if (_IS_FIREFOX) {
+    return parseHtmlInBackground(
+      html,
+      _parseProjectDetails,
+      'Firefox Parse Error (parseProjectDetailsOffscreen):',
+      null
+    );
   }
+
+  return sendOffscreenRequest(
+    { action: 'parseProjectDetails', html },
+    null,
+    (response) => (response && response.success ? response.data : null)
+  );
 }

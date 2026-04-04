@@ -1,6 +1,6 @@
 // ==========================================
 // bg/fetcher.js — HTTP fetching for job listings and project details
-// Depends on: offscreen.js (parseJobsOffscreen, setupOffscreenDocument)
+// Depends on: offscreen.js (parseJobsOffscreen, parseProjectDetailsOffscreen)
 // ==========================================
 
 function cleanTitle(text) {
@@ -48,7 +48,7 @@ async function fetchJobs(url) {
     }
 
     const jobs = await parseJobsOffscreen(html);
-    console.log(`Parsed ${jobs.length} jobs via Offscreen`);
+    console.log(`Parsed ${jobs.length} jobs from fetched HTML`);
     return jobs;
   } catch (error) {
     console.error('Error fetching jobs:', error);
@@ -71,17 +71,7 @@ async function fetchProjectDetails(url) {
     if (!response.ok) return null;
 
     const html = await response.text();
-    await setupOffscreenDocument();
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'parseProjectDetails', html: html }, (response) => {
-        if (response && response.success) {
-          resolve(response.data);
-        } else {
-          resolve(null);
-        }
-      });
-      setTimeout(() => resolve(null), 3000);
-    });
+    return await parseProjectDetailsOffscreen(html);
   } catch (error) {
     console.error('Error fetching project details:', error);
     return null;
