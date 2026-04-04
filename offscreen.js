@@ -164,7 +164,18 @@ function parseProjectDetails(html) {
 }
 
 async function playNotificationSound() {
-  await playBeep();
+  try {
+    const audioEl = document.getElementById('notificationSound');
+    if (audioEl) {
+      audioEl.currentTime = 0;
+      await audioEl.play();
+    } else {
+      await playBeep();
+    }
+  } catch (err) {
+    console.error('Audio file playback failed, falling back to beep:', err);
+    await playBeep();
+  }
 }
 
 // Create a notification sound using Web Audio API (as fallback)
@@ -185,6 +196,21 @@ async function playBeep() {
 }
 
 async function playTrackedSound() {
+  try {
+    const audioEl = document.getElementById('notificationSound');
+    if (audioEl) {
+      audioEl.currentTime = 0;
+      await audioEl.play();
+    } else {
+      await fallbackPlayTrackedSound();
+    }
+  } catch (err) {
+    console.error('Error playing tracked sound:', err);
+    await fallbackPlayTrackedSound();
+  }
+}
+
+async function fallbackPlayTrackedSound() {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === 'suspended') {

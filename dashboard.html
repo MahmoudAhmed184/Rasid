@@ -410,6 +410,23 @@
                         </div>
                         <p class="help-text">استخدم هذه الأزرار للتأكد من وصول التنبيهات وصوت الإشعار بشكل سليم.</p>
                     </div>
+
+                    <div class="settings-section">
+                        <div class="section-header">
+                            <i class="fas fa-file-export"></i>
+                            <h3>النسخ الاحتياطي</h3>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button id="exportBackupBtn" class="btn-primary" style="flex: 1; justify-content: center;">
+                                <i class="fas fa-download"></i> تصدير البيانات
+                            </button>
+                            <button id="importBackupBtn" class="btn-secondary" style="flex: 1; justify-content: center;">
+                                <i class="fas fa-upload"></i> استيراد البيانات
+                            </button>
+                            <input type="file" id="importBackupInput" accept=".json" style="display: none;">
+                        </div>
+                        <p class="help-text">احفظ نسخة من إعداداتك ومقترحاتك لاستعادتها لاحقاً.</p>
+                    </div>
                 </div>
             </div>
             <!-- Contributors Tab -->
