@@ -78,4 +78,23 @@ function setupEventListeners() {
             showSaveStatus();
         });
     }
+
+    // Backup Export/Import
+    const exportBackupBtn = document.getElementById('exportBackupBtn');
+    if (exportBackupBtn) {
+        exportBackupBtn.addEventListener('click', exportBackup);
+    }
+    
+    const importBackupBtn = document.getElementById('importBackupBtn');
+    if (importBackupBtn) {
+        importBackupBtn.addEventListener('click', () => {
+            const input = document.getElementById('importBackupInput');
+            if (input) input.click();
+        });
+    }
+
+    const importBackupInput = document.getElementById('importBackupInput');
+    if (importBackupInput) {
+        importBackupInput.addEventListener('change', importBackup);
+    }
 }

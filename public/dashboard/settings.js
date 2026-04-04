@@ -80,3 +80,44 @@ function applySettingsToForm(s) {
     setVal('notificationMode', s.notificationMode || 'auto');
     setVal('signalrServerUrl', s.signalrServerUrl || '');
 }
+
+function exportBackup() {
+    browserApi.storage.local.get(null).then((data) => {
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date().toISOString().split('T')[0];
+        a.download = `frelancia_backup_${date}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+}
+
+function importBackup(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data && typeof data === 'object') {
+                browserApi.storage.local.set(data).then(() => {
+                    alert('تم استيراد الإعدادات بنجاح. سيتم إعادة تحميل الصفحة.');
+                    window.location.reload();
+                });
+            } else {
+                alert('ملف النسخة الاحتياطية غير صالح.');
+            }
+        } catch (error) {
+            console.error('Error parsing backup:', error);
+            alert('حدث خطأ أثناء استيراد الملف.');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
