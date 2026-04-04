@@ -55,16 +55,6 @@
     background-color: #2386c8;
 }
 
-/* Override button styles to match specific Mostaql instances if needed */
-/* Default Bootstrap btn-group styles should handle border-radius and margins 
-   But just in case we need to force RTL specific border radii if Mostaql's CSS doesn't handle mixed-element groups effectively */
-/* The user requested matching 'Apply' button. Standard btn-group classes usually suffice. 
-   Removing the manual Overrides to test native behavior. */
-
-/* Modal styles (kept from before, ensured consistency) */
-/* ... (Modal styles are fine in previous content.css, will just append/ensure this doesn't overwrite necessary parts if I strictly overwrite) */
-/* Wait, I should preserve the modal styles I added earlier. The write_to_file with Overwrite:true destroys previous content. I must include previous Modal CSS. */
-
 #mostaql-ext-btn-container {
     display: inline-flex;
     align-items: center;

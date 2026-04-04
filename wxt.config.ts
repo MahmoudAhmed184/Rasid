@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 
 const icons = {
@@ -65,8 +67,28 @@ export default defineConfig({
     srcDir: 'src',
     outDir: 'dist',
     outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
-    modules: ['@wxt-dev/webextension-polyfill'],
     hooks: {
+        'build:done': async (wxt, output) => {
+            const transientArtifacts = new Set(['wxt-placeholder.js']);
+
+            for (const step of output.steps) {
+                step.chunks = step.chunks.filter(
+                    (chunk) => !transientArtifacts.has(chunk.fileName)
+                );
+            }
+
+            output.steps.splice(
+                0,
+                output.steps.length,
+                ...output.steps.filter((step) => step.chunks.length > 0)
+            );
+
+            await Promise.all(
+                [...transientArtifacts].map((fileName) =>
+                    rm(resolve(wxt.config.outDir, fileName), { force: true })
+                )
+            );
+        },
         'build:publicAssets': (wxt, files) => {
             const excludedFiles =
                 wxt.config.browser === 'firefox'

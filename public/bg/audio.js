@@ -6,8 +6,8 @@
 //
 // Firefox event pages have full access to AudioContext, so we play
 // the notification beeps directly without any offscreen document.
-// Chrome service workers lack AudioContext, so we keep the existing
-// offscreen-document delegation path unchanged.
+// Chrome service workers lack AudioContext, so playback stays delegated to the
+// offscreen document.
 // ==========================================
 
 // ─── Firefox path: direct Web Audio API ──────────────────────────────────────
@@ -87,7 +87,7 @@ async function _playTrackedBeepDirectly() {
     }
 }
 
-// ─── Chrome path: delegate to offscreen document (unchanged) ─────────────────
+// ─── Chrome path: delegate to offscreen document ──────────────────────────────
 
 /**
  * Send an action to the Offscreen Document for audio playback.

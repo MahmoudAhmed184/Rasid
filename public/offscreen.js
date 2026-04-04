@@ -6,16 +6,16 @@
 // ==========================================
 
 // Listen for messages
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'playSound') {
-        playNotificationSound().then(() => sendResponse({ success: true }));
+        playBeep().then(() => sendResponse({ success: true }));
         return true;
     } else if (message.action === 'parseJobs') {
         const jobs = parseMostaqlHTML(message.html);
-        sendResponse({ success: true, jobs: jobs });
-    } else if (message.action === 'parseTrackedData' || message.action === 'parseProjectDetails') {
+        sendResponse({ success: true, jobs });
+    } else if (message.action === 'parseProjectDetails') {
         const data = parseProjectDetails(message.html);
-        sendResponse({ success: true, data: data });
+        sendResponse({ success: true, data });
     } else if (message.action === 'playTrackedSound') {
         playTrackedSound().then(() => sendResponse({ success: true }));
         return true;
@@ -36,10 +36,6 @@ function parseProjectDetails(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     return _parseProjectDetails(doc);
-}
-
-async function playNotificationSound() {
-    await playBeep();
 }
 
 // Create a notification sound using Web Audio API (as fallback)

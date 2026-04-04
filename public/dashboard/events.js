@@ -89,7 +89,9 @@ function setupEventListeners() {
     if (importBackupBtn) {
         importBackupBtn.addEventListener('click', () => {
             const input = document.getElementById('importBackupInput');
-            if (input) input.click();
+            if (input) {
+                input.click();
+            }
         });
     }
 

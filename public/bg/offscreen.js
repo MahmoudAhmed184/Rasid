@@ -84,36 +84,9 @@ async function parseJobsOffscreen(html) {
         );
     }
 
-    // ── Chrome path (unchanged) ───────────────────────────────────────────────
+    // ── Chrome path ───────────────────────────────────────────────────────────
     return sendOffscreenRequest({ action: 'parseJobs', html }, [], (response) =>
         response && response.success ? response.jobs : []
-    );
-}
-
-// ─── parseTrackedDataOffscreen ────────────────────────────────────────────────
-
-/**
- * Parse tracked project detail metadata from raw HTML.
- * Firefox: uses DOMParser directly.
- * Chrome:  delegates to the Offscreen Document.
- *
- * @param {string} html - Raw HTML from a Mostaql project page
- * @returns {Promise<Object|null>} Parsed project details, or null on failure
- */
-async function parseTrackedDataOffscreen(html) {
-    // ── Firefox path ──────────────────────────────────────────────────────────
-    if (_IS_FIREFOX) {
-        return parseHtmlInBackground(
-            html,
-            _parseProjectDetails,
-            'Firefox Parse Error (parseTrackedDataOffscreen):',
-            null
-        );
-    }
-
-    // ── Chrome path (unchanged) ───────────────────────────────────────────────
-    return sendOffscreenRequest({ action: 'parseTrackedData', html }, null, (response) =>
-        response && response.success ? response.data : null
     );
 }
 

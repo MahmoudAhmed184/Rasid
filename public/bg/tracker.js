@@ -35,7 +35,7 @@ async function checkTrackedProjects() {
             }
 
             const html = await response.text();
-            const currentData = await parseTrackedDataOffscreen(html);
+            const currentData = await parseProjectDetailsOffscreen(html);
 
             if (currentData) {
                 let changed = false;

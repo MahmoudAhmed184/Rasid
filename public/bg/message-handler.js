@@ -3,7 +3,7 @@
 // Depends on: constants.js, filters.js, notifications.js, job-checker.js, audio.js
 // ==========================================
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'checkNow') {
         checkForNewJobs()
             .then((result) => sendResponse(result))
@@ -69,20 +69,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    if (message.action === 'clearHistory') {
-        browserApi.storage.local
-            .set({
-                seenJobs: [],
-                stats: {
-                    lastCheck: null,
-                    todayCount: 0,
-                    todayDate: new Date().toDateString(),
-                },
-            })
-            .then(() => sendResponse({ success: true }));
-        return true;
-    }
-
     if (message.action === 'debugFetch') {
         fetch(MOSTAQL_URLS.all)
             .then((r) => r.text())
@@ -94,25 +80,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'getDefaultPrompts') {
         sendResponse({ success: true, prompts: DEFAULT_PROMPTS });
         return false;
-    }
-
-    if (message.action === 'download_media') {
-        const { url, filename, content } = message;
-
-        if (content) {
-            const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
-            browserApi.downloads
-                .download({ url: dataUrl, filename, saveAs: false })
-                .then((downloadId) => sendResponse({ success: true, downloadId }))
-                .catch((error) => sendResponse({ success: false, error: error.message }));
-            return true;
-        } else if (url) {
-            browserApi.downloads
-                .download({ url, filename, saveAs: false })
-                .then((downloadId) => sendResponse({ success: true, downloadId }))
-                .catch((error) => sendResponse({ success: false, error: error.message }));
-            return true;
-        }
     }
 
     if (message.action === 'download_zip') {

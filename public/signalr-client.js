@@ -13,9 +13,7 @@ class SignalRClient {
         this.isConnected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
-        this.onNewJobsCallback = null;
         this.onFallbackActivatedCallback = null;
-        this.onReconnectedCallback = null;
     }
 
     /**
@@ -54,7 +52,6 @@ class SignalRClient {
                         return 60000;
                     },
                 })
-                .configureLogging(signalR.LogLevel.Information)
                 .build();
 
             // Increase timeouts to prevent dropping during Service Worker suspension/wake cycles
@@ -71,10 +68,6 @@ class SignalRClient {
                 signalRConnected: true,
                 signalRFallbackActive: false,
             });
-
-            if (this.onReconnectedCallback) {
-                this.onReconnectedCallback();
-            }
         } catch (error) {
             console.error('SignalR: Connection failed', error);
             this.isConnected = false;
@@ -102,11 +95,7 @@ class SignalRClient {
             }
 
             try {
-                if (this.onNewJobsCallback) {
-                    await this.onNewJobsCallback(data.jobs);
-                } else {
-                    await this.handleNewJobs(data.jobs);
-                }
+                await this.handleNewJobs(data.jobs);
             } catch (error) {
                 console.error('SignalR: Error processing new jobs', error);
             }
@@ -137,10 +126,6 @@ class SignalRClient {
                 signalRConnected: true,
                 signalRFallbackActive: false,
             });
-
-            if (this.onReconnectedCallback) {
-                this.onReconnectedCallback();
-            }
         });
     }
 
@@ -227,24 +212,10 @@ class SignalRClient {
     }
 
     /**
-     * Register a callback for when new jobs are received.
-     */
-    onNewJobs(callback) {
-        this.onNewJobsCallback = callback;
-    }
-
-    /**
      * Register a callback for when fallback mode is activated.
      */
     onFallbackActivated(callback) {
         this.onFallbackActivatedCallback = callback;
-    }
-
-    /**
-     * Register a callback for when SignalR reconnects successfully.
-     */
-    onReconnected(callback) {
-        this.onReconnectedCallback = callback;
     }
 
     /**
