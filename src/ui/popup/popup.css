@@ -42,14 +42,6 @@ body {
     border-bottom: 2px solid rgba(0, 0, 0, 0.05);
 }
 
-.main-logo {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 12px;
-    filter: brightness(0) invert(1);
-    /* Make logo white for blue background if needed */
-}
-
 .header h1 {
     font-size: 22px;
     font-weight: 800;
@@ -145,6 +137,10 @@ body {
     transition: all 0.2s ease;
 }
 
+.btn.is-loading i {
+    animation: popup-spin 0.9s linear infinite;
+}
+
 .btn.primary {
     background: var(--primary);
     color: white;
@@ -179,7 +175,6 @@ body {
     color: var(--danger);
 }
 
-/* Connection specific */
 .btn.connection {
     padding: 6px;
     font-size: 11px;
@@ -212,6 +207,10 @@ body {
     color: #c62828;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .footer {
     margin-top: auto;
     text-align: center;
@@ -224,4 +223,14 @@ body {
     color: var(--primary);
     text-decoration: none;
     font-weight: 700;
+}
+
+@keyframes popup-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
