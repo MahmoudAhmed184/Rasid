@@ -4,16 +4,13 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Frelancia Pro | لوحة التحكم</title>
-        <link rel="stylesheet" href="icon-shim.css" />
-        <link rel="stylesheet" href="dashboard.css" />
-        <link rel="stylesheet" href="dashboard-bids.css" />
+        <script type="module" src="./main.ts"></script>
     </head>
     <body>
         <div class="dashboard-container">
-            <!-- Sidebar Navigation -->
             <aside class="sidebar">
                 <div class="logo-section">
-                    <img src="icons/icon128.png" alt="Logo" class="logo-img" />
+                    <img src="../icons/icon128.png" alt="Logo" class="logo-img" />
                     <div class="logo-text">
                         <h1>Frelancia</h1>
                         <span>مساعد مستقل الذكي</span>
@@ -21,35 +18,35 @@
                 </div>
 
                 <nav class="sidebar-nav">
-                    <button class="nav-item active" data-tab="overview">
+                    <button class="nav-item active" data-tab="overview" type="button">
                         <i class="fas fa-home"></i>
                         <span>النظرة العامة</span>
                     </button>
-                    <button class="nav-item" data-tab="bids-tracker">
+                    <button class="nav-item" data-tab="bids-tracker" type="button">
                         <i class="fas fa-chart-line"></i>
                         <span>متابعة العروض</span>
                     </button>
-                    <button class="nav-item" data-tab="filters">
+                    <button class="nav-item" data-tab="filters" type="button">
                         <i class="fas fa-filter"></i>
                         <span>الفلاتر الذكية</span>
                     </button>
-                    <button class="nav-item" data-tab="prompts">
+                    <button class="nav-item" data-tab="prompts" type="button">
                         <i class="fas fa-terminal"></i>
                         <span>أوامر AI</span>
                     </button>
-                    <button class="nav-item" data-tab="proposals">
+                    <button class="nav-item" data-tab="proposals" type="button">
                         <i class="fas fa-file-contract"></i>
                         <span>نماذج العروض</span>
                     </button>
-                    <button class="nav-item" data-tab="settings">
+                    <button class="nav-item" data-tab="settings" type="button">
                         <i class="fas fa-cog"></i>
                         <span>الإعدادات المتقدمة</span>
                     </button>
-                    <button class="nav-item" data-tab="contributors">
+                    <button class="nav-item" data-tab="contributors" type="button">
                         <i class="fas fa-users"></i>
                         <span>المساهمون</span>
                     </button>
-                    <button class="nav-item" data-tab="about">
+                    <button class="nav-item" data-tab="about" type="button">
                         <i class="fas fa-info-circle"></i>
                         <span>من نحن</span>
                     </button>
@@ -66,9 +63,7 @@
                 </div>
             </aside>
 
-            <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Overview Tab -->
                 <div class="tab-container" id="overview-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -135,7 +130,6 @@
                             </h3>
                         </div>
                         <div id="recentProjectsList" class="recent-list">
-                            <!-- Projects will be loaded here -->
                             <p class="help-text" style="text-align: center; padding: 40px">
                                 سيتم عرض آخر المشاريع المرصودة هنا بمجرد توفرها.
                             </p>
@@ -143,7 +137,6 @@
                     </div>
                 </div>
 
-                <!-- Bids Tracker Tab -->
                 <div class="tab-container hidden" id="bids-tracker-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -155,12 +148,11 @@
                                 جديد.
                             </p>
                         </div>
-                        <button id="refreshBidsBtn" class="btn-secondary">
+                        <button id="refreshBidsBtn" class="btn-secondary" type="button">
                             <i class="fas fa-sync-alt"></i> تحديث
                         </button>
                     </div>
 
-                    <!-- Summary Stats -->
                     <div class="stats-grid" id="bids-summary-stats">
                         <div class="stat-card">
                             <div class="stat-icon blue">
@@ -202,18 +194,14 @@
                         </div>
                     </div>
 
-                    <!-- Status Breakdown -->
                     <div class="settings-section">
                         <div class="section-header">
                             <i class="fas fa-chart-pie"></i>
                             <h3>توزيع الحالات <span class="bids-tracker-sub">آخر 30 يوم</span></h3>
                         </div>
-                        <div id="bidsStatusGrid" class="bid-status-grid">
-                            <!-- Status cards rendered dynamically -->
-                        </div>
+                        <div id="bidsStatusGrid" class="bid-status-grid"></div>
                     </div>
 
-                    <!-- Bids Timeline -->
                     <div class="settings-section">
                         <div class="section-header">
                             <i class="fas fa-stream"></i>
@@ -233,7 +221,6 @@
                     </div>
                 </div>
 
-                <!-- Filters Tab -->
                 <div class="tab-container hidden" id="filters-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -340,24 +327,20 @@
                     </div>
                 </div>
 
-                <!-- AI Prompts Tab -->
                 <div class="tab-container hidden" id="prompts-tab">
                     <div class="content-header">
                         <div class="header-title">
                             <h2>أوامر الذكاء الاصطناعي</h2>
                             <p>قم بإدارة الأوامر (Prompts) التي تستخدمها لتوليد العروض.</p>
                         </div>
-                        <button id="addPromptBtn" class="btn-primary">
+                        <button id="addPromptBtn" class="btn-primary" type="button">
                             <i class="fas fa-plus"></i> إضافة أمر جديد
                         </button>
                     </div>
 
-                    <div id="promptsList" class="settings-grid">
-                        <!-- Prompts will be loaded here -->
-                    </div>
+                    <div id="promptsList" class="settings-grid"></div>
                 </div>
 
-                <!-- Proposals Tab -->
                 <div class="tab-container hidden" id="proposals-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -382,7 +365,6 @@
                     </div>
                 </div>
 
-                <!-- Advanced Settings Tab -->
                 <div class="tab-container hidden" id="settings-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -395,20 +377,78 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-robot"></i>
-                                <h3>رابط الذكاء الاصطناعي</h3>
+                                <h3>الذكاء الاصطناعي</h3>
                             </div>
                             <div class="form-group">
-                                <label>رابط الشات المفضل</label>
-                                <input
-                                    type="text"
-                                    id="aiChatUrl"
-                                    class="form-control"
-                                    placeholder="https://chatgpt.com/"
-                                    dir="ltr"
-                                />
+                                <label>طريقة التنفيذ</label>
+                                <select id="aiExecutionMode" class="form-control">
+                                    <option value="bridge">Bridge عبر موقع الشات</option>
+                                    <option value="direct">Direct عبر API</option>
+                                </select>
                                 <p class="help-text">
-                                    يمكنك استخدام رابط مخصص أو رابط مشروع ChatGPT بعينه.
+                                    <strong>Bridge:</strong> يرسل القالب إلى صفحة الشات التي تختارها
+                                    أنت.<br />
+                                    <strong>Direct:</strong> يولد النص داخل الإضافة مباشرة باستخدام
+                                    مفتاح API مخزن محلياً.
                                 </p>
+                            </div>
+                            <div id="aiDirectSettings" class="hidden">
+                                <div class="form-group">
+                                    <label>المزود</label>
+                                    <select id="aiProvider" class="form-control">
+                                        <option value="openai">OpenAI</option>
+                                        <option value="gemini">Gemini</option>
+                                        <option value="claude">Claude</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>اسم النموذج</label>
+                                    <input
+                                        type="text"
+                                        id="aiModel"
+                                        class="form-control"
+                                        placeholder="اكتب اسم النموذج الذي تريد استخدامه"
+                                        dir="ltr"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label>مفتاح API</label>
+                                    <input
+                                        type="password"
+                                        id="aiApiKey"
+                                        class="form-control"
+                                        placeholder="أدخل مفتاح الـ API"
+                                        dir="ltr"
+                                        autocomplete="off"
+                                    />
+                                    <p class="help-text">
+                                        يُخزن المفتاح محلياً داخل المتصفح ويُستخدم من الخلفية فقط.
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label>تعليمات النظام المشتركة</label>
+                                    <textarea
+                                        id="aiSystemPrompt"
+                                        rows="6"
+                                        class="form-control"
+                                        placeholder="تعليمات إضافية تُحقن قبل القالب المختار عند التوليد المباشر."
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div id="aiBridgeSettings">
+                                <div class="form-group">
+                                    <label>رابط الشات المفضل</label>
+                                    <input
+                                        type="text"
+                                        id="aiChatUrl"
+                                        class="form-control"
+                                        placeholder="https://chatgpt.com/"
+                                        dir="ltr"
+                                    />
+                                    <p class="help-text">
+                                        يمكنك استخدام رابط مخصص أو رابط مشروع ChatGPT بعينه.
+                                    </p>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>تكرار الفحص (بالدقائق)</label>
@@ -495,6 +535,7 @@
                                     id="testNotificationBtn"
                                     class="btn-secondary"
                                     style="flex: 1; justify-content: center"
+                                    type="button"
                                 >
                                     <i class="fas fa-bell"></i> فحص الإشعار
                                 </button>
@@ -502,6 +543,7 @@
                                     id="testSoundBtn"
                                     class="btn-secondary"
                                     style="flex: 1; justify-content: center"
+                                    type="button"
                                 >
                                     <i class="fas fa-volume-up"></i> فحص الصوت
                                 </button>
@@ -521,6 +563,7 @@
                                     id="exportBackupBtn"
                                     class="btn-primary"
                                     style="flex: 1; justify-content: center"
+                                    type="button"
                                 >
                                     <i class="fas fa-download"></i> تصدير البيانات
                                 </button>
@@ -528,6 +571,7 @@
                                     id="importBackupBtn"
                                     class="btn-secondary"
                                     style="flex: 1; justify-content: center"
+                                    type="button"
                                 >
                                     <i class="fas fa-upload"></i> استيراد البيانات
                                 </button>
@@ -544,7 +588,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Contributors Tab -->
+
                 <div class="tab-container hidden" id="contributors-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -554,7 +598,6 @@
                     </div>
 
                     <div id="contributors-list" class="about-grid">
-                        <!-- Contributors will be loaded here via JavaScript -->
                         <div
                             class="loading-spinner"
                             style="grid-column: 1/-1; text-align: center; padding: 40px"
@@ -567,7 +610,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- About Us Tab -->
+
                 <div class="tab-container hidden" id="about-tab">
                     <div class="content-header">
                         <div class="header-title">
@@ -577,7 +620,6 @@
                     </div>
 
                     <div class="about-grid">
-                        <!-- Elaraby Profile -->
                         <div class="about-card">
                             <div class="profile-header">
                                 <div class="profile-avatar elaraby">
@@ -591,6 +633,7 @@
                                 <a
                                     href="https://www.linkedin.com/in/mohammed-ramadan-elaraby-097245242/"
                                     target="_blank"
+                                    rel="noreferrer"
                                     class="social-btn linkedin"
                                 >
                                     <i class="fab fa-linkedin"></i>
@@ -599,6 +642,7 @@
                                 <a
                                     href="https://github.com/Elaraby218"
                                     target="_blank"
+                                    rel="noreferrer"
                                     class="social-btn github"
                                 >
                                     <i class="fab fa-github"></i>
@@ -607,7 +651,6 @@
                             </div>
                         </div>
 
-                        <!-- TryOmar Profile -->
                         <div class="about-card">
                             <div class="profile-header">
                                 <div class="profile-avatar omar">
@@ -621,6 +664,7 @@
                                 <a
                                     href="https://www.linkedin.com/in/tryomar/"
                                     target="_blank"
+                                    rel="noreferrer"
                                     class="social-btn linkedin"
                                 >
                                     <i class="fab fa-linkedin"></i>
@@ -629,6 +673,7 @@
                                 <a
                                     href="https://github.com/TryOmar"
                                     target="_blank"
+                                    rel="noreferrer"
                                     class="social-btn github"
                                 >
                                     <i class="fab fa-github"></i>
@@ -638,7 +683,6 @@
                         </div>
                     </div>
 
-                    <!-- Mission Brief -->
                     <div class="mission-section">
                         <div class="mission-content">
                             <i class="fas fa-heart mission-icon"></i>
@@ -654,7 +698,6 @@
                     </div>
                 </div>
 
-                <!-- Dashboard Footer -->
                 <footer class="dashboard-footer">
                     <div class="footer-content">
                         <span class="footer-text">جميع الحقوق محفوظة لـ</span>
@@ -662,11 +705,16 @@
                             <a
                                 href="https://github.com/Elaraby218"
                                 target="_blank"
+                                rel="noreferrer"
                                 class="footer-link"
                                 >Elaraby</a
                             >
                             <span class="footer-sep">و</span>
-                            <a href="https://github.com/TryOmar" target="_blank" class="footer-link"
+                            <a
+                                href="https://github.com/TryOmar"
+                                target="_blank"
+                                rel="noreferrer"
+                                class="footer-link"
                                 >TryOmar</a
                             >
                         </div>
@@ -675,7 +723,6 @@
                     <div class="footer-version">v2.0.0 Premium</div>
                 </footer>
 
-                <!-- Sticky Save Bar -->
                 <div class="sticky-footer">
                     <span
                         id="saveStatus"
@@ -688,14 +735,13 @@
                         "
                         >تم حفظ التغييرات بنجاح</span
                     >
-                    <button id="saveAllBtn" class="btn-primary">
+                    <button id="saveAllBtn" class="btn-primary" type="button">
                         <i class="fas fa-save"></i> حفظ جميع الإعدادات
                     </button>
                 </div>
             </main>
         </div>
 
-        <!-- Modals -->
         <div
             id="promptModal"
             class="hidden"
@@ -741,6 +787,7 @@
                         id="closeModalBtn"
                         class="nav-item"
                         style="background: #f1f5f9; text-align: center; justify-content: center"
+                        type="button"
                     >
                         إلغاء
                     </button>
@@ -748,32 +795,12 @@
                         id="confirmSavePrompt"
                         class="btn-primary"
                         style="flex: 1; justify-content: center"
+                        type="button"
                     >
                         حفظ الأمر
                     </button>
                 </div>
             </div>
         </div>
-
-        <script src="vendor/browser-polyfill.js"></script>
-        <script src="lib/browser-api.js"></script>
-        <!-- dashboard-bids modules (load order matters) -->
-        <script src="dashboard-bids/constants.js"></script>
-        <script src="dashboard-bids/api.js"></script>
-        <script src="dashboard-bids/data.js"></script>
-        <script src="dashboard-bids/homepage-stats.js"></script>
-        <script src="dashboard-bids/render.js"></script>
-        <script src="dashboard-bids/timers.js"></script>
-        <script src="dashboard-bids/ui-state.js"></script>
-        <script src="dashboard-bids/init.js"></script>
-        <!-- dashboard modules (load order matters) -->
-        <script src="dashboard/connection.js"></script>
-        <script src="dashboard/tabs.js"></script>
-        <script src="dashboard/projects.js"></script>
-        <script src="dashboard/prompts.js"></script>
-        <script src="dashboard/settings.js"></script>
-        <script src="dashboard/contributors.js"></script>
-        <script src="dashboard/events.js"></script>
-        <script src="dashboard/init.js"></script>
     </body>
 </html>
