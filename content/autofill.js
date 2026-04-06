@@ -9,57 +9,66 @@ function checkForAutofill() {
 }
 
 function handleAutofillSequence() {
-    if (!isContextValid()) return;
+    if (!isContextValid()) {
+        return;
+    }
 
-    chrome.storage.local.get(['mostaql_pending_autofill'], (data) => {
-        const autofill = data.mostaql_pending_autofill;
-        if (!autofill) return;
-
-        const currentProjectId = getProjectId();
-        if (autofill.projectId !== currentProjectId) {
-            console.log('Autofill project ID mismatch, skipping.');
-            return;
-        }
-
-        if (Date.now() - autofill.timestamp > 5 * 60 * 1000) {
-            console.log('Autofill data expired, skipping.');
-            chrome.storage.local.remove(['mostaql_pending_autofill']);
-            return;
-        }
-
-        console.log('Found pending autofill data:', autofill);
-
-        let attempts = 0;
-        const maxAttempts = 20;
-
-        const interval = setInterval(() => {
-            const amountInput = document.querySelector('input[name="cost"]') ||
-                document.querySelector('input[name="amount"]') ||
-                document.querySelector('#bid__cost') ||
-                document.querySelector('#amount');
-
-            const durationInput = document.querySelector('input[name="period"]') ||
-                document.querySelector('input[name="duration"]') ||
-                document.querySelector('#bid__period') ||
-                document.querySelector('#duration');
-
-            if (amountInput && durationInput) {
-                clearInterval(interval);
-                amountInput.focus();
-                durationInput.focus();
-                fillForm(amountInput, durationInput, autofill);
-            } else {
-                attempts++;
-                if (attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    console.log('Mostaql Ext: Bid form elements not found after 10 seconds.');
-                }
+    browserApi.storage.local
+        .get(['mostaql_pending_autofill'])
+        .then((data) => {
+            const autofill = data.mostaql_pending_autofill;
+            if (!autofill) {
+                return;
             }
-        }, 500);
-    });
+
+            const currentProjectId = getProjectId();
+            if (autofill.projectId !== currentProjectId) {
+                console.log('Autofill project ID mismatch, skipping.');
+                return;
+            }
+
+            if (Date.now() - autofill.timestamp > 5 * 60 * 1000) {
+                console.log('Autofill data expired, skipping.');
+                browserApi.storage.local.remove(['mostaql_pending_autofill']);
+                return;
+            }
+
+            console.log('Found pending autofill data:', autofill);
+
+            let attempts = 0;
+            const maxAttempts = 20;
+
+            const interval = setInterval(() => {
+                const amountInput =
+                    document.querySelector('input[name="cost"]') ||
+                    document.querySelector('input[name="amount"]') ||
+                    document.querySelector('#bid__cost') ||
+                    document.querySelector('#amount');
+
+                const durationInput =
+                    document.querySelector('input[name="period"]') ||
+                    document.querySelector('input[name="duration"]') ||
+                    document.querySelector('#bid__period') ||
+                    document.querySelector('#duration');
+
+                if (amountInput && durationInput) {
+                    clearInterval(interval);
+                    amountInput.focus();
+                    durationInput.focus();
+                    void fillForm(amountInput, durationInput, autofill);
+                } else {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        console.log('Mostaql Ext: Bid form elements not found after 10 seconds.');
+                    }
+                }
+            }, 500);
+        })
+        .catch(console.error);
 }
 
-function fillForm(amountInput, durationInput, data) {
+async function fillForm(amountInput, durationInput, data) {
     console.log(`Filling form: Amount=${data.amount}, Duration=${data.duration}`);
 
     const triggerEvents = (el) => {
@@ -99,7 +108,8 @@ function fillForm(amountInput, durationInput, data) {
         }
 
         if (data.proposal) {
-            const proposalTextarea = document.querySelector('#bid__details') ||
+            const proposalTextarea =
+                document.querySelector('#bid__details') ||
                 document.querySelector('#description') ||
                 document.querySelector('textarea[name="details"]') ||
                 document.querySelector('textarea[name="description"]') ||
@@ -113,13 +123,17 @@ function fillForm(amountInput, durationInput, data) {
         }
     }, 100);
 
-    const form = document.querySelector('#add-proposal-form') || amountInput.closest('form') || amountInput.parentElement;
+    const form =
+        document.querySelector('#add-proposal-form') ||
+        amountInput.closest('form') ||
+        amountInput.parentElement;
     if (form) {
         form.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         const toast = document.createElement('div');
         toast.className = 'mostaql-autofill-toast';
-        toast.innerHTML = '<i class="fa fa-magic"></i> <span>تم تعبئة تفاصيل العرض تلقائياً!</span>';
+        toast.innerHTML =
+            '<i class="fa fa-magic"></i> <span>تم تعبئة تفاصيل العرض تلقائياً!</span>';
         document.body.appendChild(toast);
 
         setTimeout(() => toast.classList.add('show'), 100);
@@ -129,10 +143,10 @@ function fillForm(amountInput, durationInput, data) {
         }, 5000);
     }
 
-    chrome.storage.local.remove(['mostaql_pending_autofill']);
+    await browserApi.storage.local.remove(['mostaql_pending_autofill']);
 }
 
-function handleQuickBidClick() {
+async function handleQuickBidClick() {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -140,33 +154,38 @@ function handleQuickBidClick() {
     console.log('Mostaql Ext: Fast Apply (Quick) clicked.');
 
     const projectId = getProjectId();
-    if (!projectId) return;
+    if (!projectId) {
+        return;
+    }
 
-    chrome.storage.local.get(['proposalTemplate'], (data) => {
-        const proposal = data.proposalTemplate || `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
+    const data = await browserApi.storage.local.get(['proposalTemplate']);
+    const proposal =
+        data.proposalTemplate ||
+        `اطلعت على مشروعك وفهمت متطلباته جيدا، واذا انني قادر على تقديم العمل بطريقة منظمة وواضحة. احرص على الدقة لضمان ان تكون النتيجة مرضية تماما لك.
 
 متحمس لبدء التعاون معك، واذاك بتنفيذ العمل بشكل سلس ومرتب. في انتظار تواصلك لترتيب التفاصيل والانطلاق مباشرة.`;
 
-        const minBudget = getBudgetFromPage();
-        const projectData = extractProjectData();
+    const minBudget = getBudgetFromPage();
+    const projectData = extractProjectData();
 
-        let durationDays = 0;
-        if (projectData.duration) {
-            const match = projectData.duration.match(/\d+/);
-            if (match) durationDays = parseInt(match[0]);
-            else if (projectData.duration.includes("يوم واحد")) durationDays = 1;
+    let durationDays = 0;
+    if (projectData.duration) {
+        const match = projectData.duration.match(/\d+/);
+        if (match) {
+            durationDays = parseInt(match[0]);
+        } else if (projectData.duration.includes('يوم واحد')) {
+            durationDays = 1;
         }
+    }
 
-        const autofillData = {
-            projectId: projectId,
-            amount: minBudget,
-            duration: durationDays,
-            proposal: proposal,
-            timestamp: Date.now()
-        };
+    const autofillData = {
+        projectId: projectId,
+        amount: minBudget,
+        duration: durationDays,
+        proposal: proposal,
+        timestamp: Date.now(),
+    };
 
-        chrome.storage.local.set({ 'mostaql_pending_autofill': autofillData }, () => {
-            handleAutofillSequence();
-        });
-    });
+    await browserApi.storage.local.set({ mostaql_pending_autofill: autofillData });
+    handleAutofillSequence();
 }

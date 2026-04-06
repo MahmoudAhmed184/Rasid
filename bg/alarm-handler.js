@@ -6,39 +6,38 @@
 /* global signalRClient */
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'checkJobs') {
-    const data = await chrome.storage.local.get(['settings']);
-    const notificationMode = (data.settings || {}).notificationMode || 'auto';
+    if (alarm.name === 'checkJobs') {
+        const data = await browserApi.storage.local.get(['settings']);
+        const notificationMode = (data.settings || {}).notificationMode || 'auto';
 
-    checkTrackedProjects();
+        checkTrackedProjects();
 
-    if (notificationMode === 'polling') {
-      console.log('📡 Notification mode: polling — checking for new jobs');
-      checkForNewJobs();
+        if (notificationMode === 'polling') {
+            console.log('📡 Notification mode: polling — checking for new jobs');
+            checkForNewJobs();
+        } else if (notificationMode === 'signalr') {
+            await initializeSignalR();
+        } else {
+            await initializeSignalR();
 
-    } else if (notificationMode === 'signalr') {
-      await initializeSignalR();
+            const isSignalRActive =
+                SIGNALR_AVAILABLE &&
+                typeof signalRClient !== 'undefined' &&
+                signalRClient.isConnected;
 
-    } else {
-      await initializeSignalR();
-
-      const isSignalRActive = SIGNALR_AVAILABLE
-        && typeof signalRClient !== 'undefined'
-        && signalRClient.isConnected;
-
-      if (!isSignalRActive) {
-        console.log('⚠️ SignalR not connected, using polling fallback for new jobs');
-        checkForNewJobs();
-      }
+            if (!isSignalRActive) {
+                console.log('⚠️ SignalR not connected, using polling fallback for new jobs');
+                checkForNewJobs();
+            }
+        }
     }
-  }
 
-  if (alarm.name === 'signalRReconnect') {
-    console.log('SignalR: Reconnect alarm fired, attempting to reconnect...');
-    const d = await chrome.storage.local.get(['settings']);
-    const mode = (d.settings || {}).notificationMode || 'auto';
-    if (mode !== 'polling') {
-      await initializeSignalR();
+    if (alarm.name === 'signalRReconnect') {
+        console.log('SignalR: Reconnect alarm fired, attempting to reconnect...');
+        const d = await browserApi.storage.local.get(['settings']);
+        const mode = (d.settings || {}).notificationMode || 'auto';
+        if (mode !== 'polling') {
+            await initializeSignalR();
+        }
     }
-  }
 });

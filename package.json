@@ -1,0 +1,20 @@
+{
+    "name": "frelancia",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Cross-browser build pipeline for the Frelancia WebExtension",
+    "scripts": {
+        "build": "node scripts/build.mjs",
+        "build:chrome": "node scripts/build.mjs chrome",
+        "build:firefox": "node scripts/build.mjs firefox",
+        "clean": "node scripts/build.mjs --clean",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
+    },
+    "devDependencies": {
+        "eslint": "^9.38.0",
+        "prettier": "^3.6.2"
+    }
+}

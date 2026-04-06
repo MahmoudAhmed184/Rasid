@@ -4,10 +4,15 @@
 // ==========================================
 
 function injectProfileTools() {
-    const target = document.querySelector('.profile_card') || document.querySelector('#profile-sidebar');
-    if (!target) return;
+    const target =
+        document.querySelector('.profile_card') || document.querySelector('#profile-sidebar');
+    if (!target) {
+        return;
+    }
 
-    if (document.getElementById('mostaql-profile-tools')) return;
+    if (document.getElementById('mostaql-profile-tools')) {
+        return;
+    }
 
     const box = document.createElement('div');
     box.id = 'mostaql-profile-tools';

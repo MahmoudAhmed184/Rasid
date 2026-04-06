@@ -7,9 +7,13 @@
 
 function injectDashboardStats() {
     const target = document.querySelector('#project-states');
-    if (!target) return;
+    if (!target) {
+        return;
+    }
 
-    if (document.getElementById('mostaql-msg-tools')) return;
+    if (document.getElementById('mostaql-msg-tools')) {
+        return;
+    }
 
     const box = document.createElement('div');
     box.id = 'mostaql-msg-tools';
@@ -36,30 +40,38 @@ function injectDashboardStats() {
     [
         'https://mostaql.com/dashboard/bids?status=processing',
         'https://mostaql.com/dashboard/bids?status=lost',
-    ].forEach(href => {
-        document.querySelectorAll(`a[href="${href}"]`).forEach(el => {
+    ].forEach((href) => {
+        document.querySelectorAll(`a[href="${href}"]`).forEach((el) => {
             el.removeAttribute('href');
             el.style.cursor = 'default';
             el.style.pointerEvents = 'none';
         });
     });
 
-    ['.label-prj-completed', '.label-prj-lost'].forEach(cls => {
-        document.querySelectorAll(cls).forEach(bar => {
+    ['.label-prj-completed', '.label-prj-lost'].forEach((cls) => {
+        document.querySelectorAll(cls).forEach((bar) => {
             const wrapper = bar.closest('.progress__bar');
-            if (wrapper) wrapper.remove();
+            if (wrapper) {
+                wrapper.remove();
+            }
         });
     });
 
     _injectAnalyticsModal();
     _injectMonitoredModal();
 
-    document.getElementById('frelancia-show-analytics-btn').addEventListener('click', _openAnalyticsModal);
-    document.getElementById('frelancia-show-monitored-btn').addEventListener('click', _openMonitoredModal);
+    document
+        .getElementById('frelancia-show-analytics-btn')
+        .addEventListener('click', _openAnalyticsModal);
+    document
+        .getElementById('frelancia-show-monitored-btn')
+        .addEventListener('click', _openMonitoredModal);
 }
 
 function _injectAnalyticsModal() {
-    if (document.getElementById('frelancia-analytics-modal')) return;
+    if (document.getElementById('frelancia-analytics-modal')) {
+        return;
+    }
 
     const modal = document.createElement('div');
     modal.id = 'frelancia-analytics-modal';
@@ -95,13 +107,17 @@ function _injectAnalyticsModal() {
         modal.style.display = 'none';
     });
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
     });
 }
 
 function _openAnalyticsModal() {
     const modal = document.getElementById('frelancia-analytics-modal');
-    if (!modal) return;
+    if (!modal) {
+        return;
+    }
     modal.style.display = 'block';
 
     if (!window._frelanciaStatsLoaded) {
@@ -111,7 +127,9 @@ function _openAnalyticsModal() {
 }
 
 function _injectMonitoredModal() {
-    if (document.getElementById('frelancia-monitored-modal')) return;
+    if (document.getElementById('frelancia-monitored-modal')) {
+        return;
+    }
 
     const modal = document.createElement('div');
     modal.id = 'frelancia-monitored-modal';
@@ -155,49 +173,75 @@ function _injectMonitoredModal() {
         _loadMonitoredData();
     });
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
     });
 }
 
 function _openMonitoredModal() {
     const modal = document.getElementById('frelancia-monitored-modal');
-    if (!modal) return;
+    if (!modal) {
+        return;
+    }
     modal.style.display = 'block';
     _loadMonitoredData();
 }
 
-function _loadMonitoredData() {
+async function _loadMonitoredData() {
     const listEl = document.getElementById('frelancia-monitored-modal-body');
-    if (!listEl) return;
+    if (!listEl) {
+        return;
+    }
 
     listEl.innerHTML = `<div style="text-align:center; padding:40px; color:#999;"><i class="fa fa-spinner fa-spin fa-2x"></i></div>`;
 
-    chrome.storage.local.get(['trackedProjects'], (data) => {
-        if (chrome.runtime.lastError) return;
+    const data = await browserApi.storage.local.get(['trackedProjects']);
 
-        const tracked = data.trackedProjects || {};
-        const jobs = Object.values(tracked)
-            .sort((a, b) => (b.lastChecked || '').localeCompare(a.lastChecked || ''));
+    const tracked = data.trackedProjects || {};
+    const jobs = Object.values(tracked).sort((a, b) =>
+        (b.lastChecked || '').localeCompare(a.lastChecked || '')
+    );
 
-        if (jobs.length === 0) {
-            listEl.innerHTML = `
+    if (jobs.length === 0) {
+        listEl.innerHTML = `
                 <div class="list-group-item" style="padding:30px; text-align:center; color:#888; border:none;">
                     لا توجد مشاريع مراقبة. افتح أي مشروع واضغط <strong>مراقبة</strong> لإضافته.
                 </div>`;
-            return;
-        }
+        return;
+    }
 
-        listEl.innerHTML = `<div class="panel-listing">` + jobs.map(job => {
-            const poster   = job.clientName   ? `<li><span class="text-muted"><i class="fa fa-fw fa-user"></i> ${job.clientName}</span></li>` : '';
-            const timeAgo  = job.publishDate  ? `<li><span class="text-muted"><i class="fa fa-fw fa-clock-o"></i> ${job.publishDate}</span></li>` : '';
-            const bids     = job.communications ? `<li><span class="text-muted"><i class="fa fa-fw fa-handshake-o"></i> ${job.communications} تواصل</span></li>` : '';
-            const budget   = (job.budget && job.budget !== 'غير محدد') ? `<li><span class="text-muted"><i class="fa fa-fw fa-money"></i> ${job.budget}</span></li>` : '';
-            const status   = job.status || 'مفتوح';
-            let statusCls  = 'label-prj-open';
-            if (status.includes('تنفيذ') || status.includes('جارٍ')) statusCls = 'label-prj-processing';
-            if (status.includes('مغلق') || status.includes('مكتمل') || status.includes('ملغى')) statusCls = 'label-prj-closed';
-            const meta = [poster, timeAgo, bids, budget].filter(Boolean).join('');
-            return `
+    listEl.innerHTML =
+        `<div class="panel-listing">` +
+        jobs
+            .map((job) => {
+                const poster = job.clientName
+                    ? `<li><span class="text-muted"><i class="fa fa-fw fa-user"></i> ${job.clientName}</span></li>`
+                    : '';
+                const timeAgo = job.publishDate
+                    ? `<li><span class="text-muted"><i class="fa fa-fw fa-clock-o"></i> ${job.publishDate}</span></li>`
+                    : '';
+                const bids = job.communications
+                    ? `<li><span class="text-muted"><i class="fa fa-fw fa-handshake-o"></i> ${job.communications} تواصل</span></li>`
+                    : '';
+                const budget =
+                    job.budget && job.budget !== 'غير محدد'
+                        ? `<li><span class="text-muted"><i class="fa fa-fw fa-money"></i> ${job.budget}</span></li>`
+                        : '';
+                const status = job.status || 'مفتوح';
+                let statusCls = 'label-prj-open';
+                if (status.includes('تنفيذ') || status.includes('جارٍ')) {
+                    statusCls = 'label-prj-processing';
+                }
+                if (
+                    status.includes('مغلق') ||
+                    status.includes('مكتمل') ||
+                    status.includes('ملغى')
+                ) {
+                    statusCls = 'label-prj-closed';
+                }
+                const meta = [poster, timeAgo, bids, budget].filter(Boolean).join('');
+                return `
                 <div class="list-group-item brd--b mrg--an">
                     <h5 class="listing__title project__title mrg--bt-reset">
                         <a href="${job.url}" target="_blank">${job.title || 'بدون عنوان'}</a>
@@ -205,8 +249,9 @@ function _loadMonitoredData() {
                     </h5>
                     ${meta ? `<ul class="project__meta list-meta text-zeta clr-gray-dark">${meta}</ul>` : ''}
                 </div>`;
-        }).join('') + `</div>`;
-    });
+            })
+            .join('') +
+        `</div>`;
 }
 
 function _extractBidRow(renderedHtml) {
@@ -214,29 +259,34 @@ function _extractBidRow(renderedHtml) {
         console.error('_extractBidRow expects a string, received:', typeof renderedHtml);
         return null;
     }
-    const tpl = document.createElement("template");
+    const tpl = document.createElement('template');
     tpl.innerHTML = renderedHtml.trim();
-    const row = tpl.content.querySelector("tr.bid-row");
-    if (!row) return null;
+    const row = tpl.content.querySelector('tr.bid-row');
+    if (!row) {
+        return null;
+    }
 
-    const titleLink = row.querySelector("h2 a");
-    const statusEl = row.querySelector(".label-prj-pending, .label");
-    const timeEl = row.querySelector("time[datetime]");
-    const priceEl = row.querySelector(".project__meta li .fa-money")?.closest("li")?.querySelector("span");
-    const url = (titleLink?.getAttribute("href") || null).split("-")[0];
+    const titleLink = row.querySelector('h2 a');
+    const statusEl = row.querySelector('.label-prj-pending, .label');
+    const timeEl = row.querySelector('time[datetime]');
+    const priceEl = row
+        .querySelector('.project__meta li .fa-money')
+        ?.closest('li')
+        ?.querySelector('span');
+    const url = (titleLink?.getAttribute('href') || null).split('-')[0];
 
     let publishedText = null;
     if (timeEl) {
-        const li = timeEl.closest("li");
-        publishedText = li ? li.textContent.replace(/\s+/g, " ").trim() : null;
+        const li = timeEl.closest('li');
+        publishedText = li ? li.textContent.replace(/\s+/g, ' ').trim() : null;
     }
 
     return {
         title: titleLink?.textContent?.trim() || null,
         url,
         status: statusEl?.textContent?.trim() || null,
-        publishedDatetime: timeEl?.getAttribute("datetime") || null,
-        price: priceEl?.textContent?.trim() || null
+        publishedDatetime: timeEl?.getAttribute('datetime') || null,
+        price: priceEl?.textContent?.trim() || null,
     };
 }
 
@@ -246,17 +296,34 @@ function _generateStatusStats(items, opts = {}) {
     const day1Ms = 1 * 24 * 60 * 60 * 1000;
 
     const safeArray = Array.isArray(items) ? items : [];
-    const normalizeStatus = (s) => (typeof s === "string" && s.trim() ? s.trim() : "UNKNOWN");
+    const normalizeStatus = (s) => (typeof s === 'string' && s.trim() ? s.trim() : 'UNKNOWN');
 
     const parsePublished = (v) => {
-        if (!v) return null;
-        if (v instanceof Date && !Number.isNaN(v.getTime())) return v;
-        if (typeof v !== "string") return null;
+        if (!v) {
+            return null;
+        }
+        if (v instanceof Date && !Number.isNaN(v.getTime())) {
+            return v;
+        }
+        if (typeof v !== 'string') {
+            return null;
+        }
         const str = v.trim();
-        if (!str) return null;
+        if (!str) {
+            return null;
+        }
         const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
         if (m) {
-            const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0), Number(m[6] ?? 0)));
+            const d = new Date(
+                Date.UTC(
+                    Number(m[1]),
+                    Number(m[2]) - 1,
+                    Number(m[3]),
+                    Number(m[4] ?? 0),
+                    Number(m[5] ?? 0),
+                    Number(m[6] ?? 0)
+                )
+            );
             return Number.isNaN(d.getTime()) ? null : d;
         }
         const d = new Date(str);
@@ -284,33 +351,41 @@ function _generateStatusStats(items, opts = {}) {
             continue;
         }
         const ageMs = now.getTime() - published.getTime();
-        if (ageMs < 0) continue;
-        if (ageMs <= days30Ms) addToBucket(last30Days, status);
+        if (ageMs < 0) {
+            continue;
+        }
+        if (ageMs <= days30Ms) {
+            addToBucket(last30Days, status);
+        }
         if (ageMs <= day1Ms) {
             addToBucket(last1Day, status);
             recent24hBids.push({ title: item.title, url: item.url, ageMs, published });
         }
     }
 
-    const uniqueStatuses = Array.from(new Set(Object.keys(overall.byStatus))).sort((a, b) => a.localeCompare(b, "ar"));
+    const uniqueStatuses = Array.from(new Set(Object.keys(overall.byStatus))).sort((a, b) =>
+        a.localeCompare(b, 'ar')
+    );
 
     return {
         meta: { now: now.toISOString(), totalItems: safeArray.length, uniqueStatuses },
         status: overall,
         last30Days: last30Days,
         last1Day: last1Day,
-        recent24hBids: recent24hBids
+        recent24hBids: recent24hBids,
     };
 }
 
 async function _fetchBidPage(pageNumber) {
     const url = `https://mostaql.com/dashboard/bids?page=${pageNumber}&sort=latest`;
     const response = await fetch(url, {
-        method: "GET",
-        headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" },
-        credentials: "include",
+        method: 'GET',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'include',
     });
-    if (!response.ok) throw new Error(`Page ${pageNumber} request failed`);
+    if (!response.ok) {
+        throw new Error(`Page ${pageNumber} request failed`);
+    }
     return await response.json();
 }
 
@@ -334,10 +409,10 @@ async function _fetchAllBids() {
     const allBids = [];
 
     const firstData = await _fetchBidPage(1);
-    console.log("all bids count:", firstData.count);
+    console.log('all bids count:', firstData.count);
 
     const totalPages = Math.ceil(firstData.count / itemsPerPage);
-    console.log("total pages:", totalPages);
+    console.log('total pages:', totalPages);
 
     allBids.push(..._processBidsFromPage(firstData));
 
@@ -358,13 +433,21 @@ function _renderBidStats(stats) {
     const BIDS_URL = 'https://mostaql.com/dashboard/bids';
 
     const STATUS_CONFIG = {
-        'مكتمل': { label: 'مكتملة', cssClass: 'label-prj-completed', href: `${BIDS_URL}?status=completed` },
-        'مستبعد': { label: 'مستبعدة', cssClass: 'label-prj-lost', href: BIDS_URL },
-        'مُغلق': { label: 'مُغلق', cssClass: 'label-prj-closed', href: BIDS_URL },
-        'بانتظار الموافقة': { label: 'بانتظار الموافقة', cssClass: 'label-prj-open', href: `${BIDS_URL}?status=pending` },
+        مكتمل: {
+            label: 'مكتملة',
+            cssClass: 'label-prj-completed',
+            href: `${BIDS_URL}?status=completed`,
+        },
+        مستبعد: { label: 'مستبعدة', cssClass: 'label-prj-lost', href: BIDS_URL },
+        مُغلق: { label: 'مُغلق', cssClass: 'label-prj-closed', href: BIDS_URL },
+        'بانتظار الموافقة': {
+            label: 'بانتظار الموافقة',
+            cssClass: 'label-prj-open',
+            href: `${BIDS_URL}?status=pending`,
+        },
     };
 
-    const pct = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) : 0;
+    const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
     const makeBar = ({ label, count, pct: p, cssClass = '', href = BIDS_URL, isLink = true }) => {
         const inner = `
@@ -387,10 +470,16 @@ function _renderBidStats(stats) {
     };
 
     const buildBars = (keys, byStatus, total) =>
-        keys.map(key => {
+        keys.map((key) => {
             const cfg = STATUS_CONFIG[key] || { label: key, cssClass: '', href: BIDS_URL };
             const count = byStatus[key] || 0;
-            return makeBar({ label: cfg.label, count, pct: pct(count, total), cssClass: cfg.cssClass, href: cfg.href });
+            return makeBar({
+                label: cfg.label,
+                count,
+                pct: pct(count, total),
+                cssClass: cfg.cssClass,
+                href: cfg.href,
+            });
         });
 
     const renderColumn = ({ icon, title, summaryBar, bars, emptyMsg }) => `
@@ -405,21 +494,45 @@ function _renderBidStats(stats) {
     const { status: overall, last30Days, last1Day, recent24hBids } = stats;
 
     const overallColumn = renderColumn({
-        icon: 'fa-list-ul', title: 'إجمالي العروض',
-        summaryBar: makeBar({ label: 'إجمالي العروض', count: overall.total, pct: 100, href: BIDS_URL }),
+        icon: 'fa-list-ul',
+        title: 'إجمالي العروض',
+        summaryBar: makeBar({
+            label: 'إجمالي العروض',
+            count: overall.total,
+            pct: 100,
+            href: BIDS_URL,
+        }),
         bars: buildBars(['مكتمل', 'مستبعد', 'مُغلق'], overall.byStatus, overall.total),
     });
 
     const last30Column = renderColumn({
-        icon: 'fa-calendar', title: 'آخر 30 يوم',
-        summaryBar: makeBar({ label: 'آخر 30 يوم (إجمالي)', count: last30Days.total, pct: pct(last30Days.total, overall.total), cssClass: 'label-prj-open', href: BIDS_URL }),
-        bars: buildBars(['بانتظار الموافقة', 'مستبعد', 'مُغلق'], last30Days.byStatus, last30Days.total),
+        icon: 'fa-calendar',
+        title: 'آخر 30 يوم',
+        summaryBar: makeBar({
+            label: 'آخر 30 يوم (إجمالي)',
+            count: last30Days.total,
+            pct: pct(last30Days.total, overall.total),
+            cssClass: 'label-prj-open',
+            href: BIDS_URL,
+        }),
+        bars: buildBars(
+            ['بانتظار الموافقة', 'مستبعد', 'مُغلق'],
+            last30Days.byStatus,
+            last30Days.total
+        ),
     });
 
     const todayKeys = Object.keys(last1Day.byStatus);
     const todayColumn = renderColumn({
-        icon: 'fa-clock-o', title: 'اليوم',
-        summaryBar: makeBar({ label: 'اليوم (إجمالي)', count: last1Day.total, pct: pct(last1Day.total, overall.total), cssClass: 'label-prj-processing', href: BIDS_URL }),
+        icon: 'fa-clock-o',
+        title: 'اليوم',
+        summaryBar: makeBar({
+            label: 'اليوم (إجمالي)',
+            count: last1Day.total,
+            pct: pct(last1Day.total, overall.total),
+            cssClass: 'label-prj-processing',
+            href: BIDS_URL,
+        }),
         bars: buildBars(todayKeys, last1Day.byStatus, last1Day.total),
         emptyMsg: 'لا توجد عروض اليوم',
     });
@@ -430,27 +543,43 @@ function _renderBidStats(stats) {
         const sortedBids = recent24hBids.sort((a, b) => b.ageMs - a.ageMs);
         const numCols = 3;
         const buckets = Array.from({ length: numCols }, () => []);
-        sortedBids.forEach((bid, index) => { buckets[index % numCols].push(bid); });
+        sortedBids.forEach((bid, index) => {
+            buckets[index % numCols].push(bid);
+        });
 
         for (let i = 0; i < numCols; i++) {
             const chunk = buckets[i];
             countdownsHtml += `<div class="col-sm-4 progress__bars">`;
-            countdownsHtml += i === 0
-                ? `<p class="text-muted mostaql-stats-header"><i class="fa fa-refresh"></i> حالة العروض اليومية</p>`
-                : `<p class="mostaql-stats-header" style="visibility:hidden;">-</p>`;
+            countdownsHtml +=
+                i === 0
+                    ? `<p class="text-muted mostaql-stats-header"><i class="fa fa-refresh"></i> حالة العروض اليومية</p>`
+                    : `<p class="mostaql-stats-header" style="visibility:hidden;">-</p>`;
 
             if (chunk.length > 0) {
-                countdownsHtml += chunk.map(bid => {
-                    const totalMs = 24 * 60 * 60 * 1000;
-                    const msLeft = totalMs - bid.ageMs;
-                    if (msLeft <= 0) return '';
-                    const p = Math.max(0, Math.min(100, Math.round(((totalMs - msLeft) / totalMs) * 100)));
-                    const appliedAtStr = bid.published.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-                    let color = '#dc3545';
-                    if (p >= 85) color = '#28a745';
-                    else if (p >= 50) color = '#ffc107';
-                    else if (p >= 25) color = '#17a2b8';
-                    return `
+                countdownsHtml += chunk
+                    .map((bid) => {
+                        const totalMs = 24 * 60 * 60 * 1000;
+                        const msLeft = totalMs - bid.ageMs;
+                        if (msLeft <= 0) {
+                            return '';
+                        }
+                        const p = Math.max(
+                            0,
+                            Math.min(100, Math.round(((totalMs - msLeft) / totalMs) * 100))
+                        );
+                        const appliedAtStr = bid.published.toLocaleTimeString('ar-EG', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        });
+                        let color = '#dc3545';
+                        if (p >= 85) {
+                            color = '#28a745';
+                        } else if (p >= 50) {
+                            color = '#ffc107';
+                        } else if (p >= 25) {
+                            color = '#17a2b8';
+                        }
+                        return `
                         <a href="${bid.url || '#'}" ${bid.url ? 'target="_blank"' : ''} class="progress__bar docs-creator">
                             <div class="projects-progress" title="تاريخ التقديم: ${appliedAtStr}">
                                 <div class="clearfix">
@@ -462,7 +591,8 @@ function _renderBidStats(stats) {
                                 </div>
                             </div>
                         </a>`;
-                }).join('');
+                    })
+                    .join('');
             }
             countdownsHtml += `</div>`;
         }
@@ -470,7 +600,9 @@ function _renderBidStats(stats) {
     }
 
     const modalBody = document.getElementById('frelancia-analytics-modal-body');
-    if (!modalBody) return;
+    if (!modalBody) {
+        return;
+    }
 
     modalBody.innerHTML = `
         <div class="row" style="margin-bottom:20px; display:flex; align-items:flex-start;">
@@ -489,7 +621,7 @@ function _startSlotCountdowns() {
 
     const updateTimers = () => {
         const totalMs = 24 * 60 * 60 * 1000;
-        document.querySelectorAll('.frelancia-countdown').forEach(el => {
+        document.querySelectorAll('.frelancia-countdown').forEach((el) => {
             let msLeft = parseInt(el.getAttribute('data-ms-left'), 10);
             if (isNaN(msLeft) || msLeft <= 0) {
                 el.textContent = 'متاح الآن!';
@@ -497,7 +629,10 @@ function _startSlotCountdowns() {
                 const container = el.closest('.projects-progress');
                 if (container) {
                     const bar = container.querySelector('.progress-bar');
-                    if (bar) { bar.style.width = '100%'; bar.style.backgroundColor = '#28a745'; }
+                    if (bar) {
+                        bar.style.width = '100%';
+                        bar.style.backgroundColor = '#28a745';
+                    }
                 }
                 return;
             }
@@ -509,14 +644,21 @@ function _startSlotCountdowns() {
             el.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             const p = Math.max(0, Math.min(100, ((totalMs - msLeft) / totalMs) * 100));
             let color = '#dc3545';
-            if (p >= 85) color = '#28a745';
-            else if (p >= 50) color = '#ffc107';
-            else if (p >= 25) color = '#17a2b8';
+            if (p >= 85) {
+                color = '#28a745';
+            } else if (p >= 50) {
+                color = '#ffc107';
+            } else if (p >= 25) {
+                color = '#17a2b8';
+            }
             el.style.color = color;
             const container = el.closest('.projects-progress');
             if (container) {
                 const bar = container.querySelector('.progress-bar');
-                if (bar) { bar.style.width = `${p}%`; bar.style.backgroundColor = color; }
+                if (bar) {
+                    bar.style.width = `${p}%`;
+                    bar.style.backgroundColor = color;
+                }
             }
         });
     };
@@ -528,10 +670,10 @@ function _startSlotCountdowns() {
 async function _loadBidStats() {
     try {
         const stats = await _fetchAllBids();
-        console.log("Final stats:", stats);
+        console.log('Final stats:', stats);
         _renderBidStats(stats);
     } catch (err) {
-        console.error("Error fetching bids:", err);
+        console.error('Error fetching bids:', err);
     }
 }
 

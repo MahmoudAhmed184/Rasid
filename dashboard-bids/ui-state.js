@@ -7,7 +7,9 @@
  */
 function showBidLoadingState() {
     const container = document.getElementById('bidsTimelineList');
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = `
         <div class="bids-loading">
@@ -19,7 +21,9 @@ function showBidLoadingState() {
     resetBidSummaryCards();
 
     const statusGrid = document.getElementById('bidsStatusGrid');
-    if (statusGrid) statusGrid.innerHTML = '';
+    if (statusGrid) {
+        statusGrid.innerHTML = '';
+    }
 }
 
 /**
@@ -28,7 +32,9 @@ function showBidLoadingState() {
  */
 function showBidErrorState(message) {
     const container = document.getElementById('bidsTimelineList');
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = `
         <div class="bids-error">
@@ -46,10 +52,17 @@ function showBidErrorState(message) {
  * Resets all summary stat card values to the loading placeholder.
  */
 function resetBidSummaryCards() {
-    ['bids-total-30d', 'bids-available-slots', 'bids-plan-usage',
-     'bids-additional', 'bids-next-available', 'bids-today-count']
-        .forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '-';
-        });
+    [
+        'bids-total-30d',
+        'bids-available-slots',
+        'bids-plan-usage',
+        'bids-additional',
+        'bids-next-available',
+        'bids-today-count',
+    ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = '-';
+        }
+    });
 }

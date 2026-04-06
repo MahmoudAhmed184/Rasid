@@ -224,7 +224,9 @@
 .bid-progress-fill {
     height: 100%;
     border-radius: 10px;
-    transition: width 1s linear, background 2s ease;
+    transition:
+        width 1s linear,
+        background 2s ease;
 }
 
 .bid-countdown {

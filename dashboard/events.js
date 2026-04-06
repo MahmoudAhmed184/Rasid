@@ -33,7 +33,9 @@ function setupEventListeners() {
 
     // Prompt modal — open
     const addPromptBtn = document.getElementById('addPromptBtn');
-    if (addPromptBtn) addPromptBtn.addEventListener('click', () => openPromptModal());
+    if (addPromptBtn) {
+        addPromptBtn.addEventListener('click', () => openPromptModal());
+    }
 
     // Prompt modal — close
     const closeModalBtn = document.getElementById('closeModalBtn');
@@ -45,13 +47,15 @@ function setupEventListeners() {
 
     // Prompt modal — confirm save
     const confirmSaveBtn = document.getElementById('confirmSavePrompt');
-    if (confirmSaveBtn) confirmSaveBtn.addEventListener('click', savePromptFromModal);
+    if (confirmSaveBtn) {
+        confirmSaveBtn.addEventListener('click', savePromptFromModal);
+    }
 
     // Diagnostic: test notification
     const testNotifyBtn = document.getElementById('testNotificationBtn');
     if (testNotifyBtn) {
         testNotifyBtn.addEventListener('click', () => {
-            chrome.runtime.sendMessage({ action: 'testNotification' });
+            browserApi.runtime.sendMessage({ action: 'testNotification' }).catch(console.error);
         });
     }
 
@@ -59,19 +63,19 @@ function setupEventListeners() {
     const testSoundBtn = document.getElementById('testSoundBtn');
     if (testSoundBtn) {
         testSoundBtn.addEventListener('click', () => {
-            chrome.runtime.sendMessage({ action: 'testSound' });
+            browserApi.runtime.sendMessage({ action: 'testSound' }).catch(console.error);
         });
     }
 
     // System toggle — auto-save immediately on change
     const systemToggle = document.getElementById('systemToggle');
     if (systemToggle) {
-        systemToggle.addEventListener('change', () => {
-            chrome.storage.local.get(['settings'], (data) => {
-                const s = data.settings || {};
-                s.systemEnabled = systemToggle.checked;
-                chrome.storage.local.set({ settings: s }, showSaveStatus);
-            });
+        systemToggle.addEventListener('change', async () => {
+            const data = await browserApi.storage.local.get(['settings']);
+            const s = data.settings || {};
+            s.systemEnabled = systemToggle.checked;
+            await browserApi.storage.local.set({ settings: s });
+            showSaveStatus();
         });
     }
 }

@@ -10,7 +10,7 @@ function startBidTrackerCountdowns() {
     clearBidTrackerTimers();
 
     const updateAllTimers = () => {
-        document.querySelectorAll('.bid-tracker-countdown').forEach(el => {
+        document.querySelectorAll('.bid-tracker-countdown').forEach((el) => {
             let msLeft = parseInt(el.getAttribute('data-ms-left'), 10);
             if (isNaN(msLeft) || msLeft <= 0) {
                 el.textContent = 'متاح الآن!';
@@ -24,7 +24,7 @@ function startBidTrackerCountdowns() {
             el.style.color = getBidCountdownColor(pct);
         });
 
-        document.querySelectorAll('.bid-tracker-bar').forEach(bar => {
+        document.querySelectorAll('.bid-tracker-bar').forEach((bar) => {
             let msLeft = parseInt(bar.getAttribute('data-ms-left'), 10);
             if (isNaN(msLeft) || msLeft <= 0) {
                 bar.style.width = '100%';

@@ -5,7 +5,9 @@
 
 function injectTrackButton() {
     const metaCardBody = document.querySelector('#project-meta-panel');
-    if (!metaCardBody) return;
+    if (!metaCardBody) {
+        return;
+    }
 
     let buttonContainer = document.getElementById('mostaql-ext-btn-container');
 
@@ -36,18 +38,21 @@ function injectTrackButton() {
         const trackBtn = document.createElement('button');
         trackBtn.id = 'track-project-btn';
         trackBtn.className = 'btn btn-success';
-        trackBtn.innerHTML = '<i class="fa fa-fw fa-eye"></i> <span class="action-text">مراقبة</span>';
+        trackBtn.innerHTML =
+            '<i class="fa fa-fw fa-eye"></i> <span class="action-text">مراقبة</span>';
         trackBtn.title = 'مراقبة المشروع';
 
         const projectId = getProjectId();
         if (isContextValid()) {
-            chrome.storage.local.get(['trackedProjects'], (data) => {
-                if (chrome.runtime.lastError) return;
-                const tracked = data.trackedProjects || {};
-                if (tracked[projectId]) {
-                    setButtonTracked(trackBtn);
-                }
-            });
+            browserApi.storage.local
+                .get(['trackedProjects'])
+                .then((data) => {
+                    const tracked = data.trackedProjects || {};
+                    if (tracked[projectId]) {
+                        setButtonTracked(trackBtn);
+                    }
+                })
+                .catch(console.error);
         }
 
         trackBtn.addEventListener('click', () => {
@@ -62,7 +67,8 @@ function injectTrackButton() {
         const quickBtn = document.createElement('button');
         quickBtn.id = 'header-quick-bid-btn';
         quickBtn.className = 'btn btn-success';
-        quickBtn.innerHTML = '<i class="fa fa-fw fa-bolt"></i> <span class="action-text">سريع</span>';
+        quickBtn.innerHTML =
+            '<i class="fa fa-fw fa-bolt"></i> <span class="action-text">سريع</span>';
         quickBtn.title = 'تعبئة العرض الافتراضي والميزانية الدنيا';
 
         quickBtn.addEventListener('click', () => {
@@ -82,14 +88,15 @@ function injectTrackButton() {
         mainBtn.id = 'chatgpt-main-btn';
         mainBtn.className = 'btn btn-primary';
         mainBtn.href = 'javascript:void(0);';
-        mainBtn.innerHTML = '<i class="fa fa-fw fa-magic"></i> <span class="action-text">ذكاء</span>';
+        mainBtn.innerHTML =
+            '<i class="fa fa-fw fa-magic"></i> <span class="action-text">ذكاء</span>';
         mainBtn.title = 'استشارة الذكاء الاصطناعي';
         mainBtn.dataset.promptId = 'default_proposal';
 
         mainBtn.addEventListener('click', (e) => {
             e.preventDefault();
             mainBtn.style.opacity = '0.8';
-            setTimeout(() => mainBtn.style.opacity = '1', 200);
+            setTimeout(() => (mainBtn.style.opacity = '1'), 200);
             handleChatGptClick(mainBtn.dataset.promptId);
         });
 
@@ -157,8 +164,8 @@ function injectTrackButton() {
                         group.classList.remove('open');
                         createPromptModal(renderMenu, p);
                     };
-                    editBtn.onmouseover = () => editBtn.style.color = '#2386c8';
-                    editBtn.onmouseout = () => editBtn.style.color = '#777';
+                    editBtn.onmouseover = () => (editBtn.style.color = '#2386c8');
+                    editBtn.onmouseout = () => (editBtn.style.color = '#777');
 
                     itemContainer.appendChild(a);
                     itemContainer.appendChild(editBtn);
@@ -182,8 +189,10 @@ function injectTrackButton() {
                         if (newId) {
                             mainBtn.dataset.promptId = newId;
                             loadPrompts((prompts) => {
-                                const p = prompts.find(x => x.id === newId);
-                                if (p) mainBtn.title = `استخدام القالب: ${p.title}`;
+                                const p = prompts.find((x) => x.id === newId);
+                                if (p) {
+                                    mainBtn.title = `استخدام القالب: ${p.title}`;
+                                }
                                 renderMenu();
                             });
                         } else {
@@ -206,30 +215,32 @@ function injectTrackButton() {
     }
 }
 
-function handleTrackClick(btn) {
+async function handleTrackClick(btn) {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
     }
     const projectId = getProjectId();
-    if (!projectId) return;
+    if (!projectId) {
+        return;
+    }
 
-    chrome.storage.local.get(['trackedProjects'], (data) => {
-        let tracked = data.trackedProjects || {};
-        if (tracked[projectId]) {
-            delete tracked[projectId];
-            setButtonUntracked(btn);
-        } else {
-            tracked[projectId] = extractProjectData();
-            tracked[projectId].id = projectId;
-            setButtonTracked(btn);
-        }
-        chrome.storage.local.set({ trackedProjects: tracked });
-    });
+    const data = await browserApi.storage.local.get(['trackedProjects']);
+    let tracked = data.trackedProjects || {};
+    if (tracked[projectId]) {
+        delete tracked[projectId];
+        setButtonUntracked(btn);
+    } else {
+        tracked[projectId] = extractProjectData();
+        tracked[projectId].id = projectId;
+        setButtonTracked(btn);
+    }
+    await browserApi.storage.local.set({ trackedProjects: tracked });
 }
 
 function setButtonTracked(btn) {
-    btn.innerHTML = '<i class="fa fa-fw fa-check-circle"></i> <span class="action-text">مُراقبة</span>';
+    btn.innerHTML =
+        '<i class="fa fa-fw fa-check-circle"></i> <span class="action-text">مُراقبة</span>';
     btn.className = 'btn btn-warning';
     btn.title = 'إلغاء المراقبة';
 }
@@ -277,7 +288,7 @@ function handleChatGptClick(promptId) {
 
     loadPrompts((prompts) => {
         let templateContent = '';
-        const selectedPrompt = prompts.find(p => p.id === promptId);
+        const selectedPrompt = prompts.find((p) => p.id === promptId);
         console.log('Prompts loaded:', prompts.length);
         console.log('Selected prompt found:', !!selectedPrompt);
 
@@ -286,23 +297,33 @@ function handleChatGptClick(promptId) {
             processTemplate(templateContent);
         } else if (promptId === 'default_proposal') {
             console.warn('Default prompt not modified/found locally, fetching original default.');
-            chrome.runtime.sendMessage({ action: 'getDefaultPrompts' }, (response) => {
-                const defaults = (response && response.prompts) ? response.prompts : [];
-                const def = defaults.find(d => d.id === 'default_proposal');
-                if (def) {
-                    processTemplate(def.content);
-                } else {
+            browserApi.runtime
+                .sendMessage({ action: 'getDefaultPrompts' })
+                .then((response) => {
+                    const defaults = response && response.prompts ? response.prompts : [];
+                    const def = defaults.find((d) => d.id === 'default_proposal');
+                    if (def) {
+                        processTemplate(def.content);
+                    } else {
+                        alert('خطأ: تعذر تحميل القالب الافتراضي.');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error loading default prompts:', error);
                     alert('خطأ: تعذر تحميل القالب الافتراضي.');
-                }
-            });
+                });
             return;
         } else {
             console.error('Prompt ID not found:', promptId);
-            alert('خطأ: لم يتم العثور على القالب المحدد (ID: ' + promptId + '). تحقق من قائمة الأوامر.');
+            alert(
+                'خطأ: لم يتم العثور على القالب المحدد (ID: ' +
+                    promptId +
+                    '). تحقق من قائمة الأوامر.'
+            );
             return;
         }
 
-        function processTemplate(content) {
+        async function processTemplate(content) {
             let prompt = content
                 .replace(/{title}/g, projectData.title)
                 .replace(/{url}/g, projectData.url)
@@ -321,13 +342,11 @@ function handleChatGptClick(promptId) {
                 .replace(/{client_joined}/g, projectData.clientJoined)
                 .replace(/{client_type}/g, projectData.clientType);
 
-            chrome.storage.local.set({ 'pendingChatGptPrompt': prompt }, () => {
-                chrome.storage.local.get(['settings'], (result) => {
-                    const settings = result.settings || {};
-                    const url = settings.aiChatUrl || 'https://chatgpt.com/';
-                    window.open(url, 'mostaql_ai_chat');
-                });
-            });
+            await browserApi.storage.local.set({ pendingChatGptPrompt: prompt });
+            const result = await browserApi.storage.local.get(['settings']);
+            const settings = result.settings || {};
+            const url = settings.aiChatUrl || 'https://chatgpt.com/';
+            window.open(url, 'mostaql_ai_chat');
         }
     });
 }

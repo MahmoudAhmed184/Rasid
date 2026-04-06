@@ -10,26 +10,34 @@
  * @returns {Date|null}
  */
 function parseBidDatetime(value) {
-    if (!value) return null;
-    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
-    if (typeof value !== 'string') return null;
+    if (!value) {
+        return null;
+    }
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value;
+    }
+    if (typeof value !== 'string') {
+        return null;
+    }
 
     const str = value.trim();
-    if (!str) return null;
+    if (!str) {
+        return null;
+    }
 
-    const match = str.match(
-        /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/
-    );
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
 
     if (match) {
-        const date = new Date(Date.UTC(
-            Number(match[1]),
-            Number(match[2]) - 1,
-            Number(match[3]),
-            Number(match[4] ?? 0),
-            Number(match[5] ?? 0),
-            Number(match[6] ?? 0)
-        ));
+        const date = new Date(
+            Date.UTC(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3]),
+                Number(match[4] ?? 0),
+                Number(match[5] ?? 0),
+                Number(match[6] ?? 0)
+            )
+        );
         return Number.isNaN(date.getTime()) ? null : date;
     }
 
@@ -43,12 +51,22 @@ function parseBidDatetime(value) {
  * @returns {string}
  */
 function normalizeStatusLabel(rawStatus) {
-    if (!rawStatus) return 'بانتظار الموافقة';
+    if (!rawStatus) {
+        return 'بانتظار الموافقة';
+    }
     const s = rawStatus.trim();
-    if (s.includes('مكتمل')) return 'مكتمل';
-    if (s.includes('مستبعد')) return 'مستبعد';
-    if (s.includes('مُغلق') || s.includes('مغلق')) return 'مُغلق';
-    if (s.includes('انتظار')) return 'بانتظار الموافقة';
+    if (s.includes('مكتمل')) {
+        return 'مكتمل';
+    }
+    if (s.includes('مستبعد')) {
+        return 'مستبعد';
+    }
+    if (s.includes('مُغلق') || s.includes('مغلق')) {
+        return 'مُغلق';
+    }
+    if (s.includes('انتظار')) {
+        return 'بانتظار الموافقة';
+    }
     return s;
 }
 
@@ -65,10 +83,14 @@ function computeBidTrackerStats(allBids) {
 
     for (const bid of allBids) {
         const published = parseBidDatetime(bid.publishedDatetime);
-        if (!published) continue;
+        if (!published) {
+            continue;
+        }
 
         const ageMs = now.getTime() - published.getTime();
-        if (ageMs < 0) continue;
+        if (ageMs < 0) {
+            continue;
+        }
 
         if (ageMs <= THIRTY_DAYS_MS) {
             const msLeft = THIRTY_DAYS_MS - ageMs;

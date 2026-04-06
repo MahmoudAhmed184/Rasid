@@ -12,9 +12,11 @@ async function fetchMostaqlHomepageStats() {
     try {
         const response = await fetch('https://mostaql.com/', {
             credentials: 'include',
-            headers: { 'Accept': 'text/html' },
+            headers: { Accept: 'text/html' },
         });
-        if (!response.ok) return defaults;
+        if (!response.ok) {
+            return defaults;
+        }
 
         const html = await response.text();
         const parser = new DOMParser();
@@ -42,9 +44,11 @@ function parseHomepageBidStats(doc, defaults) {
     }
 
     const progressBars = doc.querySelectorAll('.progress__bar');
-    progressBars.forEach(bar => {
+    progressBars.forEach((bar) => {
         const labelEl = bar.querySelector('.pull-right');
-        if (!labelEl) return;
+        if (!labelEl) {
+            return;
+        }
         const label = labelEl.textContent.trim();
 
         if (label.includes('عروض من الخطة')) {
