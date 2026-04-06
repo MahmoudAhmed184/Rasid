@@ -1,162 +1,221 @@
-# 🔔 Frelancia: Mostaql Job Notifier + AI Proposal
+# Frelancia
 
-<div align="center">
+Frelancia is a cross-browser Manifest V3 extension for Mostaql that helps freelancers discover new projects quickly, filter noise, and draft stronger proposals with AI-assisted workflows.
 
-![Version](https://img.shields.io/badge/version-1.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Firefox-orange.svg)
+ملخص بالعربية: إضافة لمستقل تعمل على Chrome و Firefox لتنبيهك بالمشاريع الجديدة، تتبع المشاريع والعروض، وتساعدك على تجهيز العروض بالذكاء الاصطناعي.
 
-**إضافة متصفح ذكية لتنبيهك فوراً بالمشاريع الجديدة على منصة مستقل مع إنشاء عروض احترافية بالذكاء الاصطناعي.**
+## Overview
 
-_A professional cross-browser extension that instantly notifies you of new projects on Mostaql.com with AI-powered proposal generation._
+Frelancia combines project monitoring, browser-side workflow automation, and configurable AI drafting into a single extension. The codebase now uses a WXT and TypeScript architecture with browser-specific builds generated from one source tree.
 
-[English](#-english-description) | [العربية](#-الوصف-بالعربية)
+The extension includes:
 
-</div>
+- Real-time project notifications through SignalR with automatic polling fallback
+- Configurable filtering by category, budget, hiring rate, duration, keywords, and quiet hours
+- AI proposal workflows with reusable prompt templates
+- Direct provider support for OpenAI, Gemini, and Claude
+- Bridge-mode drafting that can hand off proposal prompts to a configurable chat UI
+- Popup and dashboard surfaces for monitoring, settings, diagnostics, and prompt management
+- Mostaql page enhancements for autofill, tracking, and export workflows
+- ZIP export for project details and conversation data
 
----
+## Browser Support
 
-## 🇸🇦 الوصف بالعربية
+| Browser | Build Output | Notes |
+| --- | --- | --- |
+| Chrome-based browsers | `dist/chrome-mv3` | Minimum Chrome version declared in the manifest: `120` |
+| Firefox | `dist/firefox-mv3` | Minimum Firefox version declared in the manifest: `140.0` |
 
-**Frelancia** هي رفيقك المثالي كـ Freelancer على منصة مستقل. تضمن لك هذه الإضافة ألا يفوتك أي مشروع مهم، وتساعدك على كتابة عروض مقنعة في ثوانٍ معدودة.
+The Chrome build uses an offscreen document for supported background tasks. Firefox uses the same source tree but skips the offscreen entrypoint during packaging by design.
 
-### ✨ المميزات الرئيسية
+## Architecture
 
-- 🌐 **تدعم Chrome و Firefox** بنفس الكفاءة
-- 🔔 **تنبيهات فورية** عبر SignalR مع احتياطي تلقائي للاستعلام الدوري
-- 🔌 **سيرفر مخصص** — ادعم سيرفر SignalR الخاص بك من إعدادات الإضافة
-- 🎯 **فلاتر متقدمة** — كلمات مفتاحية، ميزانية، معدل توظيف، مدة التنفيذ، تصنيفات، ساعات هدوء
-- 🤖 **توليد عروض بالذكاء الاصطناعي** مع قوالب قابلة للتخصيص الكامل
-- 📝 **ملء تلقائي لنموذج العرض** — يملأ السعر والمقترح دفعةً واحدة
-- 📊 **تحليلات العروض** — إجمالي، آخر 30 يوم، اليوم، وعداد تنازلي للعروض اليومية
-- 🕐 **متتبع العروض** — جدول زمني لكل عرض مع شريط تقدم وعداد 30 يوماً
-- 👁️ **مراقبة المشاريع** — تتبع أي مشروع ومتابعة تحديثاته
-- 📤 **تصدير البيانات** — تصدير رسائل المشروع وبيانات المشروع كـ ZIP
-- 🔊 **تنبيهات صوتية** قابلة للاختبار من لوحة التحكم
-- ⚙️ **لوحة تحكم** شاملة لكل الإعدادات والإحصائيات والمشاريع المتابَعة
+The project is organized around WXT entrypoints and shared source modules:
 
----
+- `entrypoints/`: browser entrypoints for the background worker, popup, dashboard, Mostaql content script, ChatGPT bridge, and Chrome offscreen document
+- `src/core/`: reusable services for AI generation, job ingestion, notifications, downloads, storage, SignalR, DOM parsing, and offscreen coordination
+- `src/models/`: shared domain models, defaults, and runtime configuration types
+- `src/ui/`: popup, dashboard, content-script, chat bridge, offscreen, and shared UI modules
+- `public/`: static assets such as icons that are copied into the build output
+- `docs/`: operational notes for Firefox testing and store review workflows
 
-## 🇺🇸 English Description
+Build artifacts are generated into:
 
-**Frelancia** is the ultimate companion for freelancers on Mostaql.com. This extension ensures you never miss a high-value project and helps you craft winning proposals using advanced AI technology.
+- `dist/chrome-mv3`
+- `dist/firefox-mv3`
 
-### ✨ Key Features
+## Feature Set
 
-- 🌐 **Cross-browser support** — works seamlessly on Chrome and Firefox
-- 🔔 **Instant notifications** via SignalR with automatic polling fallback
-- 🔌 **Custom server** — point the extension at your own SignalR hub
-- 🎯 **Advanced filters** — keywords, budget, hiring rate, duration, categories, quiet hours
-- 🤖 **AI proposal generator** with fully customizable prompt templates
-- 📝 **Bid form auto-fill** — fills price and proposal in one click
-- 📊 **Bid analytics modal** — totals, last 30 days, today, and daily-slot countdown timers
-- 🕐 **Bid tracker tab** — timeline view with 30-day progress bars per bid
-- 👁️ **Project monitoring** — track any project and follow its updates
-- 📤 **Data export** — export project messages and details as a ZIP archive
-- 🔊 **Audio alerts** — testable directly from the dashboard
-- ⚙️ **Full dashboard** — settings, stats, tracked projects, and prompt management
+### Notification and Monitoring
 
----
+- SignalR-based job delivery with polling fallback
+- Manual check from the popup
+- Notification toggle and test actions
+- Tracked projects with persisted local state
+- Connection diagnostics for Mostaql reachability
 
-## 📥 التثبيت / Installation
+### AI and Proposal Workflow
 
-### 🛠️ Manual Installation (Recommended)
+- Prompt templates stored in extension storage
+- Proposal generation context built from Mostaql project metadata
+- Direct API mode for `openai`, `gemini`, and `claude`
+- Bridge mode for handing prompt text to a configured chat page
+- Quick bid and autofill actions on Mostaql project pages
 
-Build the browser-specific packages first:
+### Dashboard and Reporting
+
+- Settings management for filtering, AI mode, intervals, and quiet hours
+- Prompt and proposal template management
+- Bid tracker and 30-day timeline analytics
+- Runtime status and connection visibility
+- Project export and monitoring utilities
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- npm
+
+A recent Node.js LTS release is recommended.
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+`npm install` runs `wxt prepare` automatically through `postinstall`. If generated WXT files are ever missing after a cleanup or branch reset, run:
+
+```bash
+npm run postinstall
+```
+
+## Development
+
+Start a development build for one browser target:
+
+```bash
+npm run dev:chrome
+npm run dev:firefox
+```
+
+Create production builds for both targets:
 
 ```bash
 npm run build
 ```
 
-#### For Google Chrome / Edge / Brave
-
-1. Clone the repository or download the ZIP.
-    ```bash
-    git clone https://github.com/Elaraby218/Frelancia.git
-    ```
-2. Navigate to `chrome://extensions/` in your browser.
-3. Toggle the **Developer mode** switch in the top right corner.
-4. Click **Load unpacked** and select the `dist/chrome-mv3` directory.
-5. Click the puzzle icon 🧩 and pin **Frelancia** to your toolbar.
-
-#### For Mozilla Firefox
-
-1. Navigate to `about:debugging#/runtime/this-firefox` in your browser.
-2. Click **Load Temporary Add-on...**
-3. Select `dist/firefox-mv3/manifest.json`.
-4. Use Firefox 140 or newer for the packaged AMO-compatible build.
-5. Pin the extension from the extensions menu.
-
-### 🔧 Development Build
-
-Generate both browser packages:
-
-```bash
-npm run build
-```
-
-Generate only one target:
+Create a single target build:
 
 ```bash
 npm run build:chrome
 npm run build:firefox
 ```
 
-The extension now builds through [`wxt.config.ts`](wxt.config.ts), targeting `dist/chrome-mv3` and `dist/firefox-mv3`.
-Static runtime assets live under `public/`, while WXT generates the browser-specific MV3 manifests at build time.
+Create packaged zip archives:
 
-Firefox testing instructions are available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
+```bash
+npm run zip:chrome
+npm run zip:firefox
+```
 
----
+## Available Scripts
 
-## 🚀 كيفية الاستخدام / How to Use
+| Command | Purpose |
+| --- | --- |
+| `npm run postinstall` | Generate WXT types and prepared files |
+| `npm run dev:chrome` | Start Chrome MV3 development mode |
+| `npm run dev:firefox` | Start Firefox MV3 development mode |
+| `npm run build` | Build Chrome and Firefox packages |
+| `npm run build:chrome` | Build the Chrome package only |
+| `npm run build:firefox` | Build the Firefox package only |
+| `npm run zip:chrome` | Package the Chrome build as a zip |
+| `npm run zip:firefox` | Package the Firefox build as a zip |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with automatic fixes |
+| `npm run format` | Format the repository with Prettier |
+| `npm run format:check` | Check formatting with Prettier |
+| `npm run typecheck` | Run the TypeScript compiler in no-emit mode |
+| `npm run lint:firefox` | Run `web-ext lint` against `dist/firefox-mv3` |
 
-1. **Configure Notifications**: Choose your target categories and polling interval.
-2. **Setup AI Keys**: Go to settings and add your API key (OpenAI/Gemini/Claude).
-3. **Get Notified**: Receive a desktop notification when a project matches your criteria.
-4. **Generate Proposals**: Open any project on Mostaql and click the "Generate AI Proposal" button to create a professional draft instantly.
+## Load the Extension Locally
 
----
+### Chrome
 
-## 🛠️ Tech Stack / التقنيات المستخدمة
+1. Run `npm run build:chrome`.
+2. Open `chrome://extensions/`.
+3. Enable Developer mode.
+4. Click `Load unpacked`.
+5. Select `dist/chrome-mv3`.
 
-- **Manifest V3**: The latest Extension standard for both Chrome and Firefox.
-- **Vanilla JavaScript**: For high performance and responsiveness.
-- **CSS3 / Glassmorphism**: For a modern and premium dashboard look.
-- **Chrome Storage API**: Secure local data management.
-- **AI Integration**: Support for GPT-4, Gemini, and Claude models.
+### Firefox
 
----
+1. Run `npm run build:firefox`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click `Load Temporary Add-on...`.
+4. Select `dist/firefox-mv3/manifest.json`.
 
-## 🔒 Privacy & Security
+Additional Firefox-specific guidance is available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
 
-- **Local Storage**: All your settings and data are stored locally on your device.
-- **Declared Remote Hosts**: The extension connects to Mostaql, AI chat pages, and the optional SignalR backend declared in the manifest.
-- **Transparency**: Open-source code for full auditability.
+## How the Runtime Is Split
 
-Detailed disclosure draft: [`PRIVACY.md`](PRIVACY.md)
+- The background entrypoint orchestrates alarms, storage, SignalR, polling, notifications, downloads, and AI request handling.
+- The Mostaql content entrypoint injects workflow helpers into project, message, home, and profile pages.
+- The popup provides quick status, a manual check action, diagnostics, and a notification toggle.
+- The dashboard exposes the broader management surface for prompts, tracked projects, settings, and bid analytics.
 
-AMO reviewer notes: [`docs/amo-review.md`](docs/amo-review.md)
+## Remote Services and Permissions
 
----
+The manifest currently declares host permissions for:
 
-## 🤝 Contributing
+- `https://mostaql.com/*`
+- `https://chatgpt.com/*`
+- `https://chat.openai.com/*`
+- `https://frelancia.runasp.net/*`
+- `https://api.openai.com/*`
+- `https://generativelanguage.googleapis.com/*`
+- `https://api.anthropic.com/*`
 
-See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for branch naming, code rules, and the PR checklist.
+These permissions are used for Mostaql page access, optional AI drafting flows, and the SignalR notification backend.
 
----
+## Privacy and Data Handling
 
-## 📞 Support & Links
+Frelancia stores its operational state in browser local storage, including:
 
-- **Repository**: [https://github.com/Elaraby218/Frelancia](https://github.com/Elaraby218/Frelancia)
-- **Issues**: [Report a Bug](https://github.com/Elaraby218/Frelancia/issues)
-- **Developer**: [Elaraby218](https://github.com/Elaraby218) , [TryOmar](https://github.com/TryOmar)
+- notification and filter settings
+- prompt templates and proposal templates
+- tracked projects
+- recent jobs and seen job identifiers
+- lightweight runtime state used for notifications and connection management
 
----
+See [`PRIVACY.md`](PRIVACY.md) for the current privacy disclosure draft.
 
-<div align="center">
+## Quality Checks
 
-**صنع بـ ❤️ للمستقلين العرب**  
-_Made with ❤️ for Arab Freelancers_
+Before opening a pull request, run:
 
-</div>
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+If you are validating Firefox packaging or release readiness, also run:
+
+```bash
+npm run lint:firefox
+```
+
+## Documentation
+
+- [`PRIVACY.md`](PRIVACY.md)
+- [`docs/firefox-testing.md`](docs/firefox-testing.md)
+
+## Contributing
+
+Issues and pull requests are welcome. Keep changes scoped, document behavior changes, and include the relevant verification steps in your PR.
+
+## License
+
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE).
