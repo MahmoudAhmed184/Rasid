@@ -1,9 +1,28 @@
+import { browser } from 'wxt/browser';
+
+import { extractProjectData, getBudgetFromPage } from './data.mjs';
+import { getProjectId, isContextValid } from './runtime.mjs';
+
 // ==========================================
-// content/autofill.js — Bid form auto-fill
-// Depends on: utils.js (isContextValid, getProjectId), data.js (getBudgetFromPage, extractProjectData)
+// mostaql/autofill.js — Bid form auto-fill
 // ==========================================
 
-function checkForAutofill() {
+const browserApi = browser;
+
+function parseDurationDays(durationText) {
+    if (!durationText) {
+        return 0;
+    }
+
+    const match = String(durationText).match(/\d+/);
+    if (match) {
+        return parseInt(match[0], 10);
+    }
+
+    return String(durationText).includes('يوم واحد') ? 1 : 0;
+}
+
+export function checkForAutofill() {
     handleAutofillSequence();
 }
 
@@ -135,7 +154,7 @@ async function fillForm(amountInput, durationInput, data) {
     await browserApi.storage.local.remove(['mostaql_pending_autofill']);
 }
 
-async function handleQuickBidClick() {
+export async function handleQuickBidClick() {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -155,22 +174,25 @@ async function handleQuickBidClick() {
 
     const minBudget = getBudgetFromPage();
     const projectData = extractProjectData();
-
-    let durationDays = 0;
-    if (projectData.duration) {
-        const match = projectData.duration.match(/\d+/);
-        if (match) {
-            durationDays = parseInt(match[0]);
-        } else if (projectData.duration.includes('يوم واحد')) {
-            durationDays = 1;
-        }
-    }
-
-    const autofillData = {
-        projectId: projectId,
+    await queueProposalAutofill({
+        projectId,
+        proposal,
         amount: minBudget,
-        duration: durationDays,
-        proposal: proposal,
+        duration: parseDurationDays(projectData.duration),
+    });
+}
+
+export async function queueProposalAutofill({
+    projectId,
+    proposal,
+    amount = 0,
+    duration = 0,
+}) {
+    const autofillData = {
+        projectId,
+        amount,
+        duration,
+        proposal,
         timestamp: Date.now(),
     };
 

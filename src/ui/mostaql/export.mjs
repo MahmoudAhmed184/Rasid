@@ -1,7 +1,12 @@
+import { browser } from 'wxt/browser';
+
+import { extractMyProposalFull, extractProjectDetailsFull } from './data.mjs';
+
 // ==========================================
-// content/export.js — Export buttons and export engine
-// Depends on: utils.js, data.js (extractProjectDetailsFull, extractMyProposalFull)
+// mostaql/export.js — Export buttons and export engine
 // ==========================================
+
+const browserApi = browser;
 
 const EXPORT_ICON_SHIM_CSS = `
             .fa {
@@ -53,7 +58,7 @@ function sanitizeFile(name, fallback) {
     return name.replace(/[^\u0600-\u06FFa-zA-Z0-9.\-_ ]/g, '_').trim() || fallback;
 }
 
-function injectMessageExporter() {
+export function injectMessageExporter() {
     const targetPanel = document.querySelector('#message-meta');
     if (!targetPanel) {
         return;
@@ -106,7 +111,7 @@ function injectMessageExporter() {
     targetPanel.after(btn);
 }
 
-function injectProjectExporter() {
+export function injectProjectExporter() {
     const buttonContainer = document.getElementById('mostaql-ext-btn-container');
     if (!buttonContainer) {
         return;

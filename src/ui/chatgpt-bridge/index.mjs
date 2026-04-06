@@ -1,6 +1,10 @@
+import { browser } from 'wxt/browser';
+
 // ==========================================
-// Mostaql Project Tracker - ChatGPT Automation
+// chatgpt-bridge/index.js — Prompt injection bridge
 // ==========================================
+
+const browserApi = browser;
 
 function findChatInput() {
     // Selectors for ChatGPT's input box (subject to change)
@@ -72,23 +76,22 @@ async function injectPrompt() {
 }
 
 // Listen for changes in storage (for when tab is reused/focused without reload)
-browserApi.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.pendingChatGptPrompt) {
-        const newValue = changes.pendingChatGptPrompt.newValue;
-        if (newValue) {
-            setTimeout(injectPrompt, 500);
+export function initChatgptBridge() {
+    browserApi.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && changes.pendingChatGptPrompt?.newValue) {
+            setTimeout(() => {
+                void injectPrompt();
+            }, 500);
         }
-    }
-});
-
-// Run injection logic
-// We wait a bit for the page to be fully interactive
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        void injectPrompt();
     });
-} else {
-    // If loaded, wait a split second just in case
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            void injectPrompt();
+        });
+        return;
+    }
+
     setTimeout(() => {
         void injectPrompt();
     }, 1000);

@@ -1,9 +1,10 @@
+import { getProjectId } from './runtime.mjs';
+
 // ==========================================
-// content/data.js — DOM scraping & project data extraction
-// Depends on: utils.js (getProjectId)
+// mostaql/data.js — DOM scraping & project data extraction
 // ==========================================
 
-function extractProjectData() {
+export function extractProjectData() {
     const statusLabel = document.querySelector(
         '.label-prj-open, .label-prj-closed, .label-prj-completed, .label-prj-cancelled, .label-prj-underway, .label-prj-processing'
     );
@@ -158,7 +159,7 @@ function extractProjectData() {
     };
 }
 
-function getProjectDescription() {
+export function getProjectDescription() {
     let description = '';
 
     const container =
@@ -191,7 +192,7 @@ function getProjectDescription() {
     return description.trim();
 }
 
-function getBudgetFromPage() {
+export function getBudgetFromPage() {
     const budgetEl = document.querySelector('[data-type="project-budget_range"]');
     if (!budgetEl) {
         return 0;
@@ -211,7 +212,7 @@ function getBudgetFromPage() {
     return Math.min(...values);
 }
 
-async function fetchDeepProjectData(url) {
+export async function fetchDeepProjectData(url) {
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -380,7 +381,7 @@ async function fetchDeepProjectData(url) {
     }
 }
 
-async function extractProjectDetailsFull() {
+export async function extractProjectDetailsFull() {
     try {
         let data = extractProjectData();
         let description = '';
@@ -476,7 +477,7 @@ async function extractProjectDetailsFull() {
     }
 }
 
-function extractMyProposalFull(externalProjectData = null) {
+export function extractMyProposalFull(externalProjectData = null) {
     try {
         const myName =
             document.querySelector('.user-menu__name')?.innerText.trim() ||

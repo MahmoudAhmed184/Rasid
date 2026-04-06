@@ -1,9 +1,16 @@
+import { browser } from 'wxt/browser';
+
+import { AI_PROMPT_VARIABLES } from '../../models/ai';
+import { isContextValid } from './runtime.mjs';
+
 // ==========================================
-// content/prompts.js — Prompt template CRUD
-// Depends on: utils.js (isContextValid)
+// mostaql/prompts.js — Prompt template CRUD
 // ==========================================
 
-function loadPrompts(callback) {
+const browserApi = browser;
+const availableVariableText = AI_PROMPT_VARIABLES.map((key) => `{${key}}`).join(', ');
+
+export function loadPrompts(callback) {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -26,7 +33,7 @@ function loadPrompts(callback) {
     });
 }
 
-function savePrompt(promptData, callback) {
+export function savePrompt(promptData, callback) {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -63,7 +70,7 @@ function savePrompt(promptData, callback) {
     });
 }
 
-function createPromptModal(onSave, existingPrompt = null) {
+export function createPromptModal(onSave, existingPrompt = null) {
     if (document.getElementById('mostaql-prompt-modal')) {
         return;
     }
@@ -100,8 +107,7 @@ function createPromptModal(onSave, existingPrompt = null) {
 
     const contentHelp = document.createElement('div');
     contentHelp.className = 'mostaql-form-help';
-    contentHelp.textContent =
-        'المتغيرات المتاحة: {title}, {description}, {url}, {tags}, {client_name}, {client_type}, {budget}, {duration}, {publish_date}, {project_id}, {project_status}, {category}, {hiring_rate}, {open_projects}, {underway_projects}, {client_joined}';
+    contentHelp.textContent = `المتغيرات المتاحة: ${availableVariableText}`;
 
     const contentInput = document.createElement('textarea');
     contentInput.className = 'mostaql-form-textarea';

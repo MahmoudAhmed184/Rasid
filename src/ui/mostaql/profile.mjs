@@ -1,9 +1,8 @@
 // ==========================================
-// content/profile.js — Profile page injector
-// Depends on: utils.js
+// mostaql/profile.js — Profile page injector
 // ==========================================
 
-function injectProfileTools() {
+export function injectProfileTools() {
     const target =
         document.querySelector('.profile_card') || document.querySelector('#profile-sidebar');
     if (!target) {

@@ -1,11 +1,12 @@
+import { browser } from 'wxt/browser';
+
 // ==========================================
-// content/home.js — Homepage injectors (bid stats + monitored panel)
-// Depends on: utils.js (isContextValid)
-// Note: bid-fetching logic is intentionally separate from dashboard-bids.js
-//       because this runs as a content script in the page DOM context.
+// mostaql/home.js — Homepage injectors (bid stats + monitored panel)
 // ==========================================
 
-function injectDashboardStats() {
+const browserApi = browser;
+
+export function injectDashboardStats() {
     const target = document.querySelector('#project-states');
     if (!target) {
         return;
@@ -666,6 +667,6 @@ async function _loadBidStats() {
     }
 }
 
-function injectMonitoredProjects() {
+export function injectMonitoredProjects() {
     _injectMonitoredModal();
 }

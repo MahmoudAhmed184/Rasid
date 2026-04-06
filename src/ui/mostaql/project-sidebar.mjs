@@ -1,9 +1,17 @@
+import { browser } from 'wxt/browser';
+
+import { handleQuickBidClick, queueProposalAutofill } from './autofill.mjs';
+import { extractProjectData, getProjectDescription } from './data.mjs';
+import { createPromptModal, loadPrompts } from './prompts.mjs';
+import { getProjectId, isContextValid } from './runtime.mjs';
+
 // ==========================================
-// content/project-sidebar.js — Sidebar button injection
-// Depends on: utils.js, data.js, prompts.js, autofill.js
+// mostaql/project-sidebar.js — Sidebar button injection
 // ==========================================
 
-function injectTrackButton() {
+const browserApi = browser;
+
+export function injectTrackButton() {
     const metaCardBody = document.querySelector('#project-meta-panel');
     if (!metaCardBody) {
         return;
@@ -251,6 +259,19 @@ function setButtonUntracked(btn) {
     btn.title = 'مراقبة هذا المشروع';
 }
 
+function parseDurationDays(durationText) {
+    if (!durationText) {
+        return 0;
+    }
+
+    const match = String(durationText).match(/\d+/);
+    if (match) {
+        return parseInt(match[0], 10);
+    }
+
+    return String(durationText).includes('يوم واحد') ? 1 : 0;
+}
+
 function handleChatGptClick(promptId) {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
@@ -266,31 +287,14 @@ function handleChatGptClick(promptId) {
     }
 
     loadPrompts((prompts) => {
-        let templateContent = '';
         const selectedPrompt = prompts.find((p) => p.id === promptId);
 
         if (selectedPrompt) {
-            templateContent = selectedPrompt.content;
-            processTemplate(templateContent);
-        } else if (promptId === 'default_proposal') {
-            console.warn('Default prompt not modified/found locally, fetching original default.');
-            browserApi.runtime
-                .sendMessage({ action: 'getDefaultPrompts' })
-                .then((response) => {
-                    const defaults = response && response.prompts ? response.prompts : [];
-                    const def = defaults.find((d) => d.id === 'default_proposal');
-                    if (def) {
-                        processTemplate(def.content);
-                    } else {
-                        alert('خطأ: تعذر تحميل القالب الافتراضي.');
-                    }
-                })
-                .catch((error) => {
-                    console.error('Error loading default prompts:', error);
-                    alert('خطأ: تعذر تحميل القالب الافتراضي.');
-                });
+            processPrompt(selectedPrompt.id);
             return;
-        } else {
+        }
+
+        if (promptId !== 'default_proposal') {
             console.error('Prompt ID not found:', promptId);
             alert(
                 'خطأ: لم يتم العثور على القالب المحدد (ID: ' +
@@ -300,30 +304,60 @@ function handleChatGptClick(promptId) {
             return;
         }
 
-        async function processTemplate(content) {
-            let prompt = content
-                .replace(/{title}/g, projectData.title)
-                .replace(/{url}/g, projectData.url)
-                .replace(/{description}/g, description)
-                .replace(/{tags}/g, projectData.tags)
-                .replace(/{client_name}/g, projectData.clientName)
-                .replace(/{budget}/g, projectData.budget)
-                .replace(/{duration}/g, projectData.duration)
-                .replace(/{publish_date}/g, projectData.publishDate)
-                .replace(/{project_status}/g, projectData.status)
-                .replace(/{project_id}/g, projectData.id)
-                .replace(/{category}/g, projectData.category)
-                .replace(/{hiring_rate}/g, projectData.hiringRate)
-                .replace(/{open_projects}/g, projectData.openProjects)
-                .replace(/{underway_projects}/g, projectData.underwayProjects)
-                .replace(/{client_joined}/g, projectData.clientJoined)
-                .replace(/{client_type}/g, projectData.clientType);
-
-            await browserApi.storage.local.set({ pendingChatGptPrompt: prompt });
-            const result = await browserApi.storage.local.get(['settings']);
-            const settings = result.settings || {};
-            const url = settings.aiChatUrl || 'https://chatgpt.com/';
-            window.open(url, 'mostaql_ai_chat');
-        }
+        processPrompt('default_proposal');
     });
+
+    async function processPrompt(templateId) {
+        try {
+            const response = await browserApi.runtime.sendMessage({
+                action: 'generateProposal',
+                templateId,
+                context: {
+                    title: projectData.title,
+                    url: projectData.url,
+                    description,
+                    tags: projectData.tags,
+                    clientName: projectData.clientName,
+                    budget: projectData.budget,
+                    duration: projectData.duration,
+                    publishDate: projectData.publishDate,
+                    projectStatus: projectData.status,
+                    projectId: projectData.id,
+                    category: projectData.category,
+                    hiringRate: projectData.hiringRate,
+                    openProjects: projectData.openProjects,
+                    underwayProjects: projectData.underwayProjects,
+                    clientJoined: projectData.clientJoined,
+                    clientType: projectData.clientType,
+                    communications: projectData.communications,
+                },
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || 'Unknown AI generation error.');
+            }
+
+            if (response.mode === 'direct') {
+                await queueProposalAutofill({
+                    projectId: projectData.id,
+                    proposal: response.proposal,
+                    duration: parseDurationDays(projectData.duration),
+                });
+                return;
+            }
+
+            if (response.mode === 'bridge') {
+                await browserApi.storage.local.set({ pendingChatGptPrompt: response.prompt });
+                window.open(response.chatUrl || 'https://chatgpt.com/', 'mostaql_ai_chat');
+                return;
+            }
+
+            throw new Error('Unsupported AI response mode.');
+        } catch (error) {
+            console.error('Error generating proposal:', error);
+            alert(
+                `خطأ: تعذر إنشاء العرض. ${error instanceof Error ? error.message : 'حاول مرة أخرى.'}`
+            );
+        }
+    }
 }

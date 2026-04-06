@@ -1,11 +1,12 @@
+import { browser } from 'wxt/browser';
+
 // ==========================================
-// content/utils.js — Runtime helpers & shared state
+// mostaql/runtime.js — Runtime helpers
 // ==========================================
 
-let lastPath = '';
-let observerStarted = false;
+const browserApi = browser;
 
-function isContextValid() {
+export function isContextValid() {
     try {
         return (
             typeof browserApi !== 'undefined' &&
@@ -18,7 +19,7 @@ function isContextValid() {
     }
 }
 
-function getPageType() {
+export function getPageType() {
     const path = location.pathname;
     if (/\/project[s]?\/\d+/.test(path)) {
         return 'project';
@@ -38,7 +39,7 @@ function getPageType() {
     return 'other';
 }
 
-function getProjectId() {
+export function getProjectId() {
     const match = window.location.pathname.match(/\/project\/(\d+)/);
     return match ? match[1] : '';
 }
