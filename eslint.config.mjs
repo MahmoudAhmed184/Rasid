@@ -1,6 +1,13 @@
 export default [
     {
-        ignores: ['dist/**', 'node_modules/**', '**/*.min.js', 'package-lock.json'],
+        ignores: [
+            '.wxt/**',
+            'dist/**',
+            'node_modules/**',
+            '**/vendor/**',
+            '**/*.min.js',
+            'package-lock.json',
+        ],
     },
     {
         files: ['**/*.js'],

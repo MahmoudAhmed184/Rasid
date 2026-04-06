@@ -2,18 +2,18 @@
 
 ## Package Under Review
 
-- Firefox build output: `dist/firefox`
-- Shared manifest source: `manifests/base.json`
-- Firefox manifest overlay: `manifests/firefox.json`
+- Firefox build output: `dist/firefox-mv3`
+- Manifest source: `wxt.config.ts`
 - Minimum Firefox version for the AMO package: `140.0`
 - Minimum Firefox for Android version if Android compatibility is enabled: `142.0`
 
 ## Third-Party Libraries
 
+- `public/vendor/browser-polyfill.js` (Mozilla `webextension-polyfill`)
 - `signalr.min.js`
 - `jszip.min.js`
 
-These files are intentionally committed in minified form for runtime use. The repository itself is the corresponding source package and includes the build script in `scripts/build.mjs`.
+These files are intentionally committed in minified form for runtime use. The repository itself is the corresponding source package and builds through WXT.
 
 ## External Services Used
 
@@ -24,7 +24,7 @@ These files are intentionally committed in minified form for runtime use. The re
 
 ## Reviewer Test Flow
 
-1. Load `dist/firefox/manifest.json` temporarily from `about:debugging`.
+1. Load `dist/firefox-mv3/manifest.json` temporarily from `about:debugging`.
 2. Open `https://mostaql.com/projects`.
 3. Open the popup and click `فحص الآن`.
 4. Open the dashboard and test:

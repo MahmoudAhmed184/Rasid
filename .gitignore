@@ -1,4 +1,5 @@
 # Build output — never commit these
+.wxt/
 dist/
 node_modules/
 
