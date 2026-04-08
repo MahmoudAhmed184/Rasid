@@ -60,22 +60,29 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
 
 export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null {
     const doc = parseDocument(html);
-    const descriptionCandidates = [
+    const descriptionSelectors = [
+        '.card-body > article.replace_urls',
+        '.card-body .replace_urls',
+        'article.replace_urls',
         '[itemprop="articleBody"]',
-        '.comment-body',
         '.topic-body',
         '.post-body',
         '.content-body',
+        '.comment-body',
         'article',
         'main article',
         'main .content',
-    ]
-        .flatMap((selector) => [...doc.querySelectorAll<HTMLElement>(selector)])
-        .map((element) => normalizeText(element.textContent))
-        .filter(Boolean)
-        .sort((left, right) => right.length - left.length);
+    ];
+    const description =
+        descriptionSelectors
+            .flatMap((selector) => {
+                const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
+                    .map((element) => normalizeText(element.textContent))
+                    .filter(Boolean);
 
-    const description = descriptionCandidates[0] ?? '';
+                const detailedCandidate = texts.find((text) => text.length >= 80);
+                return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
+            })[0] ?? '';
     const clientName = normalizeText(
         doc.querySelector<HTMLElement>(
             '.user-info .username, .post-author .username, .comment-user a, .user-name, .username, a[href*="/user/"], a[href*="/users/"]'

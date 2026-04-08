@@ -4,11 +4,14 @@ export const KHAMSAT_SELECTORS = {
     project: {
         titleCandidates: ['h1', '.details-head', '.post-title', '.topic-title'],
         descriptionCandidates: [
+            '.card-body > article.replace_urls',
+            '.card-body .replace_urls',
+            'article.replace_urls',
             '[itemprop="articleBody"]',
-            '.comment-body',
             '.topic-body',
             '.post-body',
             '.content-body',
+            '.comment-body',
             'article',
             'main article',
             'main .content',

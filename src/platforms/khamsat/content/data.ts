@@ -41,13 +41,23 @@ function getTitle(doc: Document): string {
 }
 
 function getDescription(doc: Document): string {
-    const candidates = queryAll<HTMLElement>(doc, KHAMSAT_SELECTORS.project.descriptionCandidates)
-        .map((element) => normalizeText(element.textContent))
-        .filter(Boolean)
-        .sort((left, right) => right.length - left.length);
+    for (const selector of KHAMSAT_SELECTORS.project.descriptionCandidates) {
+        const candidates = [...doc.querySelectorAll<HTMLElement>(selector)]
+            .map((element) => normalizeText(element.textContent))
+            .filter(Boolean);
 
-    const detailedCandidate = candidates.find((text) => text.length >= 80);
-    return detailedCandidate ?? candidates[0] ?? '';
+        const detailedCandidate = candidates.find((text) => text.length >= 80);
+
+        if (detailedCandidate) {
+            return detailedCandidate;
+        }
+
+        if (candidates[0]) {
+            return candidates[0];
+        }
+    }
+
+    return '';
 }
 
 function getCategory(doc: Document): string | undefined {
