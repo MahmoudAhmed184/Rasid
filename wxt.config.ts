@@ -13,6 +13,9 @@ const icons = {
 
 const hostPermissions = [
     'https://mostaql.com/*',
+    'https://khamsat.com/*',
+    'https://nafezly.com/*',
+    'https://kafiil.com/*',
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
     'https://frelancia.runasp.net/*',
@@ -44,7 +47,7 @@ export default defineConfig({
             name: 'Frelancia',
             short_name: 'Frelancia',
             version: '1.0.0',
-            description: 'تنبيهات مشاريع مستقل مع توليد عروض بالذكاء الاصطناعي',
+            description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
             action: {
                 default_title: 'Frelancia',
                 default_popup: 'popup/index.html',
@@ -61,17 +64,17 @@ export default defineConfig({
             browser_specific_settings: isChrome
                 ? undefined
                 : {
-                    gecko: {
-                        id: 'frelancia@mostaql-notifier',
-                        strict_min_version: '140.0',
-                        data_collection_permissions: {
-                            required: ['websiteContent'],
-                        },
-                    },
-                    gecko_android: {
-                        strict_min_version: '142.0',
-                    },
-                },
+                      gecko: {
+                          id: 'frelancia@mostaql-notifier',
+                          strict_min_version: '140.0',
+                          data_collection_permissions: {
+                              required: ['websiteContent'],
+                          },
+                      },
+                      gecko_android: {
+                          strict_min_version: '142.0',
+                      },
+                  },
         };
     },
 });

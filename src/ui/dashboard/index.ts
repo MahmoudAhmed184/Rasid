@@ -1,5 +1,3 @@
-import { browser } from 'wxt/browser'
-
 import './dashboard.css'
 import './dashboard-bids.css'
 import '../shared/icon-shim.css'
@@ -11,31 +9,33 @@ import { createPromptManager } from './prompts'
 import { createTrackedProjectsPanel } from './projects'
 import { createSettingsForm } from './settings'
 import { createTabController } from './tabs'
-import type { PromptTemplate } from '../../models/extension'
+import type { BackupRepository } from '../../infrastructure/storage/repositories/backup-repository'
+import type { MonitoringRepository } from '../../infrastructure/storage/repositories/monitoring-repository'
+import type { PromptRepository } from '../../infrastructure/storage/repositories/prompt-repository'
+import type { ProposalRepository } from '../../infrastructure/storage/repositories/proposal-repository'
+import type { SettingsRepository } from '../../infrastructure/storage/repositories/settings-repository'
+import type { TrackingRepository } from '../../infrastructure/storage/repositories/tracking-repository'
 
-interface DashboardStats {
-    todayCount?: number
-    lastCheck?: string | null
-}
-
-interface TrackedProjectRecord {
-    id?: string
-    title?: string
-    url?: string
-    budget?: string
-    duration?: string
-    clientName?: string
-    publishDate?: string
-    communications?: string | number
-    status?: string
-    lastChecked?: string
+interface DashboardDependencies {
+    readonly backupRepository: Pick<BackupRepository, 'exportAll' | 'importAll'>
+    readonly monitoringRepository: Pick<MonitoringRepository, 'getOverview'>
+    readonly promptRepository: Pick<PromptRepository, 'list' | 'save' | 'remove'>
+    readonly proposalRepository: Pick<
+        ProposalRepository,
+        'getQuickTemplate' | 'setQuickTemplate' | 'queueAutofill'
+    >
+    readonly settingsRepository: Pick<SettingsRepository, 'get' | 'save' | 'update'>
+    readonly trackingRepository: Pick<TrackingRepository, 'list'>
 }
 
 function getElement<T extends HTMLElement>(id: string) {
     return document.getElementById(id) as T | null
 }
 
-function updateOverviewStats(stats: DashboardStats, trackedCount: number) {
+function updateOverviewStats(
+    stats: { readonly todayCount?: number; readonly lastCheck?: string | null },
+    trackedCount: number
+) {
     const todayEl = getElement<HTMLElement>('stat-today')
     const totalEl = getElement<HTMLElement>('stat-total')
     const lastTimeEl = getElement<HTMLElement>('stat-last-time')
@@ -56,15 +56,25 @@ function updateOverviewStats(stats: DashboardStats, trackedCount: number) {
     }
 }
 
-function createDashboardApp(root: Document) {
-    const connectionPanel = createConnectionStatusPanel(root)
-    const trackedProjectsPanel = createTrackedProjectsPanel(root)
+function createDashboardApp(root: Document, deps: DashboardDependencies) {
+    const connectionPanel = createConnectionStatusPanel(root, {
+        monitoringRepository: deps.monitoringRepository,
+    })
+    const trackedProjectsPanel = createTrackedProjectsPanel(root, {
+        proposalRepository: deps.proposalRepository,
+    })
     const settingsForm = createSettingsForm(root, {
+        repositories: {
+            backupRepository: deps.backupRepository,
+            proposalRepository: deps.proposalRepository,
+            settingsRepository: deps.settingsRepository,
+        },
         onSaved: () => {
             void connectionPanel.load()
         },
     })
     const promptManager = createPromptManager(root, {
+        promptRepository: deps.promptRepository,
         onSaved: settingsForm.showSaveStatus,
     })
     const contributorsPanel = createContributorsPanel(root)
@@ -82,36 +92,28 @@ function createDashboardApp(root: Document) {
     })
 
     async function loadData() {
-        const data = (await browser.storage.local.get([
-            'settings',
-            'stats',
-            'prompts',
-            'proposalTemplate',
-            'trackedProjects',
-        ])) as {
-            settings?: Record<string, unknown>
-            stats?: DashboardStats
-            prompts?: PromptTemplate[]
-            proposalTemplate?: string
-            trackedProjects?: Record<string, TrackedProjectRecord>
-        }
+        const [overview, settings, trackedProjects, proposalTemplate, prompts] = await Promise.all([
+            deps.monitoringRepository.getOverview(),
+            deps.settingsRepository.get(),
+            deps.trackingRepository.list(),
+            deps.proposalRepository.getQuickTemplate(),
+            deps.promptRepository.list(),
+        ])
 
-        const trackedProjects = Object.values(data.trackedProjects ?? {})
-            .filter((project): project is TrackedProjectRecord & { url: string } => Boolean(project.url))
-            .sort((left, right) =>
-                String(right.lastChecked ?? '').localeCompare(String(left.lastChecked ?? ''))
-            )
+        const visibleTrackedProjects = trackedProjects.sort((left, right) =>
+            String(right.lastChecked ?? '').localeCompare(String(left.lastChecked ?? ''))
+        )
 
-        updateOverviewStats(data.stats ?? {}, trackedProjects.length)
-        trackedProjectsPanel.render(trackedProjects)
-        settingsForm.apply((data.settings ?? {}) as Record<string, never>)
+        updateOverviewStats(overview.stats, visibleTrackedProjects.length)
+        trackedProjectsPanel.render(visibleTrackedProjects)
+        settingsForm.apply(settings)
 
         const proposalTemplateEl = getElement<HTMLTextAreaElement>('proposalTemplate')
         if (proposalTemplateEl) {
-            proposalTemplateEl.value = data.proposalTemplate ?? ''
+            proposalTemplateEl.value = proposalTemplate
         }
 
-        promptManager.render(Array.isArray(data.prompts) ? data.prompts : [])
+        promptManager.render(prompts)
     }
 
     async function init() {
@@ -136,8 +138,8 @@ function createDashboardApp(root: Document) {
     }
 }
 
-export function bootstrapDashboard(root: Document = document) {
-    const app = createDashboardApp(root)
+export function bootstrapDashboard(root: Document = document, deps: DashboardDependencies) {
+    const app = createDashboardApp(root, deps)
     void app.init()
 
     root.defaultView?.addEventListener(

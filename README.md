@@ -1,12 +1,12 @@
 # Frelancia
 
-Frelancia is a cross-browser Manifest V3 extension for Mostaql that helps freelancers discover new projects quickly, filter noise, and draft stronger proposals with AI-assisted workflows.
+Frelancia is a cross-browser Manifest V3 extension for Arabic freelancing platforms that helps freelancers discover new opportunities quickly, filter noise, and draft stronger proposals with AI-assisted workflows.
 
-ملخص بالعربية: إضافة لمستقل تعمل على Chrome و Firefox لتنبيهك بالمشاريع الجديدة، تتبع المشاريع والعروض، وتساعدك على تجهيز العروض بالذكاء الاصطناعي.
+ملخص بالعربية: إضافة للعمل الحر تعمل على Chrome و Firefox لتنبيهك بالفرص الجديدة، تتبع المشاريع والطلبات، وتساعدك على تجهيز الردود والعروض بالذكاء الاصطناعي.
 
 ## Overview
 
-Frelancia combines project monitoring, browser-side workflow automation, and configurable AI drafting into a single extension. The codebase now uses a WXT and TypeScript architecture with browser-specific builds generated from one source tree.
+Frelancia combines project monitoring, browser-side workflow automation, and configurable AI drafting into a single extension. The codebase is built with WXT, TypeScript, and a layered `src/` layout that separates application flows from browser infrastructure and platform-specific DOM code.
 
 The extension includes:
 
@@ -16,7 +16,8 @@ The extension includes:
 - Direct provider support for OpenAI, Gemini, and Claude
 - Bridge-mode drafting that can hand off proposal prompts to a configurable chat UI
 - Popup and dashboard surfaces for monitoring, settings, diagnostics, and prompt management
-- Mostaql page enhancements for autofill, tracking, and export workflows
+- Platform page enhancements for autofill, tracking, export, and AI workflows
+- Current platform adapters for Mostaql and Khamsat
 - ZIP export for project details and conversation data
 
 ## Browser Support
@@ -28,92 +29,94 @@ The extension includes:
 
 The Chrome build uses an offscreen document for supported background tasks. Firefox uses the same source tree but skips the offscreen entrypoint during packaging by design.
 
-## Architecture
+## Source Layout
 
-The project is organized around WXT entrypoints and shared source modules:
+The repository keeps WXT entrypoints in `entrypoints/` and reusable code in `src/`.
 
-- `entrypoints/`: browser entrypoints for the background worker, popup, dashboard, Mostaql content script, ChatGPT bridge, and Chrome offscreen document
-- `src/core/`: reusable services for AI generation, job ingestion, notifications, downloads, storage, SignalR, DOM parsing, and offscreen coordination
-- `src/models/`: shared domain models, defaults, and runtime configuration types
-- `src/ui/`: popup, dashboard, content-script, chat bridge, offscreen, and shared UI modules
-- `public/`: static assets such as icons that are copied into the build output
-- `docs/`: operational notes for Firefox testing and store review workflows
+### `entrypoints/`
 
-Build artifacts are generated into:
+Manifest-facing surfaces only:
 
-- `dist/chrome-mv3`
-- `dist/firefox-mv3`
+- `entrypoints/background.ts`
+- `entrypoints/mostaql.content/index.ts`
+- `entrypoints/khamsat.content/index.ts`
+- `entrypoints/chatgpt-bridge.content.ts`
+- `entrypoints/popup/main.ts`
+- `entrypoints/dashboard/main.ts`
+- `entrypoints/offscreen/main.ts`
 
-## Feature Set
+### `src/`
 
-### Notification and Monitoring
+- `src/application/`
+  Use cases and runtime contracts.
+  Includes monitoring flows, proposal generation orchestration, content bootstrap, and background message handling.
+- `src/infrastructure/`
+  Browser and transport details.
+  Includes storage, repositories, SignalR, notifications, downloads, offscreen RPC, audio, and AI provider clients.
+- `src/models/`
+  Shared TypeScript domain models.
+- `src/platforms/`
+  Platform abstractions and platform-specific implementations.
+  Mostaql and Khamsat parsing, monitoring, and content injectors live under `src/platforms/`.
+- `src/ui/`
+  Generic extension surfaces that are not tied to one freelancing platform.
+  Includes popup, dashboard, ChatGPT bridge, and offscreen page bootstrap.
 
-- SignalR-based job delivery with polling fallback
-- Manual check from the popup
-- Notification toggle and test actions
-- Tracked projects with persisted local state
-- Connection diagnostics for Mostaql reachability
+This structure keeps platform-specific DOM code out of generic UI folders and keeps browser APIs out of application workflows.
 
-### AI and Proposal Workflow
+## Runtime Split
 
-- Prompt templates stored in extension storage
-- Proposal generation context built from Mostaql project metadata
-- Direct API mode for `openai`, `gemini`, and `claude`
-- Bridge mode for handing prompt text to a configured chat page
-- Quick bid and autofill actions on Mostaql project pages
+- `entrypoints/background.ts` is the WXT composition root. It delegates service wiring to `src/application/background/create-background-services.ts` and runtime transport registration to `src/application/runtime/background-message-bus.ts`.
+- `src/application/runtime/background-messages.ts` defines the typed request/response contract used by popup, dashboard, and content scripts.
+- `src/application/runtime/background-runtime-handlers.ts` maps those messages to use cases.
+- `src/platforms/platform-modules.ts` is the single manifest for supported platforms. It resolves content adapters, monitoring adapters, monitoring parsers, and realtime capability metadata.
+- `src/platforms/mostaql/adapter.ts` and `src/platforms/khamsat/adapter.ts` implement platform-specific content behavior.
+- `src/platforms/*/content/*.ts` contains platform-specific DOM extraction, injection, autofill, and export logic.
+- `src/infrastructure/realtime/signalr-reducer.ts` and `src/infrastructure/realtime/signalr-effects.ts` make SignalR state transitions and alarm effects explicit while `src/infrastructure/realtime/signalr-manager.ts` stays focused on orchestration.
+- `src/infrastructure/offscreen/*` hides the Chrome offscreen-vs-Firefox local execution split.
 
-### Dashboard and Reporting
-
-- Settings management for filtering, AI mode, intervals, and quiet hours
-- Prompt and proposal template management
-- Bid tracker and 30-day timeline analytics
-- Runtime status and connection visibility
-- Project export and monitoring utilities
-
-## Getting Started
+## Development
 
 ### Prerequisites
 
 - Node.js
 - npm
 
-A recent Node.js LTS release is recommended.
+A recent Node.js LTS release is recommended. The repository does not currently declare an `engines.node` field.
 
-### Install Dependencies
+### Install
 
 ```bash
 npm install
 ```
 
-`npm install` runs `wxt prepare` automatically through `postinstall`. If generated WXT files are ever missing after a cleanup or branch reset, run:
+`npm install` runs `wxt prepare` automatically through `postinstall`. If generated WXT files are missing after a cleanup or branch reset, run:
 
 ```bash
 npm run postinstall
 ```
 
-## Development
-
-Start a development build for one browser target:
+### Development Builds
 
 ```bash
 npm run dev:chrome
 npm run dev:firefox
 ```
 
-Create production builds for both targets:
+### Production Builds
 
 ```bash
 npm run build
 ```
 
-Create a single target build:
+Or per target:
 
 ```bash
 npm run build:chrome
 npm run build:firefox
 ```
 
-Create packaged zip archives:
+### Packaged ZIP Builds
 
 ```bash
 npm run zip:chrome
@@ -139,7 +142,7 @@ npm run zip:firefox
 | `npm run typecheck` | Run the TypeScript compiler in no-emit mode |
 | `npm run lint:firefox` | Run `web-ext lint` against `dist/firefox-mv3` |
 
-## Load the Extension Locally
+## Load The Extension Locally
 
 ### Chrome
 
@@ -156,20 +159,14 @@ npm run zip:firefox
 3. Click `Load Temporary Add-on...`.
 4. Select `dist/firefox-mv3/manifest.json`.
 
-Additional Firefox-specific guidance is available in [`docs/firefox-testing.md`](docs/firefox-testing.md).
+Additional Firefox-specific guidance is available in [docs/firefox-testing.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/firefox-testing.md).
 
-## How the Runtime Is Split
-
-- The background entrypoint orchestrates alarms, storage, SignalR, polling, notifications, downloads, and AI request handling.
-- The Mostaql content entrypoint injects workflow helpers into project, message, home, and profile pages.
-- The popup provides quick status, a manual check action, diagnostics, and a notification toggle.
-- The dashboard exposes the broader management surface for prompts, tracked projects, settings, and bid analytics.
-
-## Remote Services and Permissions
+## Remote Services And Permissions
 
 The manifest currently declares host permissions for:
 
 - `https://mostaql.com/*`
+- `https://khamsat.com/*`
 - `https://chatgpt.com/*`
 - `https://chat.openai.com/*`
 - `https://frelancia.runasp.net/*`
@@ -177,9 +174,9 @@ The manifest currently declares host permissions for:
 - `https://generativelanguage.googleapis.com/*`
 - `https://api.anthropic.com/*`
 
-These permissions are used for Mostaql page access, optional AI drafting flows, and the SignalR notification backend.
+These permissions are used for supported platform page access, optional AI drafting flows, and the SignalR notification backend.
 
-## Privacy and Data Handling
+## Privacy And Data Handling
 
 Frelancia stores its operational state in browser local storage, including:
 
@@ -188,8 +185,9 @@ Frelancia stores its operational state in browser local storage, including:
 - tracked projects
 - recent jobs and seen job identifiers
 - lightweight runtime state used for notifications and connection management
+- temporary bridge/autofill payloads
 
-See [`PRIVACY.md`](PRIVACY.md) for the current privacy disclosure draft.
+See [PRIVACY.md](/home/mahmoud-ahmed/Projects/Frelancia/PRIVACY.md) for the current privacy disclosure draft.
 
 ## Quality Checks
 
@@ -209,8 +207,13 @@ npm run lint:firefox
 
 ## Documentation
 
-- [`PRIVACY.md`](PRIVACY.md)
-- [`docs/firefox-testing.md`](docs/firefox-testing.md)
+- [docs/01-setup-and-workflow.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/01-setup-and-workflow.md)
+- [docs/02-architecture-and-data-flow.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/02-architecture-and-data-flow.md)
+- [docs/03-cross-browser-quirks.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/03-cross-browser-quirks.md)
+- [docs/04-ai-content-bridge.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/04-ai-content-bridge.md)
+- [docs/05-adding-a-platform.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/05-adding-a-platform.md)
+- [docs/firefox-testing.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/firefox-testing.md)
+- [docs/amo-review.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/amo-review.md)
 
 ## Contributing
 
@@ -218,4 +221,4 @@ Issues and pull requests are welcome. Keep changes scoped, document behavior cha
 
 ## License
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE).
+This project is licensed under the MIT License. See [LICENSE](/home/mahmoud-ahmed/Projects/Frelancia/LICENSE).

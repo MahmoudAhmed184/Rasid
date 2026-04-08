@@ -1,26 +1,30 @@
 import { browser } from 'wxt/browser';
 
-import { playNotificationAudioDirect } from '../core/audio';
+import { playNotificationAudioDirect } from '../infrastructure/audio/service';
 import {
+    createOffscreenTransportFailure,
+    createOffscreenTransportSuccess,
+    dispatchOffscreenTask,
     isOffscreenProtocolMessage,
+    type OffscreenTaskHandlerMap,
     type OffscreenTaskEnvelope,
-} from '../core/offscreen-manager';
-import { parseJobsFromHtml, parseProjectDetailsFromHtml } from '../core/dom';
+} from '../infrastructure/offscreen/manager';
+import { getPlatformMonitoringHtmlParser } from '../platforms/platform-modules';
 
 let initialized = false;
 
-async function handleTask(message: OffscreenTaskEnvelope) {
-    switch (message.task) {
-        case 'audio.play-notification':
-            await playNotificationAudioDirect();
-            return undefined;
-        case 'dom.parse-jobs':
-            return parseJobsFromHtml(message.payload.html);
-        case 'dom.parse-project-details':
-            return parseProjectDetailsFromHtml(message.payload.html);
-        default:
-            return undefined;
-    }
+const offscreenTaskHandlers = {
+    async 'audio.play-notification'() {
+        await playNotificationAudioDirect();
+    },
+    'monitoring.parse-listing-html': (payload) =>
+        getPlatformMonitoringHtmlParser(payload.platformId).parseListingHtml(payload.html),
+    'monitoring.parse-project-html': (payload) =>
+        getPlatformMonitoringHtmlParser(payload.platformId).parseProjectHtml(payload.html),
+} satisfies OffscreenTaskHandlerMap;
+
+function handleTask(message: OffscreenTaskEnvelope) {
+    return dispatchOffscreenTask(offscreenTaskHandlers, message);
 }
 
 export function initOffscreen(): void {
@@ -38,7 +42,22 @@ export function initOffscreen(): void {
         // The offscreen page is the Chrome execution target for audio and DOM work,
         // so it responds directly to the worker's task envelopes. Chrome MV3
         // requires callback-style async replies for broad version compatibility.
-        void handleTask(message).then(sendResponse);
+        void Promise.resolve(handleTask(message)).then(
+            (
+                result:
+                    | Awaited<ReturnType<typeof handleTask>>
+            ) => {
+                sendResponse(createOffscreenTransportSuccess(message.task, result));
+            },
+            (error: unknown) => {
+                sendResponse(
+                    createOffscreenTransportFailure(
+                        message.task,
+                        error instanceof Error ? error.message : String(error)
+                    )
+                );
+            }
+        );
 
         return true;
     });

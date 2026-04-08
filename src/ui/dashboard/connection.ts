@@ -1,62 +1,59 @@
-import { browser } from 'wxt/browser'
+import { isSignalRFallbackState } from '../../models/runtime';
+import type { MonitoringRepository } from '../../infrastructure/storage/repositories/monitoring-repository';
 
-type NotificationMode = 'auto' | 'signalr' | 'polling'
+interface ConnectionStatusPanelDependencies {
+    readonly monitoringRepository: Pick<MonitoringRepository, 'getOverview'>;
+}
 
-export function createConnectionStatusPanel(root: Document) {
+function setStatusIcon(root: Document, container: HTMLElement, tone: string, iconClass: string): void {
+    const icon = root.createElement('i');
+    icon.className = `fas ${iconClass}`;
+    container.className = `stat-icon ${tone}`;
+    container.replaceChildren(icon);
+}
+
+export function createConnectionStatusPanel(
+    root: Document,
+    deps: ConnectionStatusPanelDependencies
+) {
     async function load() {
-        const data = (await browser.storage.local.get([
-            'signalRConnected',
-            'signalRFallbackActive',
-            'settings',
-            'runtime',
-        ])) as {
-            signalRConnected?: boolean
-            signalRFallbackActive?: boolean
-            settings?: { notificationMode?: NotificationMode }
-            runtime?: { signalr?: { status?: string; isFallbackActive?: boolean } }
-        }
+        const overview = await deps.monitoringRepository.getOverview();
 
-        const statusEl = root.getElementById('stat-connection')
-        const iconEl = root.getElementById('connection-status-icon')
+        const statusEl = root.getElementById('stat-connection');
+        const iconEl = root.getElementById('connection-status-icon');
 
         if (!(statusEl instanceof HTMLElement) || !(iconEl instanceof HTMLElement)) {
-            return
+            return;
         }
 
-        const mode = data.settings?.notificationMode ?? 'auto'
-        const runtimeSignalr = data.runtime?.signalr
-        const isConnected =
-            data.signalRConnected === true || runtimeSignalr?.status === 'connected'
-        const isFallbackActive =
-            data.signalRFallbackActive === true || runtimeSignalr?.isFallbackActive === true
+        const mode = overview.notificationMode;
+        const runtimeSignalr = overview.runtime.signalr;
+        const isConnected = runtimeSignalr.status === 'connected';
+        const isFallbackActive = isSignalRFallbackState(runtimeSignalr);
 
         if (mode === 'polling') {
-            statusEl.textContent = 'استعلام دوري'
-            iconEl.className = 'stat-icon blue'
-            iconEl.innerHTML = '<i class="fas fa-sync-alt"></i>'
-            return
+            statusEl.textContent = 'استعلام دوري';
+            setStatusIcon(root, iconEl, 'blue', 'fa-sync-alt');
+            return;
         }
 
         if (isConnected) {
-            statusEl.textContent = 'اتصال مباشر'
-            iconEl.className = 'stat-icon green'
-            iconEl.innerHTML = '<i class="fas fa-wifi"></i>'
-            return
+            statusEl.textContent = 'اتصال مباشر';
+            setStatusIcon(root, iconEl, 'green', 'fa-wifi');
+            return;
         }
 
         if (isFallbackActive) {
-            statusEl.textContent = 'وضع الاستعلام'
-            iconEl.className = 'stat-icon orange'
-            iconEl.innerHTML = '<i class="fas fa-sync-alt"></i>'
-            return
+            statusEl.textContent = 'وضع الاستعلام';
+            setStatusIcon(root, iconEl, 'orange', 'fa-sync-alt');
+            return;
         }
 
-        statusEl.textContent = 'غير متصل'
-        iconEl.className = 'stat-icon purple'
-        iconEl.innerHTML = '<i class="fas fa-plug"></i>'
+        statusEl.textContent = 'غير متصل';
+        setStatusIcon(root, iconEl, 'purple', 'fa-plug');
     }
 
     return {
         load,
-    }
+    };
 }

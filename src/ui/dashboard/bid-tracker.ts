@@ -1,3 +1,5 @@
+import { queryHtmlFragment } from '../../shared/dom/html-fragments'
+
 interface BidPageResponse {
     collection?: Array<{ id?: string | number; rendered?: string } | string>
     count?: number
@@ -46,6 +48,52 @@ const BID_STATUS_CONFIG = {
     مُغلق: { icon: 'fa-ban', color: '#6b7280', bg: '#f3f4f6', label: 'مُغلقة' },
 } as const
 
+function createIcon(doc: Document, iconClass: string): HTMLElement {
+    const icon = doc.createElement('i')
+    icon.className = `fas ${iconClass}`
+    return icon
+}
+
+function createStateMessage(
+    doc: Document,
+    options: {
+        readonly className: string
+        readonly iconClass: string
+        readonly title: string
+        readonly detail?: string
+        readonly action?: HTMLElement
+    }
+): HTMLElement {
+    const container = doc.createElement('div')
+    container.className = options.className
+
+    const title = doc.createElement('p')
+    title.textContent = options.title
+
+    container.append(createIcon(doc, options.iconClass), title)
+
+    if (options.detail) {
+        const detail = doc.createElement('span')
+        detail.textContent = options.detail
+        container.appendChild(detail)
+    }
+
+    if (options.action) {
+        container.appendChild(options.action)
+    }
+
+    return container
+}
+
+function createHelpText(doc: Document, message: string): HTMLElement {
+    const paragraph = doc.createElement('p')
+    paragraph.className = 'help-text'
+    paragraph.style.textAlign = 'center'
+    paragraph.style.padding = '20px'
+    paragraph.textContent = message
+    return paragraph
+}
+
 export function createBidTracker(root: Document) {
     const timelineContainer = root.getElementById('bidsTimelineList')
     const statusGrid = root.getElementById('bidsStatusGrid')
@@ -69,17 +117,18 @@ export function createBidTracker(root: Document) {
             return
         }
 
-        timelineContainer.innerHTML = `
-            <div class="bids-loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>جاري تحميل بيانات العروض...</p>
-            </div>
-        `
+        timelineContainer.replaceChildren(
+            createStateMessage(root, {
+                className: 'bids-loading',
+                iconClass: 'fa-spinner fa-spin',
+                title: 'جاري تحميل بيانات العروض...',
+            })
+        )
 
         resetSummaryCards()
 
         if (statusGrid instanceof HTMLElement) {
-            statusGrid.innerHTML = ''
+            statusGrid.replaceChildren()
         }
     }
 
@@ -88,16 +137,21 @@ export function createBidTracker(root: Document) {
             return
         }
 
-        timelineContainer.innerHTML = `
-            <div class="bids-error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>تعذر تحميل بيانات العروض</p>
-                <span>${message}</span>
-                <button class="btn-secondary btn-retry-bids" style="margin-top: 16px;" type="button">
-                    <i class="fas fa-redo"></i> إعادة المحاولة
-                </button>
-            </div>
-        `
+        const retryButton = root.createElement('button')
+        retryButton.className = 'btn-secondary btn-retry-bids'
+        retryButton.style.marginTop = '16px'
+        retryButton.type = 'button'
+        retryButton.append(createIcon(root, 'fa-redo'), root.createTextNode(' إعادة المحاولة'))
+
+        timelineContainer.replaceChildren(
+            createStateMessage(root, {
+                className: 'bids-error',
+                iconClass: 'fa-exclamation-triangle',
+                title: 'تعذر تحميل بيانات العروض',
+                detail: message,
+                action: retryButton,
+            })
+        )
     }
 
     async function fetchBidTrackerPage(pageNumber: number): Promise<BidPageResponse> {
@@ -125,10 +179,9 @@ export function createBidTracker(root: Document) {
             return null
         }
 
-        const template = document.createElement('template')
-        template.innerHTML = renderedHtml.trim()
-
-        const row = template.content.querySelector('tr.bid-row')
+        const row = queryHtmlFragment<HTMLElement>(renderedHtml, 'tr.bid-row', {
+            context: 'table-body',
+        })
         if (!row) {
             return null
         }
@@ -433,36 +486,54 @@ export function createBidTracker(root: Document) {
         const statusKeys = Object.keys(byStatus)
 
         if (statusKeys.length === 0) {
-            statusGrid.innerHTML =
-                '<p class="help-text" style="text-align:center; padding:20px;">لا توجد بيانات حالات.</p>'
+            statusGrid.replaceChildren(createHelpText(root, 'لا توجد بيانات حالات.'))
             return
         }
 
-        statusGrid.innerHTML = statusKeys
-            .map((statusKey) => {
-                const count = byStatus[statusKey]
-                const percentage = total > 0 ? Math.round((count / total) * 100) : 0
-                const config = BID_STATUS_CONFIG[statusKey as keyof typeof BID_STATUS_CONFIG] ?? {
-                    icon: 'fa-question-circle',
-                    color: '#6b7280',
-                    bg: '#f3f4f6',
-                    label: statusKey,
-                }
+        const fragment = root.createDocumentFragment()
 
-                return `
-                    <div class="bid-status-card">
-                        <div class="bid-status-icon" style="background: ${config.bg}; color: ${config.color};">
-                            <i class="fas ${config.icon}"></i>
-                        </div>
-                        <div class="bid-status-info">
-                            <span class="bid-status-count">${count}</span>
-                            <span class="bid-status-label">${config.label}</span>
-                        </div>
-                        <span class="bid-status-pct" style="color: ${config.color};">${percentage}%</span>
-                    </div>
-                `
-            })
-            .join('')
+        for (const statusKey of statusKeys) {
+            const count = byStatus[statusKey]
+            const percentage = total > 0 ? Math.round((count / total) * 100) : 0
+            const config = BID_STATUS_CONFIG[statusKey as keyof typeof BID_STATUS_CONFIG] ?? {
+                icon: 'fa-question-circle',
+                color: '#6b7280',
+                bg: '#f3f4f6',
+                label: statusKey,
+            }
+
+            const card = root.createElement('div')
+            card.className = 'bid-status-card'
+
+            const iconWrap = root.createElement('div')
+            iconWrap.className = 'bid-status-icon'
+            iconWrap.style.background = config.bg
+            iconWrap.style.color = config.color
+            iconWrap.appendChild(createIcon(root, config.icon))
+
+            const info = root.createElement('div')
+            info.className = 'bid-status-info'
+
+            const countEl = root.createElement('span')
+            countEl.className = 'bid-status-count'
+            countEl.textContent = String(count)
+
+            const labelEl = root.createElement('span')
+            labelEl.className = 'bid-status-label'
+            labelEl.textContent = config.label
+
+            info.append(countEl, labelEl)
+
+            const pctEl = root.createElement('span')
+            pctEl.className = 'bid-status-pct'
+            pctEl.style.color = config.color
+            pctEl.textContent = `${percentage}%`
+
+            card.append(iconWrap, info, pctEl)
+            fragment.appendChild(card)
+        }
+
+        statusGrid.replaceChildren(fragment)
     }
 
     function renderTimeline(bids: TimelineBid[]) {
@@ -471,68 +542,105 @@ export function createBidTracker(root: Document) {
         }
 
         if (bids.length === 0) {
-            timelineContainer.innerHTML = `
-                <div class="bids-empty">
-                    <i class="fas fa-inbox"></i>
-                    <p>لا توجد عروض في آخر 30 يومًا</p>
-                    <span>جميع العروض متاحة للاستخدام!</span>
-                </div>
-            `
+            timelineContainer.replaceChildren(
+                createStateMessage(root, {
+                    className: 'bids-empty',
+                    iconClass: 'fa-inbox',
+                    title: 'لا توجد عروض في آخر 30 يومًا',
+                    detail: 'جميع العروض متاحة للاستخدام!',
+                })
+            )
             return
         }
 
-        timelineContainer.innerHTML = bids
-            .map((bid, index) => {
-                const percentage = Math.min(100, Math.round((bid.ageMs / THIRTY_DAYS_MS) * 100))
-                const color = getCountdownColor(percentage)
-                const appliedDate = bid.published.toLocaleDateString('ar-EG', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    timeZone: 'UTC',
-                })
-                const appliedTime = bid.published.toLocaleTimeString('ar-EG', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'UTC',
-                })
+        const fragment = root.createDocumentFragment()
 
-                return `
-                    <div class="bid-timeline-item" data-index="${index}">
-                        <div class="bid-timeline-marker" style="background: ${color};"></div>
-                        <div class="bid-timeline-content">
-                            <div class="bid-timeline-header">
-                                <a href="${bid.url || '#'}" target="_blank" rel="noreferrer" class="bid-timeline-title">
-                                    ${bid.title || 'عرض بدون عنوان'}
-                                </a>
-                                <span class="bid-timeline-status ${getStatusCssClass(bid.status)}">${bid.status || 'بانتظار'}</span>
-                            </div>
-                            <div class="bid-timeline-meta">
-                                <span><i class="fas fa-calendar-alt"></i> ${appliedDate}</span>
-                                <span><i class="fas fa-clock"></i> ${appliedTime}</span>
-                                ${bid.price ? `<span><i class="fas fa-dollar-sign"></i> ${bid.price}</span>` : ''}
-                            </div>
-                            <div class="bid-timeline-progress">
-                                <div class="bid-progress-bar">
-                                    <div
-                                        class="bid-progress-fill bid-tracker-bar"
-                                        data-ms-left="${bid.msLeft}"
-                                        style="width: ${percentage}%; background: ${color};"
-                                    ></div>
-                                </div>
-                                <span
-                                    class="bid-countdown bid-tracker-countdown"
-                                    data-ms-left="${bid.msLeft}"
-                                    style="color: ${color};"
-                                >
-                                    ${formatCountdown(bid.msLeft)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                `
+        for (const [index, bid] of bids.entries()) {
+            const percentage = Math.min(100, Math.round((bid.ageMs / THIRTY_DAYS_MS) * 100))
+            const color = getCountdownColor(percentage)
+            const appliedDate = bid.published.toLocaleDateString('ar-EG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                timeZone: 'UTC',
             })
-            .join('')
+            const appliedTime = bid.published.toLocaleTimeString('ar-EG', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'UTC',
+            })
+
+            const item = root.createElement('div')
+            item.className = 'bid-timeline-item'
+            item.dataset.index = String(index)
+
+            const marker = root.createElement('div')
+            marker.className = 'bid-timeline-marker'
+            marker.style.background = color
+
+            const content = root.createElement('div')
+            content.className = 'bid-timeline-content'
+
+            const header = root.createElement('div')
+            header.className = 'bid-timeline-header'
+
+            const titleLink = root.createElement('a')
+            titleLink.className = 'bid-timeline-title'
+            titleLink.href = bid.url || '#'
+            titleLink.target = '_blank'
+            titleLink.rel = 'noreferrer'
+            titleLink.textContent = bid.title || 'عرض بدون عنوان'
+
+            const status = root.createElement('span')
+            status.className = `bid-timeline-status ${getStatusCssClass(bid.status)}`
+            status.textContent = bid.status || 'بانتظار'
+
+            header.append(titleLink, status)
+
+            const meta = root.createElement('div')
+            meta.className = 'bid-timeline-meta'
+
+            const dateMeta = root.createElement('span')
+            dateMeta.append(createIcon(root, 'fa-calendar-alt'), root.createTextNode(` ${appliedDate}`))
+
+            const timeMeta = root.createElement('span')
+            timeMeta.append(createIcon(root, 'fa-clock'), root.createTextNode(` ${appliedTime}`))
+
+            meta.append(dateMeta, timeMeta)
+
+            if (bid.price) {
+                const priceMeta = root.createElement('span')
+                priceMeta.append(createIcon(root, 'fa-dollar-sign'), root.createTextNode(` ${bid.price}`))
+                meta.appendChild(priceMeta)
+            }
+
+            const progress = root.createElement('div')
+            progress.className = 'bid-timeline-progress'
+
+            const progressBar = root.createElement('div')
+            progressBar.className = 'bid-progress-bar'
+
+            const progressFill = root.createElement('div')
+            progressFill.className = 'bid-progress-fill bid-tracker-bar'
+            progressFill.dataset.msLeft = String(bid.msLeft)
+            progressFill.style.width = `${percentage}%`
+            progressFill.style.background = color
+
+            progressBar.appendChild(progressFill)
+
+            const countdown = root.createElement('span')
+            countdown.className = 'bid-countdown bid-tracker-countdown'
+            countdown.dataset.msLeft = String(bid.msLeft)
+            countdown.style.color = color
+            countdown.textContent = formatCountdown(bid.msLeft)
+
+            progress.append(progressBar, countdown)
+            content.append(header, meta, progress)
+            item.append(marker, content)
+            fragment.appendChild(item)
+        }
+
+        timelineContainer.replaceChildren(fragment)
     }
 
     function clearCountdowns() {

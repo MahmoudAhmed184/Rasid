@@ -3,9 +3,9 @@
 ## Runtime Requirements
 
 - Package manager: `npm`
-- Node.js version: Not implemented in current codebase.
+- Node.js version: not pinned in the repository
 
-The repository does not declare an `engines.node` field in `package.json`, and there is no `.nvmrc`, `.node-version`, or `.tool-versions` file. Reviewers and contributors therefore need to choose a Node.js version themselves.
+The project still does not declare `engines.node`, `.nvmrc`, or `.node-version`, so contributors should use a recent Node.js LTS release.
 
 ## Install
 
@@ -13,7 +13,7 @@ The repository does not declare an `engines.node` field in `package.json`, and t
 npm install
 ```
 
-`npm install` runs the `postinstall` script automatically:
+`npm install` runs:
 
 ```bash
 npm run postinstall
@@ -25,25 +25,25 @@ That script executes:
 wxt prepare
 ```
 
-Run `npm run postinstall` again if generated WXT types or prepared files are missing after a cleanup.
+Run `npm run postinstall` again if generated WXT files are missing after a cleanup or branch reset.
 
 ## Development Scripts
 
-These scripts are defined exactly in `package.json`:
+These scripts are defined in `package.json`:
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev:chrome` | Start a Chrome Manifest V3 development build with `wxt -b chrome --mv3` |
-| `npm run dev:firefox` | Start a Firefox Manifest V3 development build with `wxt -b firefox --mv3` |
-| `npm run build` | Build both browsers by chaining `build:chrome` then `build:firefox` |
-| `npm run build:chrome` | Build `dist/chrome-mv3` with `wxt build -b chrome --mv3` |
-| `npm run build:firefox` | Build `dist/firefox-mv3` with `wxt build -b firefox --mv3` |
-| `npm run zip:chrome` | Package the Chrome build with `wxt zip -b chrome --mv3` |
-| `npm run zip:firefox` | Package the Firefox build with `wxt zip -b firefox --mv3` |
+| `npm run dev:chrome` | Start a Chrome Manifest V3 development build |
+| `npm run dev:firefox` | Start a Firefox Manifest V3 development build |
+| `npm run build` | Build both browser targets |
+| `npm run build:chrome` | Build `dist/chrome-mv3` |
+| `npm run build:firefox` | Build `dist/firefox-mv3` |
+| `npm run zip:chrome` | Package the Chrome build |
+| `npm run zip:firefox` | Package the Firefox build |
 | `npm run lint` | Run ESLint |
 | `npm run lint:fix` | Run ESLint with fixes |
 | `npm run format` | Run Prettier in write mode |
-| `npm run format:check` | Check formatting with Prettier |
+| `npm run format:check` | Check Prettier formatting |
 | `npm run typecheck` | Run `tsc -p tsconfig.json --noEmit` |
 | `npm run lint:firefox` | Run `web-ext lint --source-dir dist/firefox-mv3` |
 
@@ -62,79 +62,117 @@ This creates a strict split:
 
 ### `entrypoints/`
 
-`entrypoints/` contains files that WXT should treat as extension entrypoints or extension HTML pages:
+Only manifest-facing surfaces belong here:
 
 - `entrypoints/background.ts`
 - `entrypoints/mostaql.content/index.ts`
+- `entrypoints/khamsat.content/index.ts`
 - `entrypoints/chatgpt-bridge.content.ts`
-- `entrypoints/popup/index.html`
 - `entrypoints/popup/main.ts`
-- `entrypoints/dashboard/index.html`
 - `entrypoints/dashboard/main.ts`
-- `entrypoints/offscreen/index.html`
 - `entrypoints/offscreen/main.ts`
 
-New manifest-facing surfaces should be added here, not in `src/`.
+New browser entrypoints should be added here, not under `src/`.
 
 ### `src/`
 
-`src/` contains reusable modules that are imported by entrypoints but are not entrypoints themselves:
+Reusable code is grouped by architectural role:
 
-- `src/core/`: background services and shared runtime logic
-- `src/models/`: shared types, defaults, constants
-- `src/ui/`: popup, dashboard, content-script UI, bridge UI, offscreen handler code
+- `src/application/`
+  Use cases, orchestration logic, and message contracts.
+- `src/infrastructure/`
+  Browser APIs and external service integrations.
+- `src/models/`
+  Shared domain models.
+- `src/platforms/`
+  Platform adapters and platform-specific implementations.
+- `src/shared/`
+  Cross-cutting DOM, parsing, and identity helpers.
+- `src/ui/`
+  Generic extension surfaces such as popup, dashboard, ChatGPT bridge, and offscreen bootstrap.
 
-This is reinforced by the comment in `wxt.config.ts`: the codebase keeps WXT entrypoints separate from reusable source modules.
+Two practical rules follow from this:
 
-## EntryPoint Import Graph
+1. Browser/runtime details belong in `src/infrastructure/`, not in `src/application/`.
+2. Platform-specific DOM code belongs in `src/platforms/<platform>/`, not in generic UI folders.
 
-The current WXT graph is:
+## Current Source Layout
+
+```text
+src/
+  application/
+    content/
+    monitoring/
+    proposals/
+    runtime/
+  infrastructure/
+    ai/
+    audio/
+    downloads/
+    notifications/
+    offscreen/
+    realtime/
+    storage/
+  models/
+  platforms/
+    khamsat/
+    mostaql/
+      content/
+  shared/
+  ui/
+    chatgpt-bridge/
+    dashboard/
+    popup/
+```
+
+## Entrypoint Import Graph
+
+The current high-level graph is:
 
 ```text
 entrypoints/background.ts
-  -> src/core/ai.ts
-  -> src/core/audio.ts
-  -> src/core/dom.ts
-  -> src/core/downloads.ts
-  -> src/core/offscreen-manager.ts
-  -> src/core/jobs.ts
-  -> src/core/notifications.ts
-  -> src/core/signalr.ts
-  -> src/core/storage.ts
-  -> src/models/ai.ts
-  -> src/models/extension.ts
+  -> src/application/background/create-background-services.ts
+  -> src/application/runtime/background-message-bus.ts
 
 entrypoints/mostaql.content/index.ts
-  -> src/ui/mostaql/autofill.mjs
-  -> src/ui/mostaql/export.mjs
-  -> src/ui/mostaql/home.mjs
-  -> src/ui/mostaql/profile.mjs
-  -> src/ui/mostaql/project-sidebar.mjs
-  -> src/ui/mostaql/runtime.mjs
-  -> entrypoints/mostaql.content/style.css
+  -> src/application/content/*
+  -> src/platforms/platform-modules.ts
+    -> src/platforms/mostaql/adapter.ts
+      -> src/platforms/mostaql/content/*.ts
+  -> src/infrastructure/storage/browser-repositories.ts
+
+entrypoints/khamsat.content/index.ts
+  -> src/application/content/*
+  -> src/platforms/platform-modules.ts
+    -> src/platforms/khamsat/adapter.ts
+      -> src/platforms/khamsat/content/*.ts
+  -> src/infrastructure/storage/browser-repositories.ts
 
 entrypoints/chatgpt-bridge.content.ts
-  -> src/ui/chatgpt-bridge/index.mjs
+  -> src/ui/chatgpt-bridge/index.ts
+  -> src/infrastructure/storage/browser-repositories.ts
 
 entrypoints/offscreen/main.ts
   -> src/ui/offscreen.ts
-    -> src/core/audio.ts
-    -> src/core/dom.ts
-    -> src/core/offscreen-manager.ts
+  -> src/infrastructure/offscreen/manager.ts
+  -> src/platforms/platform-modules.ts
 
 entrypoints/popup/main.ts
   -> src/ui/popup/index.ts
+  -> src/infrastructure/storage/browser-repositories.ts
 
 entrypoints/dashboard/main.ts
   -> src/ui/dashboard/index.ts
-    -> src/ui/dashboard/bid-tracker.ts
-    -> src/ui/dashboard/connection.ts
-    -> src/ui/dashboard/contributors.ts
-    -> src/ui/dashboard/prompts.ts
-    -> src/ui/dashboard/projects.ts
-    -> src/ui/dashboard/settings.ts
-    -> src/ui/dashboard/tabs.ts
+  -> src/infrastructure/storage/browser-repositories.ts
 ```
+
+## Platform Registration Rule
+
+Supported platforms are registered in one place:
+
+- `src/platforms/platform-modules.ts`
+
+Do not add new content, monitoring, or parser registries. Add the platform module once and let the rest of the runtime resolve through that manifest.
 
 ## Build Outputs
 

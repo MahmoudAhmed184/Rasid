@@ -29,7 +29,6 @@
     },
     "dependencies": {
         "@microsoft/signalr": "^10.0.0",
-        "jszip": "^3.10.1",
-        "linkedom": "^0.18.12"
+        "jszip": "^3.10.1"
     }
 }

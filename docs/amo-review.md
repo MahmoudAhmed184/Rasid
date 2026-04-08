@@ -11,8 +11,7 @@
 ## How To Build From Source
 
 1. Install Node.js and npm.
-   - Exact Node.js version: Not implemented in current codebase.
-   - The repository does not declare `engines.node`, `.nvmrc`, or `.node-version`.
+   - Exact Node.js version: not pinned in the repository.
 2. Install dependencies:
 
    ```bash
@@ -54,7 +53,7 @@
 
 #### `alarms`
 
-Required for the background scheduler in `src/core/signalr.ts`.
+Required for the background scheduler in `src/infrastructure/realtime/signalr-manager.ts`.
 
 The code creates and manages:
 
@@ -65,22 +64,22 @@ The code creates and manages:
 
 These alarms drive:
 
-- Mostaql polling
+- platform polling
 - SignalR health checks
 - SignalR lease rotation
 - SignalR reconnect backoff
 
 #### `downloads`
 
-Required for `src/core/downloads.ts`.
+Required for `src/infrastructure/downloads/zip-downloads.ts`.
 
 The extension builds ZIP archives from user-requested exports and then calls `browser.downloads.download(...)` to save them. The export path is triggered only from Mostaql UI buttons added by the content script.
 
 #### `notifications`
 
-Required for `src/core/notifications.ts`.
+Required for `src/infrastructure/notifications/service.ts`.
 
-The extension creates browser notifications for newly detected Mostaql projects and for the dashboard test action. It also handles notification clicks by opening the stored project URL in a new tab.
+The extension creates browser notifications for newly detected projects on enabled platforms and for the dashboard test action. It also handles notification clicks by opening the stored project URL in a new tab.
 
 #### `storage`
 
@@ -105,10 +104,6 @@ Not present in the Firefox AMO build.
 
 The source config adds `offscreen` only when `browser === 'chrome'`. Firefox uses the local background execution path instead of a Chrome offscreen document.
 
-#### `webRequest`
-
-Not requested in current codebase.
-
 ### Host permissions
 
 #### `https://mostaql.com/*`
@@ -118,30 +113,40 @@ Required for the extension’s primary functionality.
 The code uses this host permission for:
 
 - the Mostaql content script (`entrypoints/mostaql.content/index.ts`)
-- HTML feed polling in `src/core/jobs.ts`
-- project detail hydration in `src/core/jobs.ts`
+- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- Mostaql listing/detail parsing in `src/platforms/mostaql/html-parser.ts`
 - bid tracker requests in `src/ui/dashboard/bid-tracker.ts`
-- homepage analytics requests in `src/ui/dashboard/bid-tracker.ts`
-- deep project scraping in `src/ui/mostaql/data.mjs`
-- export attachment downloads in `src/core/downloads.ts`
+- Mostaql content extraction in `src/platforms/mostaql/content/data.ts`
+- export attachment downloads in `src/infrastructure/downloads/zip-downloads.ts`
+
+#### `https://khamsat.com/*`
+
+Required for the Khamsat platform adapter.
+
+The code uses this host permission for:
+
+- the Khamsat content script (`entrypoints/khamsat.content/index.ts`)
+- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- Khamsat listing/detail parsing in `src/platforms/khamsat/html-parser.ts`
+- Khamsat content extraction in `src/platforms/khamsat/content/data.ts`
 
 #### `https://chatgpt.com/*`
 
 Required for the optional bridge workflow.
 
-The code injects a content script on this host in `entrypoints/chatgpt-bridge.content.ts` and writes a prepared proposal prompt into the chat input DOM when the user explicitly starts bridge mode from a Mostaql project page.
+The code injects a content script on this host in `entrypoints/chatgpt-bridge.content.ts` and writes a prepared proposal prompt into the chat input DOM when the user explicitly starts bridge mode from a supported project page.
 
 #### `https://chat.openai.com/*`
 
 Required for the same optional bridge workflow on the legacy OpenAI chat host.
 
-The same bridge content script matches this host and uses the same prompt injection behavior.
-
 #### `https://frelancia.runasp.net/*`
 
 Required for realtime job notifications.
 
-`src/core/signalr.ts` connects to `https://frelancia.runasp.net/jobNotificationHub` by default unless the user overrides the hub URL in settings.
+`src/infrastructure/realtime/signalr-manager.ts` connects to `https://frelancia.runasp.net/jobNotificationHub` by default unless the user overrides the hub URL in settings.
 
 #### `https://api.openai.com/*`
 
@@ -150,16 +155,12 @@ Required for optional direct AI generation when the user chooses:
 - `aiExecutionMode = direct`
 - `aiProvider = openai`
 
-The background sends the rendered Mostaql prompt to `POST /v1/responses`.
-
 #### `https://generativelanguage.googleapis.com/*`
 
 Required for optional direct AI generation when the user chooses:
 
 - `aiExecutionMode = direct`
 - `aiProvider = gemini`
-
-The background sends the rendered Mostaql prompt to Gemini’s `generateContent` endpoint.
 
 #### `https://api.anthropic.com/*`
 
@@ -168,12 +169,14 @@ Required for optional direct AI generation when the user chooses:
 - `aiExecutionMode = direct`
 - `aiProvider = claude`
 
-The background sends the rendered Mostaql prompt to Anthropic’s `messages` endpoint.
-
 ## Firefox-Specific Notes
 
 - Firefox does not use the Chrome offscreen document path.
-- In Firefox, audio playback and HTML parsing use the local handler path in `src/core/audio.ts`, `src/core/dom.ts`, and `src/core/offscreen-manager.ts`.
+- In Firefox, audio playback and HTML parsing use the local task-handler path in:
+  - `src/infrastructure/audio/service.ts`
+  - `src/infrastructure/offscreen/manager.ts`
+  - `src/infrastructure/offscreen/tasks.ts`
+  - `src/platforms/monitoring-html-parser.ts`
 - The source config declares:
 
   ```json
@@ -182,7 +185,7 @@ The background sends the rendered Mostaql prompt to Anthropic’s `messages` end
   }
   ```
 
-This is because the extension reads Mostaql page content to build notifications, tracked-project records, exports, and optional AI prompts.
+This is because the extension reads supported platform page content to build notifications, tracked-project records, exports, and optional AI prompts.
 
 ## Reviewer Test Flow
 
@@ -200,6 +203,10 @@ This is because the extension reads Mostaql page content to build notifications,
    - `سريع` queues autofill
    - `ذكاء` opens the AI workflow
    - `تصدير` creates the ZIP export
+6. Optional multi-platform verification:
+   - Open a Khamsat request page
+   - Verify `متابعة` toggles tracked state
+   - Verify `ولّد الرد` queues the reply autofill flow
 
 ## Additional Review Notes
 

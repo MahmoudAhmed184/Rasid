@@ -1,22 +1,97 @@
-import { browser } from 'wxt/browser'
-
-import type { PromptTemplate } from '../../models/extension'
+import type { PromptTemplate } from '../../models/prompts';
+import type { PromptRepository } from '../../infrastructure/storage/repositories/prompt-repository';
 
 interface PromptManagerOptions {
-    onSaved?: () => void
+    readonly onSaved?: () => void;
+    readonly promptRepository: Pick<PromptRepository, 'list' | 'save' | 'remove'>;
 }
 
-export function createPromptManager(root: Document, options: PromptManagerOptions = {}) {
-    const list = root.getElementById('promptsList')
-    const modal = root.getElementById('promptModal')
-    const modalTitle = root.getElementById('modalTitle')
-    const promptIdField = root.getElementById('promptId')
-    const titleField = root.getElementById('promptTitle')
-    const contentField = root.getElementById('promptContent')
-    let isBound = false
+export function createPromptManager(root: Document, options: PromptManagerOptions) {
+    const list = root.getElementById('promptsList');
+    const modal = root.getElementById('promptModal');
+    const modalTitle = root.getElementById('modalTitle');
+    const promptIdField = root.getElementById('promptId');
+    const titleField = root.getElementById('promptTitle');
+    const contentField = root.getElementById('promptContent');
+    let isBound = false;
+
+    function createPromptEmptyState(): HTMLParagraphElement {
+        const paragraph = root.createElement('p');
+
+        paragraph.className = 'help-text';
+        paragraph.style.gridColumn = '1/-1';
+        paragraph.style.textAlign = 'center';
+        paragraph.style.padding = '40px';
+        paragraph.textContent = 'لا يوجد أوامر مضافة حالياً.';
+
+        return paragraph;
+    }
+
+    function createIconButton(
+        index: number,
+        buttonClassName: string,
+        iconClassName: string,
+        color: string
+    ): HTMLButtonElement {
+        const button = root.createElement('button');
+        const icon = root.createElement('i');
+
+        button.dataset.index = String(index);
+        button.className = `btn-icon ${buttonClassName}`;
+        button.style.background = 'none';
+        button.style.border = 'none';
+        button.style.color = color;
+        button.style.cursor = 'pointer';
+        button.type = 'button';
+
+        icon.className = iconClassName;
+        button.appendChild(icon);
+
+        return button;
+    }
+
+    function createPromptCard(prompt: PromptTemplate, index: number): HTMLDivElement {
+        const card = root.createElement('div');
+        card.className = 'prompt-card';
+
+        const header = root.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'flex-start';
+        header.style.marginBottom = '12px';
+
+        const title = root.createElement('h4');
+        title.style.fontWeight = '800';
+        title.style.fontSize = '16px';
+        title.style.color = 'var(--text-title)';
+        title.textContent = prompt.title;
+
+        const actions = root.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '8px';
+        actions.append(
+            createIconButton(index, 'btn-edit-prompt', 'fas fa-edit', 'var(--text-muted)'),
+            createIconButton(index, 'btn-delete-prompt', 'fas fa-trash', 'var(--danger)')
+        );
+
+        header.append(title, actions);
+
+        const content = root.createElement('p');
+        content.style.fontSize = '13px';
+        content.style.color = 'var(--text-body)';
+        content.style.display = '-webkit-box';
+        content.style.setProperty('-webkit-line-clamp', '3');
+        content.style.setProperty('-webkit-box-orient', 'vertical');
+        content.style.overflow = 'hidden';
+        content.textContent = prompt.content;
+
+        card.append(header, content);
+
+        return card;
+    }
 
     function closeModal() {
-        modal?.classList.add('hidden')
+        modal?.classList.add('hidden');
     }
 
     function openModal(prompt: PromptTemplate | null = null, index = -1) {
@@ -26,45 +101,48 @@ export function createPromptManager(root: Document, options: PromptManagerOption
             !(titleField instanceof HTMLInputElement) ||
             !(contentField instanceof HTMLTextAreaElement)
         ) {
-            return
+            return;
         }
 
         if (prompt) {
-            modalTitle.textContent = 'تعديل الأمر'
-            titleField.value = prompt.title
-            contentField.value = prompt.content
-            promptIdField.value = String(index)
+            modalTitle.textContent = 'تعديل الأمر';
+            titleField.value = prompt.title;
+            contentField.value = prompt.content;
+            promptIdField.value = String(index);
         } else {
-            modalTitle.textContent = 'إضافة أمر جديد'
-            titleField.value = ''
-            contentField.value = ''
-            promptIdField.value = '-1'
+            modalTitle.textContent = 'إضافة أمر جديد';
+            titleField.value = '';
+            contentField.value = '';
+            promptIdField.value = '-1';
         }
 
-        modal?.classList.remove('hidden')
+        modal?.classList.remove('hidden');
     }
 
     async function editPrompt(index: number) {
-        const data = (await browser.storage.local.get(['prompts'])) as { prompts?: PromptTemplate[] }
-        const prompt = data.prompts?.[index]
+        const prompts = await options.promptRepository.list();
+        const prompt = prompts[index];
 
         if (prompt) {
-            openModal(prompt, index)
+            openModal(prompt, index);
         }
     }
 
     async function deletePrompt(index: number) {
         if (!window.confirm('هل أنت متأكد من حذف هذا الأمر؟')) {
-            return
+            return;
         }
 
-        const data = (await browser.storage.local.get(['prompts'])) as { prompts?: PromptTemplate[] }
-        const prompts = Array.isArray(data.prompts) ? [...data.prompts] : []
-        prompts.splice(index, 1)
+        const prompts = await options.promptRepository.list();
+        const prompt = prompts[index];
 
-        await browser.storage.local.set({ prompts })
-        render(prompts)
-        options.onSaved?.()
+        if (!prompt) {
+            return;
+        }
+
+        const nextPrompts = await options.promptRepository.remove(prompt.id);
+        render(nextPrompts);
+        options.onSaved?.();
     }
 
     async function saveFromModal() {
@@ -73,107 +151,86 @@ export function createPromptManager(root: Document, options: PromptManagerOption
             !(titleField instanceof HTMLInputElement) ||
             !(contentField instanceof HTMLTextAreaElement)
         ) {
-            return
+            return;
         }
 
-        const title = titleField.value.trim()
-        const content = contentField.value.trim()
-        const index = Number.parseInt(promptIdField.value, 10)
+        const title = titleField.value.trim();
+        const content = contentField.value.trim();
+        const index = Number.parseInt(promptIdField.value, 10);
 
         if (!title || !content) {
-            window.alert('يرجى ملء جميع الحقول')
-            return
+            window.alert('يرجى ملء جميع الحقول');
+            return;
         }
 
-        const data = (await browser.storage.local.get(['prompts'])) as { prompts?: PromptTemplate[] }
-        const prompts = Array.isArray(data.prompts) ? [...data.prompts] : []
+        const prompts = await options.promptRepository.list();
+        const existingPrompt = index >= 0 ? prompts[index] : null;
 
-        if (index >= 0) {
-            prompts[index] = {
-                ...prompts[index],
-                title,
-                content,
-            }
-        } else {
-            prompts.push({
-                id: crypto.randomUUID(),
-                title,
-                content,
-            })
+        if (index >= 0 && !existingPrompt) {
+            return;
         }
 
-        await browser.storage.local.set({ prompts })
-        closeModal()
-        render(prompts)
-        options.onSaved?.()
+        await options.promptRepository.save({
+            id: existingPrompt?.id,
+            title,
+            content,
+        });
+
+        closeModal();
+        render(await options.promptRepository.list());
+        options.onSaved?.();
     }
 
     function render(prompts: PromptTemplate[]) {
         if (!(list instanceof HTMLElement)) {
-            return
+            return;
         }
 
         if (prompts.length === 0) {
-            list.innerHTML =
-                '<p class="help-text" style="grid-column: 1/-1; text-align: center; padding: 40px;">لا يوجد أوامر مضافة حالياً.</p>'
-            return
+            list.replaceChildren(createPromptEmptyState());
+            return;
         }
 
-        list.innerHTML = prompts
-            .map(
-                (prompt, index) => `
-                    <div class="prompt-card">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                            <h4 style="font-weight: 800; font-size: 16px; color: var(--text-title);">${prompt.title}</h4>
-                            <div style="display: flex; gap: 8px;">
-                                <button data-index="${index}" class="btn-icon btn-edit-prompt" style="background: none; border: none; color: var(--text-muted); cursor: pointer;" type="button"><i class="fas fa-edit"></i></button>
-                                <button data-index="${index}" class="btn-icon btn-delete-prompt" style="background: none; border: none; color: var(--danger); cursor: pointer;" type="button"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <p style="font-size: 13px; color: var(--text-body); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${prompt.content}</p>
-                    </div>
-                `
-            )
-            .join('')
+        list.replaceChildren(...prompts.map((prompt, index) => createPromptCard(prompt, index)));
     }
 
     function bind() {
         if (isBound) {
-            return
+            return;
         }
 
-        isBound = true
+        isBound = true;
 
         root.getElementById('addPromptBtn')?.addEventListener('click', () => {
-            openModal()
-        })
+            openModal();
+        });
 
         root.getElementById('closeModalBtn')?.addEventListener('click', () => {
-            closeModal()
-        })
+            closeModal();
+        });
 
         root.getElementById('confirmSavePrompt')?.addEventListener('click', () => {
-            void saveFromModal()
-        })
+            void saveFromModal();
+        });
 
         list?.addEventListener('click', (event) => {
-            const target = event.target as HTMLElement | null
-            const editButton = target?.closest<HTMLButtonElement>('.btn-edit-prompt')
-            const deleteButton = target?.closest<HTMLButtonElement>('.btn-delete-prompt')
+            const target = event.target as HTMLElement | null;
+            const editButton = target?.closest<HTMLButtonElement>('.btn-edit-prompt');
+            const deleteButton = target?.closest<HTMLButtonElement>('.btn-delete-prompt');
 
             if (editButton) {
-                void editPrompt(Number.parseInt(editButton.dataset.index ?? '-1', 10))
-                return
+                void editPrompt(Number.parseInt(editButton.dataset.index ?? '-1', 10));
+                return;
             }
 
             if (deleteButton) {
-                void deletePrompt(Number.parseInt(deleteButton.dataset.index ?? '-1', 10))
+                void deletePrompt(Number.parseInt(deleteButton.dataset.index ?? '-1', 10));
             }
-        })
+        });
     }
 
     return {
         bind,
         render,
-    }
+    };
 }

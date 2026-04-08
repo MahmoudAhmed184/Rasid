@@ -4,295 +4,231 @@
 
 ```mermaid
 flowchart TD
-    A[background.ts] --> B[storage.ts]
-    A --> C[signalr.ts]
-    A --> D[jobs.ts]
-    A --> E[notifications.ts]
-    A --> F[audio.ts]
-    A --> G[dom.ts]
-    A --> H[offscreen-manager.ts]
+    BG[entrypoints/background.ts]
 
-    C --> D
-    D --> B
-    D --> E
-    D --> F
-    D --> G
+    BG --> BAPP[src/application/background/create-background-services.ts]
+    BG --> BMSG[src/application/runtime/background-message-bus.ts]
 
-    I[popup UI] -->|reads stats / toggles notifications| B
-    I -->|checkNow / debugFetch| A
+    BAPP --> MON[src/application/monitoring/*]
+    BAPP --> PUB[src/application/monitoring/job-batch-publisher.ts]
+    BAPP --> PROP[src/application/proposals/*]
+    BAPP --> STORE[src/infrastructure/storage/extension-storage.ts]
+    BAPP --> NOTIF[src/infrastructure/notifications/service.ts]
+    BAPP --> AUDIO[src/infrastructure/audio/service.ts]
+    BAPP --> OFF[src/infrastructure/offscreen/manager.ts]
+    BAPP --> PHP[src/platforms/monitoring-html-parser.ts]
+    BAPP --> PMOD[src/platforms/platform-modules.ts]
+    BAPP --> SIG[src/infrastructure/realtime/signalr-manager.ts]
 
-    J[dashboard UI] -->|reads settings, stats, runtime, trackedProjects| B
-    J -->|testNotification / testSound / reconnect / updateAlarm| A
+    SIG --> SIGRED[src/infrastructure/realtime/signalr-reducer.ts]
+    SIG --> SIGEFF[src/infrastructure/realtime/signalr-effects.ts]
 
-    K[mostaql content script] -->|trackedProjects / prompts / autofill state| B
-    K -->|generateProposal / download_zip / getDefaultPrompts| A
+    POP[src/ui/popup/index.ts] --> MSG[src/application/runtime/background-messages.ts]
+    POP --> REPOS[src/infrastructure/storage/browser-repositories.ts]
+
+    DASH[src/ui/dashboard/*] --> MSG
+    DASH --> REPOS
+
+    MC[entrypoints/mostaql.content/index.ts] --> CBOOT[src/application/content/bootstrapPlatformContent.ts]
+    MC --> CAUTO[src/application/content/bootstrapPlatformAutofill.ts]
+    MC --> CDEPS[src/application/content/createPlatformContentServices.ts]
+    MC --> PMOD
+    MC --> REPOS
+
+    KC[entrypoints/khamsat.content/index.ts] --> CBOOT
+    KC --> CAUTO
+    KC --> CDEPS
+    KC --> PMOD
+    KC --> REPOS
+
+    PMOD --> MADAPTER[src/platforms/mostaql/adapter.ts]
+    PMOD --> KADAPTER[src/platforms/khamsat/adapter.ts]
 ```
 
 ## Background Boot Sequence
 
-`entrypoints/background.ts` is the orchestration root.
+`entrypoints/background.ts` is a thin WXT composition root.
 
-On bootstrap it:
+It delegates:
 
-1. Creates `storage`, `notifications`, `offscreen`, `audio`, `dom`, and `signalr` singletons.
-2. Calls `storage.ensureDefaults()`.
-3. Calls `offscreen.bootstrap()`.
-4. Calls `signalr.bootstrap(reason)`.
-5. Registers:
+- dependency construction to `src/application/background/create-background-services.ts`
+- runtime message transport registration to `src/application/runtime/background-message-bus.ts`
+
+On startup the background app:
+
+1. creates storage, notifications, offscreen, audio, monitoring parser, monitoring adapters, AI providers, and the SignalR manager
+2. creates proposal-generation and runtime handler services
+3. runs:
+   - `storage.ensureDefaults()`
+   - `offscreen.bootstrap()`
+   - `signalr.bootstrap(reason)`
+4. registers lifecycle listeners for:
    - `runtime.onInstalled`
    - `runtime.onStartup`
    - `alarms.onAlarm`
    - `runtime.onMessage`
    - notification click handlers
 
-The background script never parses HTML or plays audio directly through ad-hoc code paths. Both duties go through the offscreen/local abstraction.
+The background layer no longer owns platform registry wiring, notification policy duplication, or raw SignalR state transitions inline.
 
-## Polling And SignalR Control Plane
+## Monitoring Control Plane
 
-`src/core/signalr.ts` decides whether the extension should be:
+Monitoring is driven by:
+
+- `src/application/monitoring/run-polling-cycle.ts`
+- `src/application/monitoring/process-realtime-job-batch.ts`
+- `src/application/monitoring/job-batch-publisher.ts`
+- `src/infrastructure/realtime/signalr-manager.ts`
+
+`signalr-manager.ts` decides between:
 
 - disabled
 - polling-only
 - SignalR-first with polling fallback
 
-The decision comes from `settings.systemEnabled` and `settings.notificationMode`.
+That decision depends on:
 
-Recurring alarms are then synchronized:
+- `settings.systemEnabled`
+- `settings.notificationMode`
+- whether any enabled platform module has `realtime.supportsSignalR === true`
 
-- `jobs:poll`
-- `signalr:health`
-- `signalr:lease`
-- `signalr:reconnect`
+The manager still owns connection orchestration, but state logic is now split into:
 
-Important implementation detail: the polling alarm still exists while SignalR is enabled so the extension can keep progressing when the MV3 worker is suspended or the live socket drops.
+- `src/infrastructure/realtime/signalr-reducer.ts`
+  pure state transitions
+- `src/infrastructure/realtime/signalr-effects.ts`
+  alarm scheduling and clearing side effects
 
-## Job Ingest: SignalR Path
+## Realtime Job Ingest
 
-### 1. Socket connection
+Realtime job batches flow through:
 
-`createSignalRManager()` connects to:
+- `src/application/monitoring/job-records.ts`
+- `src/application/monitoring/process-realtime-job-batch.ts`
+- `src/application/monitoring/job-batch-publisher.ts`
 
-- `settings.signalrServerUrl`, or
-- `DEFAULT_SIGNALR_URL` = `https://frelancia.runasp.net/jobNotificationHub`
+The realtime path:
 
-The SignalR client enables these transports:
+1. normalizes incoming hub payloads into `JobRecord`
+2. applies platform-enabled and filter checks
+3. ingests unseen jobs into normalized storage
+4. runs the shared publish policy
 
-- WebSockets
-- Server-Sent Events
-- Long Polling
+The shared publish policy is where these decisions now live:
 
-### 2. Incoming event
+- quiet-hours suppression
+- whether notifications are enabled
+- whether notification audio should play
+- result shaping for polling vs SignalR callers
 
-The manager listens for the hub event:
+The realtime path does not hydrate project HTML after the hub payload arrives.
 
-- `NewJobsDetected`
+## Polling Job Ingest
 
-The payload can be either:
+The polling path is owned by:
 
-- `{ jobs: [...] }`
-- a raw array of jobs
+- `src/application/monitoring/run-polling-cycle.ts`
+- `src/application/monitoring/fetch-platform-html.ts`
+- `src/application/monitoring/job-batch-publisher.ts`
+- `src/platforms/platform-modules.ts`
+- `src/platforms/*/monitoring.ts`
+- `src/platforms/*/html-parser.ts`
 
-Each item is normalized through `normalizeJobRecord()`.
+The polling path:
 
-### 3. First-pass filtering
+1. resolves enabled platform monitoring adapters from `platform-modules.ts`
+2. resolves feed URLs from each adapter
+3. fetches listing HTML with `credentials: 'omit'`
+4. parses shallow `JobRecord[]` through the platform parser contract
+5. ingests unseen jobs
+6. hydrates new jobs from project/detail HTML
+7. re-applies filters to the hydrated records
+8. merges enriched jobs back into recent storage
+9. runs the shared publish policy
 
-`processRealtimeJobBatch()` applies `applyFilters()` before storage ingest. The filter rules are:
+The background layer never parses platform HTML inline. It always delegates through the monitoring adapter and the offscreen/local HTML parsing bridge.
 
-- `minBudget`
-- `minHiringRate`
-- `keywordsInclude`
-- `keywordsExclude`
-- `maxDuration`
-- `minClientAge`
+## Storage Model
 
-For SignalR, this first pass uses whatever fields already exist on the hub payload. There is no follow-up hydration request in the realtime path.
+There are three storage-facing layers worth keeping separate:
 
-### 4. Cache write
+- `src/infrastructure/storage/storage-client.ts`
+  the raw `browser.storage.local` boundary
+- `src/infrastructure/storage/extension-storage.ts`
+  normalized storage access for settings, monitoring, runtime, and notification payloads
+- `src/infrastructure/storage/repositories/*`
+  domain-focused repositories for popup, dashboard, content scripts, backup, prompts, proposals, and tracking
 
-Filtered jobs are passed to `storage.ingestJobs(candidates)`.
+Proposal bridge/autofill state is handled through:
 
-That method:
+- `src/infrastructure/storage/modules/proposal-state-storage.ts`
 
-- deduplicates against `seenJobs`
-- appends new IDs to `seenJobs`
-- merges records into `recentJobs`
-- trims `seenJobs` to `MAX_SEEN_JOBS = 500`
-- trims `recentJobs` to `MAX_RECENT_JOBS = 50`
-- updates `stats.lastCheck`
-- increments `stats.todayCount`
+Snapshot import/export normalization is handled through:
 
-### 5. Quiet-hours suppression
+- `src/infrastructure/storage/snapshot-state.ts`
+- `src/infrastructure/storage/repositories/backup-repository.ts`
 
-If quiet hours are enabled and the current clock falls inside the configured interval, notifications are suppressed after the storage write. The jobs are still cached locally.
+## Platform Layer
 
-### 6. Notification + sound
+Platform abstractions live in:
 
-If notifications are enabled:
+- `src/platforms/contracts.ts`
+- `src/platforms/platform-modules.ts`
+- `src/platforms/monitoring-html-parser.ts`
+- `src/platforms/platform-ids.ts`
 
-- `notifications.showJobsNotification(newJobs)` creates one browser notification
-- `audio.playNotification()` plays the two-tone alert if `settings.sound` is enabled
+Each supported platform module provides:
 
-The notification payload is also persisted under:
+- a content adapter
+- a monitoring adapter factory
+- a monitoring HTML parser
+- realtime capability metadata
 
-- `notification:<notificationId>` -> `{ url, jobId }`
+Current concrete implementations live in:
 
-When the user clicks the notification, the extension opens the stored job URL in a new tab.
+- `src/platforms/mostaql/*`
+- `src/platforms/khamsat/*`
 
-## Job Ingest: Polling Path
+There are no longer separate content, monitoring, and parser registries to keep in sync.
 
-### 1. Feed selection
+## Content Runtime
 
-`runPollingCycle()` resolves feeds from `MOSTAQL_FEEDS`:
+Platform page entrypoints compose:
 
-- `all`
-- `development`
-- `ai`
+- browser repositories
+- `PlatformContentServices`
+- the selected `PlatformAdapter`
 
-If `settings.all !== false`, only the all-projects feed is polled. Otherwise the enabled category feeds are polled individually.
+The content runtime then uses:
 
-### 2. Feed fetch
+- `src/application/content/bootstrapPlatformContent.ts`
+- `src/application/content/bootstrapPlatformAutofill.ts`
 
-Each feed is requested as HTML with:
+Key runtime rules:
 
-- `GET`
-- `credentials: 'omit'`
-- `cache: 'no-store'`
-- a `_cb=<timestamp>` cache-buster
+- services are required, not optional
+- contributions return `mounted` or `deferred`
+- mounted contribution IDs are tracked separately from disposers
+- mutation-driven retries only rerun deferred contributions
 
-If the response contains Cloudflare challenge markers, the batch is discarded.
+## Runtime Messages
 
-### 3. Feed parse
+Popup, dashboard, and content scripts talk to the background through:
 
-HTML parsing goes through `dom.parseJobs(html)`, which extracts jobs from:
+- `src/application/runtime/background-messages.ts`
 
-- `.list-group-item a[href*="/project/"]`
-- table rows with `a[href*="/project/"]`
-- a final fallback scan of all `a[href*="/project/"]`
+The background implements the contract in:
 
-This produces shallow `JobRecord` objects.
+- `src/application/runtime/background-runtime-handlers.ts`
 
-### 4. Initial ingest
-
-The union of all feed jobs is written through `storage.ingestJobs([...feedJobs.values()])`.
-
-At this point:
-
-- IDs are deduplicated
-- `seenJobs` is updated
-- `recentJobs` is updated with shallow job data
-- `stats` is updated
-- `runtime.lastPollingReason` is patched
-
-### 5. Project hydration
-
-Only newly seen jobs are hydrated.
-
-For each new job, the background fetches the job detail page and parses:
-
-- `status`
-- `communications`
-- `hiringRate`
-- `description`
-- `duration`
-- `budget`
-- `registrationDate`
-
-### 6. Second-pass filtering
-
-The hydrated record is filtered again with `applyFilters()`.
-
-This matters because some filters depend on fields that are usually unavailable on the shallow feed payload:
-
-- `description`
-- `duration`
-- `hiringRate`
-- `registrationDate`
-
-### 7. Cache enrichment
-
-`storage.mergeRecentJobs(hydratedJobs)` upgrades the existing `recentJobs` cache with the more complete hydrated records.
-
-### 8. Quiet-hours / notification
-
-As in the SignalR path:
-
-- quiet hours suppress delivery after caching
-- notifications create one browser notification
-- sound is optional
-
-## Filter Behavior
-
-`applyFilters()` is deterministic and fully local:
-
-- Budget: extracts all numeric values from the budget string and compares the maximum value against `minBudget`
-- Hiring rate: parses the first numeric value unless the text contains `بعد`
-- Include keywords: comma-separated, matched against `title + description`
-- Exclude keywords: comma-separated, matched against `title + description`
-- Duration: parses day counts, with explicit handling for `يوم واحد`
-- Client age: parses Arabic month names from `registrationDate`
-
-Quiet hours are not part of `applyFilters()`. They are enforced later as a notification-delivery rule.
-
-## Persistent Storage Model
-
-The normalized storage snapshot is:
-
-- `settings`
-- `seenJobs`
-- `recentJobs`
-- `stats`
-- `trackedProjects`
-- `prompts`
-- `proposalTemplate`
-- `notificationsEnabled`
-- `runtime`
-
-Additional transient keys are written outside the snapshot helper:
-
-- `pendingChatGptPrompt`
-- `mostaql_pending_autofill`
-- `notification:<id>`
-
-## UI Consumers
-
-### Popup
-
-The popup reads:
-
-- `stats`
-- `seenJobs`
-- `notificationsEnabled`
-
-It can also send:
+Important message actions include:
 
 - `checkNow`
 - `debugFetch`
-
-### Dashboard
-
-The dashboard reads:
-
-- `settings`
-- `stats`
-- `prompts`
-- `proposalTemplate`
-- `trackedProjects`
-- `runtime.signalr`
-
-It can send:
-
+- `generateProposal`
+- `downloadZip`
 - `updateAlarm`
 - `reconnectSignalR`
 - `disconnectSignalR`
-- `testNotification`
-- `testSound`
 
-### Mostaql content script
-
-The Mostaql content script does not ingest jobs. It works on top of cached state and page DOM:
-
-- adds tracking controls
-- reads and writes `trackedProjects`
-- queues `mostaql_pending_autofill`
-- requests proposal generation
-- requests ZIP export generation
+Responses are returned through an explicit success/error transport envelope instead of ad hoc `undefined` handling.

@@ -1,298 +1,170 @@
 # AI Content Bridge
 
-## Entry Surface On Mostaql
+## Entry Surface On Supported Platforms
 
-The AI workflow starts on Mostaql project pages.
+The AI workflow starts on supported project or request pages.
 
-`entrypoints/mostaql.content/index.ts` routes project pages to `injectTrackButton()`, which injects three controls into `#project-meta-panel`:
+The content entrypoints bootstrap:
 
-- `مراقبة`
-- `سريع`
-- `ذكاء`
+- `entrypoints/mostaql.content/index.ts`
+- `entrypoints/khamsat.content/index.ts`
+- `src/application/content/createPlatformContentServices.ts`
+- `src/application/content/bootstrapPlatformContent.ts`
+- `src/application/content/bootstrapPlatformAutofill.ts`
+- `getPlatformAdapter(...)` from `src/platforms/platform-modules.ts`
 
-The AI button group is created in `src/ui/mostaql/project-sidebar.mjs`:
+The entrypoints create browser repositories, build explicit `PlatformContentServices`, resolve the platform adapter, then hand control to the shared content runtime.
 
-- main button id: `chatgpt-main-btn`
-- dropdown container id: `chatgpt-group`
-- default prompt id: `default_proposal`
+## Prompt Source
 
-Prompt templates are loaded from `browser.storage.local.prompts`. If that key is empty, the content script asks the background for `getDefaultPrompts` and stores the returned defaults locally.
+Prompt templates are exposed to platform UI code through `PlatformContentServices`.
 
-## DOM Data Extracted From Mostaql
+Those services are backed by:
 
-The proposal context comes from `extractProjectData()` plus `getProjectDescription()` in `src/ui/mostaql/data.mjs`.
+- `src/infrastructure/storage/browser-repositories.ts`
+- `src/infrastructure/storage/repositories/prompt-repository.ts`
+- `src/infrastructure/storage/repositories/proposal-repository.ts`
+- `src/infrastructure/storage/repositories/tracking-repository.ts`
 
-### Core selectors
+This means platform UI code does not need to import storage singletons or raw background message helpers directly.
 
-- Status label:
-  - `.label-prj-open`
-  - `.label-prj-closed`
-  - `.label-prj-completed`
-  - `.label-prj-cancelled`
-  - `.label-prj-underway`
-  - `.label-prj-processing`
+## DOM Data Extracted From Platform Pages
 
-- Meta rows:
-  - `.meta-row`
-  - `.table-meta tr`
-  - `.card .table tr`
-  - `li.meta-item`
+The Mostaql proposal context comes from:
 
-- Meta labels inside those rows:
-  - `.meta-label`
-  - `td:first-child`
-  - `.meta-item-label`
+- `extractProjectData()`
+- `getProjectDescription()`
 
-- Meta values inside those rows:
-  - `.meta-value`
-  - `td:last-child`
-  - `.meta-item-value`
+in `src/platforms/mostaql/content/data.ts`.
 
-- Budget:
-  - `[data-type="project-budget_range"]`
-  - `#project-meta-panel .meta-value[data-type="project-budget_range"]`
+Khamsat proposal context is extracted through:
 
-- Publish date:
-  - `time[itemprop="datePublished"]`
-  - `#project-meta-panel time`
+- `extractKhamsatProposalSource(...)`
 
-- Sidebar tags:
-  - `#project-meta-panel .tag`
+in `src/platforms/khamsat/content/data.ts`.
 
-- Client name:
-  - `.profile__name bdi`
+Typical fields collected into `AiRequestContext` include:
 
-- Category:
-  - `.breadcrumb-item[data-index="2"]`
+- title
+- description
+- url
+- tags
+- client name
+- budget
+- duration
+- publish date
+- project ID
+- category
+- hiring rate
+- open projects
+- underway projects
+- client joined
+- communications
+- attachments
 
-- Client card:
-  - `.profile_card`
-  - `.profile_card .table-meta tr`
-  - `.profile_card .meta_items li`
-
-- General tags:
-  - `.skills .tag`
-  - `.tags .tag`
-  - `.project-tags .tag`
-
-- Title:
-  - `.heada__title span[data-type="page-header-title"]`
-  - `.page-title h1`
-  - `.project-title`
-
-- Attachments:
-  - `#projectDetailsTab #project-files-panel .attachment a[href]`
-
-### Description selectors
-
-`getProjectDescription()` reads:
-
-- container:
-  - `#projectDetailsTab`
-  - `#project-brief`
-
-- main body:
-  - `.carda__content`
-  - `.text-wrapper-div:not(.field-label)`
-
-- detail rows:
-  - `.pdn--ts`
-  - `.row > div`
-
-- per-row fields:
-  - `.field-label`
-  - `.text-wrapper-div:not(.field-label)`
-
-If no description is found, the AI flow stops and alerts the user.
+If the page extractor cannot produce a valid proposal source, the AI flow stops on the page and the action is not sent to the background.
 
 ## Message Sent To Background
 
-When the user clicks the AI button, the content script sends:
+When the user clicks an AI action, the content script calls:
+
+- `requestGenerateProposal(...)`
+
+from `src/application/runtime/background-messages.ts`.
+
+The payload shape is:
 
 ```ts
-browser.runtime.sendMessage({
-  action: 'generateProposal',
-  templateId,
-  context: {
-    title,
-    url,
-    description,
-    tags,
-    clientName,
-    budget,
-    duration,
-    publishDate,
-    projectStatus,
-    projectId,
-    category,
-    hiringRate,
-    openProjects,
-    underwayProjects,
-    clientJoined,
-    clientType,
-    communications,
-  },
-})
+{
+    action: 'generateProposal',
+    templateId,
+    context: AiRequestContext,
+}
 ```
 
-That `context` shape matches `AiRequestContext` in `src/models/ai.ts`.
+That request crosses the typed runtime message bus and is handled in the background by:
+
+- `src/application/runtime/background-runtime-handlers.ts`
+- `src/application/proposals/generate-proposal.ts`
 
 ## Background AI Handling
 
-`entrypoints/background.ts` resolves the selected template from:
+The background proposal path is split across:
 
-- `storage.getSnapshot().prompts`, or
-- `DEFAULT_PROMPTS`
-
-Then it chooses one of two execution modes from `settings.aiExecutionMode`.
+- `src/application/proposals/generate-proposal.ts`
+- `src/application/proposals/generate-direct-proposal.ts`
+- `src/application/proposals/generate-bridge-proposal.ts`
+- `src/application/proposals/proposal-template-catalog.ts`
+- `src/infrastructure/ai/providers/*`
 
 ### Direct mode
+
+Direct mode is used when:
+
+- `settings.aiExecutionMode === 'direct'`
 
 Requirements enforced by code:
 
 - `settings.aiApiKey` must exist
 - `settings.aiModel` must exist
 
-The background then creates an AI gateway and sends the rendered prompt to one provider:
+The background resolves the selected prompt template, renders it, and delegates to one provider:
 
 - `openai`
 - `gemini`
 - `claude`
 
-#### OpenAI request
-
-Endpoint:
-
-- `POST https://api.openai.com/v1/responses`
-
-Payload:
-
-- `model`
-- `instructions`
-- `input`
-- optional `temperature`
-- optional `max_output_tokens`
-- optional `metadata`
-
-#### Gemini request
-
-Endpoint:
-
-- `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}`
-
-Payload:
-
-- `systemInstruction.parts[].text`
-- `contents[].parts[].text`
-- optional `generationConfig.temperature`
-- optional `generationConfig.maxOutputTokens`
-
-#### Claude request
-
-Endpoint:
-
-- `POST https://api.anthropic.com/v1/messages`
-
-Payload:
-
-- `model`
-- `system`
-- `messages`
-- `temperature`
-- `max_tokens`
-
-Headers also include:
-
-- `x-api-key`
-- `anthropic-version: 2023-06-01`
-- `anthropic-dangerous-direct-browser-access: true`
-
 ### Bridge mode
 
-The background does not call an AI API.
+Bridge mode is used when:
+
+- `settings.aiExecutionMode !== 'direct'`
+
+The background does not call an AI API in this mode.
 
 Instead it returns:
 
 - `mode: 'bridge'`
-- `prompt: renderLegacyPromptTemplate(...)`
-- `chatUrl: settings.aiChatUrl || 'https://chatgpt.com/'`
+- `prompt`
+- `chatUrl`
 
-The content script then writes:
+The originating content script then stores the prompt through:
 
-- `browser.storage.local.set({ pendingChatGptPrompt: response.prompt })`
+- `proposalRepository.setPendingBridgePrompt(...)`
 
-and opens:
-
-- `window.open(response.chatUrl || 'https://chatgpt.com/', 'mostaql_ai_chat')`
+and opens the configured chat URL.
 
 ## ChatGPT DOM Bridge
 
-The bridge entrypoint is `entrypoints/chatgpt-bridge.content.ts`.
+The bridge entrypoint is:
+
+- `entrypoints/chatgpt-bridge.content.ts`
 
 It matches:
 
 - `https://chatgpt.com/*`
 - `https://chat.openai.com/*`
 
-`src/ui/chatgpt-bridge/index.mjs` looks for the chat input with these selectors, in order:
+`src/ui/chatgpt-bridge/index.ts`:
 
-- `#prompt-textarea`
-- `[contenteditable="true"]`
-- `textarea[data-id="root"]`
-- `textarea`
+1. reads the pending prompt from repository state
+2. waits for the chat input to appear
+3. writes the prompt into:
+   - `#prompt-textarea`, or
+   - `[contenteditable="true"]`, or
+   - fallback textarea selectors
+4. dispatches an `input` event
 
-Behavior:
+The bridge does not click the send button. Actual submission still requires user action on the chat site.
 
-1. Read `pendingChatGptPrompt` from `browser.storage.local`.
-2. Retry up to 20 times, every 500 ms, until an input is found.
-3. If the target is contenteditable, set:
-   - `innerHTML = <p>...</p>`
-4. If the target is a textarea, use the native `HTMLTextAreaElement.value` setter when available, otherwise assign `value`.
-5. Dispatch one bubbled `input` event.
+## Direct Proposal Autofill
 
-The bridge also listens to `browser.storage.onChanged` so a reused ChatGPT tab can receive a new prompt without a full reload.
+When direct mode returns a generated proposal, the content script queues autofill through:
 
-### What the bridge does not do
+- `proposalRepository.queueAutofill(...)`
 
-- It does not click the send button.
-- It does not submit the chat automatically.
-- It does not remove `pendingChatGptPrompt` after injection.
-- It does not provide a DOM bridge for Gemini or Claude.
+The shared content autofill bootstrap then checks the current page and gives the platform adapter a chance to apply the draft through:
 
-Gemini DOM bridge: Not implemented in current codebase.
+- `PlatformAdapter.applyProposalAutofill(...)`
 
-Claude DOM bridge: Not implemented in current codebase.
-
-## How Direct Mode Returns To Mostaql
-
-When the background returns `mode: 'direct'`, the Mostaql content script calls `queueProposalAutofill(...)`.
-
-The autofill queue is stored under:
-
-- `mostaql_pending_autofill`
-
-`src/ui/mostaql/autofill.mjs` then fills the bid form by probing these selectors:
-
-- Amount:
-  - `input[name="cost"]`
-  - `input[name="amount"]`
-  - `#bid__cost`
-  - `#amount`
-
-- Duration:
-  - `input[name="period"]`
-  - `input[name="duration"]`
-  - `#bid__period`
-  - `#duration`
-
-- Proposal body:
-  - `#bid__details`
-  - `#description`
-  - `textarea[name="details"]`
-  - `textarea[name="description"]`
-  - `#proposal-description`
-
-- Form container:
-  - `#add-proposal-form`
-
-The extension dispatches focus, input, change, and keyboard events after writing values so Mostaql’s own form logic reacts to the injected content.
+This keeps page-specific form writing inside the platform adapter instead of inside the background or generic bridge code.
