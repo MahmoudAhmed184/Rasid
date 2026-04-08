@@ -40,16 +40,19 @@ Open pull requests against `main` unless maintainers ask for a different target 
 | Path | Purpose |
 | --- | --- |
 | `entrypoints/` | WXT entrypoints for the background worker, popup, dashboard, content scripts, and offscreen document |
-| `src/core/` | Shared runtime services such as AI, storage, jobs, notifications, downloads, DOM parsing, and SignalR |
+| `src/application/` | Core background services, workflow orchestration, scheduling, and runtime messaging |
+| `src/infrastructure/` | Browser and external integrations (AI, storage, notifications, offscreen, realtime SignalR) |
 | `src/models/` | Shared domain types, defaults, and runtime configuration |
+| `src/platforms/` | Platform-specific adapters, DOM parsing, and content script integrations |
+| `src/shared/` | Common utilities and helpers |
 | `src/ui/` | UI modules for popup, dashboard, Mostaql integrations, chat bridge, offscreen helpers, and shared assets |
 | `public/` | Static assets copied into the final extension build |
-| `docs/` | Firefox testing and release-review notes |
+| `docs/` | Project architecture, data flow, setup, and release review notes |
 
 ## Engineering Standards
 
 - Prefer TypeScript for new shared logic and entrypoints.
-- Keep code modular. Put reusable logic in `src/core/` or `src/models/` instead of duplicating behavior across entrypoints.
+- Keep code modular. Put reusable logic in `src/application/`, `src/infrastructure/` or `src/models/` instead of duplicating behavior across entrypoints.
 - Preserve Manifest V3 safety. Do not add remote scripts, `eval`, or browser-incompatible background patterns.
 - Keep browser behavior explicit. Chrome-only and Firefox-specific behavior should be intentional and documented in code when needed.
 - Do not commit secrets, API keys, personal data, or test credentials.
@@ -102,6 +105,11 @@ When relevant, update:
 
 - `README.md`
 - `PRIVACY.md`
+- `docs/01-setup-and-workflow.md`
+- `docs/02-architecture-and-data-flow.md`
+- `docs/03-cross-browser-quirks.md`
+- `docs/04-ai-content-bridge.md`
+- `docs/05-adding-a-platform.md`
 - `docs/firefox-testing.md`
 - `docs/amo-review.md`
 
