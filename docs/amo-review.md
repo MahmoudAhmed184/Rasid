@@ -132,6 +132,31 @@ The code uses this host permission for:
 - Khamsat listing/detail parsing in `src/platforms/khamsat/html-parser.ts`
 - Khamsat content extraction in `src/platforms/khamsat/content/data.ts`
 
+#### `https://nafezly.com/*`
+
+Required for the Nafezly platform adapter.
+
+The code uses this host permission for:
+
+- the Nafezly content script (`entrypoints/nafezly.content/index.ts`)
+- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- Nafezly listing/detail parsing in `src/platforms/nafezly/html-parser.ts`
+- Nafezly content extraction and autofill in `src/platforms/nafezly/content/*`
+
+#### `https://kafiil.com/*`
+
+Required for the Kafiil monitoring adapter and future host expansion.
+
+The code uses this host permission for:
+
+- the Kafiil content script (`entrypoints/kafiil.content/index.ts`)
+- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- Kafiil listing/detail parsing in `src/platforms/kafiil/html-parser.ts`
+
+The v1 Kafiil adapter does not inject project-page UI or autofill forms.
+
 #### `https://chatgpt.com/*`
 
 Required for the optional bridge workflow.
@@ -207,6 +232,10 @@ This is because the extension reads supported platform page content to build not
    - Open a Khamsat request page
    - Verify `متابعة` toggles tracked state
    - Verify `ولّد الرد` queues the reply autofill flow
+   - Open a Nafezly project page
+   - Verify the floating panel loads once and can queue proposal autofill
+   - Open a Kafiil project page
+   - Verify the content script loads without visible injected UI or console errors
 
 ## Additional Review Notes
 

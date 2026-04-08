@@ -16,9 +16,16 @@ The extension includes:
 - Direct provider support for OpenAI, Gemini, and Claude
 - Bridge-mode drafting that can hand off proposal prompts to a configurable chat UI
 - Popup and dashboard surfaces for monitoring, settings, diagnostics, and prompt management
-- Platform page enhancements for autofill, tracking, export, and AI workflows
-- Current platform adapters for Mostaql and Khamsat
+- Platform page enhancements for autofill, tracking, export, and AI workflows where supported
+- Current platform adapters for Mostaql, Khamsat, Nafezly, and Kafiil
 - ZIP export for project details and conversation data
+
+Current support level:
+
+- Mostaql: monitoring, content tools, autofill, and export
+- Khamsat: monitoring, content tools, and reply autofill
+- Nafezly: monitoring, project-page tools, and proposal autofill hooks
+- Kafiil: monitoring-only in the current release
 
 ## Browser Support
 
@@ -40,6 +47,8 @@ Manifest-facing surfaces only:
 - `entrypoints/background.ts`
 - `entrypoints/mostaql.content/index.ts`
 - `entrypoints/khamsat.content/index.ts`
+- `entrypoints/nafezly.content/index.ts`
+- `entrypoints/kafiil.content/index.ts`
 - `entrypoints/chatgpt-bridge.content.ts`
 - `entrypoints/popup/main.ts`
 - `entrypoints/dashboard/main.ts`
@@ -57,7 +66,7 @@ Manifest-facing surfaces only:
   Shared TypeScript domain models.
 - `src/platforms/`
   Platform abstractions and platform-specific implementations.
-  Mostaql and Khamsat parsing, monitoring, and content injectors live under `src/platforms/`.
+  Mostaql, Khamsat, Nafezly, and Kafiil parsing, monitoring, and content injectors live under `src/platforms/`.
 - `src/ui/`
   Generic extension surfaces that are not tied to one freelancing platform.
   Includes popup, dashboard, ChatGPT bridge, and offscreen page bootstrap.
@@ -70,7 +79,7 @@ This structure keeps platform-specific DOM code out of generic UI folders and ke
 - `src/application/runtime/background-messages.ts` defines the typed request/response contract used by popup, dashboard, and content scripts.
 - `src/application/runtime/background-runtime-handlers.ts` maps those messages to use cases.
 - `src/platforms/platform-modules.ts` is the single manifest for supported platforms. It resolves content adapters, monitoring adapters, monitoring parsers, and realtime capability metadata.
-- `src/platforms/mostaql/adapter.ts` and `src/platforms/khamsat/adapter.ts` implement platform-specific content behavior.
+- `src/platforms/mostaql/adapter.ts`, `src/platforms/khamsat/adapter.ts`, `src/platforms/nafezly/adapter.ts`, and `src/platforms/kafiil/adapter.ts` implement platform-specific content behavior.
 - `src/platforms/*/content/*.ts` contains platform-specific DOM extraction, injection, autofill, and export logic.
 - `src/infrastructure/realtime/signalr-reducer.ts` and `src/infrastructure/realtime/signalr-effects.ts` make SignalR state transitions and alarm effects explicit while `src/infrastructure/realtime/signalr-manager.ts` stays focused on orchestration.
 - `src/infrastructure/offscreen/*` hides the Chrome offscreen-vs-Firefox local execution split.
@@ -167,6 +176,8 @@ The manifest currently declares host permissions for:
 
 - `https://mostaql.com/*`
 - `https://khamsat.com/*`
+- `https://nafezly.com/*`
+- `https://kafiil.com/*`
 - `https://chatgpt.com/*`
 - `https://chat.openai.com/*`
 - `https://frelancia.runasp.net/*`

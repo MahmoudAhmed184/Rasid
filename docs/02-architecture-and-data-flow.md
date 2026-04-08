@@ -41,8 +41,22 @@ flowchart TD
     KC --> PMOD
     KC --> REPOS
 
+    NC[entrypoints/nafezly.content/index.ts] --> CBOOT
+    NC --> CAUTO
+    NC --> CDEPS
+    NC --> PMOD
+    NC --> REPOS
+
+    KFC[entrypoints/kafiil.content/index.ts] --> CBOOT
+    KFC --> CAUTO
+    KFC --> CDEPS
+    KFC --> PMOD
+    KFC --> REPOS
+
     PMOD --> MADAPTER[src/platforms/mostaql/adapter.ts]
     PMOD --> KADAPTER[src/platforms/khamsat/adapter.ts]
+    PMOD --> NADAPTER[src/platforms/nafezly/adapter.ts]
+    PMOD --> KFADAPTER[src/platforms/kafiil/adapter.ts]
 ```
 
 ## Background Boot Sequence
@@ -188,6 +202,8 @@ Current concrete implementations live in:
 
 - `src/platforms/mostaql/*`
 - `src/platforms/khamsat/*`
+- `src/platforms/nafezly/*`
+- `src/platforms/kafiil/*`
 
 There are no longer separate content, monitoring, and parser registries to keep in sync.
 

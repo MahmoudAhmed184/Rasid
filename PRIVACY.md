@@ -25,6 +25,8 @@ The extension stores operational state in `browser.storage.local`.
 - `pendingChatGptPrompt`
 - `mostaql_pending_autofill`
 - `khamsat_pending_autofill`
+- `nafezly_pending_autofill`
+- `kafiil_pending_autofill`
 - `freelancer_pending_autofill`
 - `upwork_pending_autofill`
 - `notification:<notificationId>`
@@ -175,6 +177,86 @@ The Khamsat content script reads the currently open request page DOM for trackin
 
 Additional Khamsat network requests are not initiated from the content script for the basic page-side panel workflow in the current codebase.
 
+## What Is Sent To Nafezly
+
+The extension makes monitoring requests to `https://nafezly.com/*`.
+
+### Background polling requests
+
+Nafezly monitoring is implemented through:
+
+- `src/application/monitoring/run-polling-cycle.ts`
+- `src/application/monitoring/fetch-platform-html.ts`
+- `src/platforms/nafezly/monitoring.ts`
+
+The current Nafezly monitoring feed is:
+
+- `https://nafezly.com/projects`
+
+Request properties:
+
+- method: `GET`
+- body: none
+- credentials: `omit`
+- cache: `no-store`
+- referrerPolicy: `no-referrer`
+
+### Project/detail hydration requests
+
+When polling finds a new Nafezly project, the background may fetch the project URL and parse it locally for richer metadata.
+
+Request properties:
+
+- method: `GET`
+- body: none
+- credentials: `omit`
+
+### Page-side content features
+
+The Nafezly content script reads the currently open project page DOM for tracking, AI proposal generation, and optional proposal autofill.
+
+The current Nafezly content workflow does not add custom platform-origin network requests beyond the page the user already opened.
+
+## What Is Sent To Kafiil
+
+The extension makes monitoring requests to `https://kafiil.com/*`.
+
+### Background polling requests
+
+Kafiil monitoring is implemented through:
+
+- `src/application/monitoring/run-polling-cycle.ts`
+- `src/application/monitoring/fetch-platform-html.ts`
+- `src/platforms/kafiil/monitoring.ts`
+
+The current Kafiil monitoring feed is:
+
+- `https://kafiil.com/projects`
+
+Request properties:
+
+- method: `GET`
+- body: none
+- credentials: `omit`
+- cache: `no-store`
+- referrerPolicy: `no-referrer`
+
+### Project/detail hydration requests
+
+When polling finds a new Kafiil project, the background may fetch the project URL and parse it locally for richer metadata.
+
+Request properties:
+
+- method: `GET`
+- body: none
+- credentials: `omit`
+
+### Page-side content features
+
+The Kafiil content script currently exists only to classify supported URLs and keep the host registration path consistent.
+
+The v1 Kafiil adapter does not inject UI, does not autofill forms, and does not initiate additional Kafiil network requests from the content script.
+
 ## What Is Sent To The Custom SignalR Server
 
 The extension connects to:
@@ -318,7 +400,7 @@ This request does not send project data, prompts, or API keys.
 
 Based on the repository code:
 
-- it does not send custom POST or PUT payloads to Mostaql or Khamsat
+- it does not send custom POST or PUT payloads to Mostaql, Khamsat, Nafezly, or Kafiil
 - it does not send user prompts or project payloads to the SignalR server
 - it does not auto-submit bridge-mode prompts to ChatGPT
 - it does not encrypt AI API keys before storing them locally

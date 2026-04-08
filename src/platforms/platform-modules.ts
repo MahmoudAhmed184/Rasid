@@ -1,7 +1,13 @@
 import type { JobRecord } from '../models/jobs';
 import { isPlatformMonitoringEnabled, type ExtensionSettings } from '../models/settings';
 import type { PlatformAdapter, PlatformId, PlatformMonitoringAdapter } from './contracts';
+import { kafiilAdapter } from './kafiil/adapter';
+import { parseKafiilListingHtml, parseKafiilProjectHtml } from './kafiil/html-parser';
+import { createKafiilMonitoringAdapter } from './kafiil/monitoring';
 import type { PlatformMonitoringHtmlParser } from './monitoring-html-parser';
+import { nafezlyAdapter } from './nafezly/adapter';
+import { parseNafezlyListingHtml, parseNafezlyProjectHtml } from './nafezly/html-parser';
+import { createNafezlyMonitoringAdapter } from './nafezly/monitoring';
 import { khamsatAdapter } from './khamsat/adapter';
 import { parseKhamsatListingHtml, parseKhamsatProjectHtml } from './khamsat/html-parser';
 import { createKhamsatMonitoringAdapter } from './khamsat/monitoring';
@@ -27,6 +33,18 @@ export interface PlatformModule {
 }
 
 const PLATFORM_MODULES = {
+    kafiil: {
+        id: 'kafiil',
+        content: kafiilAdapter,
+        realtime: {
+            supportsSignalR: true,
+        },
+        monitoringParser: {
+            parseListingHtml: parseKafiilListingHtml,
+            parseProjectHtml: parseKafiilProjectHtml,
+        },
+        createMonitoringAdapter: createKafiilMonitoringAdapter,
+    },
     khamsat: {
         id: 'khamsat',
         content: khamsatAdapter,
@@ -38,6 +56,18 @@ const PLATFORM_MODULES = {
             parseProjectHtml: parseKhamsatProjectHtml,
         },
         createMonitoringAdapter: createKhamsatMonitoringAdapter,
+    },
+    nafezly: {
+        id: 'nafezly',
+        content: nafezlyAdapter,
+        realtime: {
+            supportsSignalR: true,
+        },
+        monitoringParser: {
+            parseListingHtml: parseNafezlyListingHtml,
+            parseProjectHtml: parseNafezlyProjectHtml,
+        },
+        createMonitoringAdapter: createNafezlyMonitoringAdapter,
     },
     mostaql: {
         id: 'mostaql',

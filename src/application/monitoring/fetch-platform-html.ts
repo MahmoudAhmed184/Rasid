@@ -1,7 +1,18 @@
 import type { JobRecord } from '../../models/jobs';
 import type { PlatformMonitoringAdapter } from '../../platforms/contracts';
+import { detectChallengePage } from '../../shared/network/challenge-page';
 
-async function fetchHtml(url: string): Promise<string | null> {
+type HtmlFetchResult =
+    | {
+          readonly kind: 'success';
+          readonly html: string;
+      }
+    | {
+          readonly kind: 'error';
+          readonly reason: string;
+      };
+
+async function fetchHtml(url: string): Promise<HtmlFetchResult> {
     const response = await fetch(url, {
         method: 'GET',
         credentials: 'omit',
@@ -16,49 +27,60 @@ async function fetchHtml(url: string): Promise<string | null> {
     });
 
     if (!response.ok) {
-        return null;
+        return {
+            kind: 'error',
+            reason: `Request failed with HTTP ${response.status}.`,
+        };
     }
 
-    return response.text();
-}
+    const html = await response.text();
+    if (!html.trim()) {
+        return {
+            kind: 'error',
+            reason: 'Received an empty HTML document.',
+        };
+    }
 
-function isChallengePage(html: string): boolean {
-    const normalized = html.trim();
+    const challengeMatch = detectChallengePage(html);
+    if (challengeMatch) {
+        return {
+            kind: 'error',
+            reason: `Upstream challenge page detected (${challengeMatch.marker}).`,
+        };
+    }
 
-    return (
-        normalized.length === 0 ||
-        normalized.includes('Cloudflare') ||
-        normalized.includes('challenge-platform') ||
-        normalized.includes('Request blocked')
-    );
+    return {
+        kind: 'success',
+        html,
+    };
 }
 
 export async function fetchPlatformFeedJobs(
     monitoring: PlatformMonitoringAdapter,
     url: string
 ): Promise<readonly JobRecord[]> {
-    const html = await fetchHtml(`${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`);
+    const result = await fetchHtml(`${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`);
 
-    if (!html || isChallengePage(html)) {
+    if (result.kind !== 'success') {
         return [];
     }
 
-    return monitoring.parseListingHtml(html);
+    return monitoring.parseListingHtml(result.html);
 }
 
 export async function hydratePlatformJob(
     monitoring: PlatformMonitoringAdapter,
     job: Readonly<JobRecord>
 ): Promise<JobRecord> {
-    const html = await fetchHtml(job.url);
+    const result = await fetchHtml(job.url);
 
-    if (!html || isChallengePage(html)) {
+    if (result.kind !== 'success') {
         return { ...job };
     }
 
     return {
         ...job,
-        ...((await monitoring.parseProjectHtml(html)) ?? {}),
+        ...((await monitoring.parseProjectHtml(result.html)) ?? {}),
     };
 }
 
@@ -68,18 +90,18 @@ export async function debugFetchMonitoringSource(monitoring: PlatformMonitoringA
     error?: string;
 }> {
     try {
-        const html = await fetchHtml(monitoring.debugProbeUrl);
+        const result = await fetchHtml(monitoring.debugProbeUrl);
 
-        if (!html || isChallengePage(html)) {
+        if (result.kind !== 'success') {
             return {
                 success: false,
-                error: `Unable to fetch monitoring listing HTML for ${monitoring.displayName}.`,
+                error: `${monitoring.displayName}: ${result.reason}`,
             };
         }
 
         return {
             success: true,
-            length: html.length,
+            length: result.html.length,
         };
     } catch (error) {
         return {
