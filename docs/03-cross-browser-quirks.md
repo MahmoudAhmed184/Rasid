@@ -2,7 +2,7 @@
 
 ## Browser Split Implemented In This Repository
 
-The Chrome vs Firefox divergence is implemented in `src/application/background/create-background-services.ts`:
+The Chrome vs Firefox divergence is implemented in `src/app/background/create-background-services.ts`:
 
 ```ts
 const offscreen = createOffscreenManager({
@@ -27,28 +27,35 @@ Chrome receives:
 <meta name="wxt.include" content='["chrome"]' />
 ```
 
-`src/infrastructure/offscreen/manager.ts` then:
+`src/shared/browser/offscreen/manager.ts` then:
 
 1. detects whether an offscreen document already exists with `chrome.runtime.getContexts(...)`
 2. creates it with `chrome.offscreen.createDocument(...)` if needed
 3. uses Chrome offscreen reasons:
-   - `AUDIO_PLAYBACK`
-   - `DOM_PARSER`
+    - `AUDIO_PLAYBACK`
+    - `BLOBS`
+    - `DOM_PARSER`
 4. sends task envelopes through `browser.runtime.sendMessage(...)`
 
 The task channel is:
 
-- `frelancia:offscreen`
+- `rasid:offscreen`
 
 The supported tasks are:
 
 - `audio.play-notification`
+- `downloads.create-zip-url`
+- `downloads.download-zip`
+- `downloads.revoke-object-url`
 - `monitoring.parse-listing-html`
 - `monitoring.parse-project-html`
 
-The offscreen page implementation lives in `src/ui/offscreen.ts`, which dispatches:
+The offscreen page implementation lives in `src/app/offscreen/bootstrap-offscreen.ts`, which dispatches:
 
 - `audio.play-notification` -> `playNotificationAudioDirect()`
+- `downloads.create-zip-url` -> `createZipObjectUrl(...)`
+- `downloads.download-zip` -> `downloadZipArchive(...)`
+- `downloads.revoke-object-url` -> `revokeZipObjectUrl(...)`
 - `monitoring.parse-listing-html` -> `getPlatformMonitoringHtmlParser(platformId).parseListingHtml(...)`
 - `monitoring.parse-project-html` -> `getPlatformMonitoringHtmlParser(platformId).parseProjectHtml(...)`
 
@@ -63,7 +70,9 @@ Instead, the same task contract executes locally in the background page context.
 
 Local handlers are registered by:
 
-- `src/infrastructure/audio/service.ts`
+- `src/app/background/create-background-services.ts`
+- `src/features/notifications/audio-service.ts`
+- `src/features/downloads/zip-downloads.ts`
 - `src/platforms/monitoring-html-parser.ts`
 
 When `createOffscreenManager()` is in `mode: 'local'`, `offscreen.request(...)` does not send a runtime message to another page. It calls the local handler map directly.
@@ -75,20 +84,21 @@ The codebase keeps the rest of the runtime browser-neutral:
 - background orchestration talks to audio, monitoring, notifications, storage, and SignalR abstractions
 - HTML parsing and audio playback are routed through the offscreen contract
 - only the offscreen manager decides whether the work runs in:
-  - a Chrome offscreen document
-  - a Firefox local handler
+    - a Chrome offscreen document
+    - a Firefox local handler
 
 This prevents monitoring and notification flows from carrying browser-specific branches.
 
 ## Capability Matrix
 
-| Concern | Chrome path | Firefox path |
-| --- | --- | --- |
-| Audio playback | Offscreen document task | Local handler in background context |
+| Concern              | Chrome path             | Firefox path                        |
+| -------------------- | ----------------------- | ----------------------------------- |
+| Audio playback       | Offscreen document task | Local handler in background context |
+| ZIP export download  | Offscreen document task | Local handler in background context |
 | Listing HTML parsing | Offscreen document task | Local handler in background context |
 | Project HTML parsing | Offscreen document task | Local handler in background context |
-| Offscreen permission | Requested | Not requested |
-| Offscreen entrypoint | Included | Excluded |
+| Offscreen permission | Requested               | Not requested                       |
+| Offscreen entrypoint | Included                | Excluded                            |
 
 ## What Is Not Abstracted Here
 
@@ -97,4 +107,4 @@ This prevents monitoring and notification flows from carrying browser-specific b
 - Notification creation is shared.
 - Platform adapter contracts are shared.
 
-Only audio playback and HTML parsing are routed through the Chrome offscreen bridge.
+Only audio playback, generated ZIP download URLs, and HTML parsing are routed through the Chrome offscreen bridge.

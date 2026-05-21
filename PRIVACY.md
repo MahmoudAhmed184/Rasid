@@ -73,10 +73,10 @@ Request properties:
 - cache: `no-store`
 - referrerPolicy: `no-referrer`
 - headers:
-  - `Accept`
-  - `Accept-Language`
-  - `Cache-Control`
-  - `Pragma`
+    - `Accept`
+    - `Accept-Language`
+    - `Cache-Control`
+    - `Pragma`
 
 ### Background project hydration requests
 
@@ -262,7 +262,7 @@ The v1 Kafiil adapter does not inject UI, does not autofill forms, and does not 
 The extension connects to:
 
 - `settings.signalrServerUrl`, or
-- `https://frelancia.runasp.net/jobNotificationHub`
+- `https://freelancia.runasp.net/jobNotificationHub`
 
 This connection is managed by:
 
@@ -378,23 +378,14 @@ Instead it:
 2. stores that text in `browser.storage.local.pendingChatGptPrompt`
 3. opens `settings.aiChatUrl` or `https://chatgpt.com/`
 4. injects the prompt into the DOM on:
-   - `https://chatgpt.com/*`
-   - `https://chat.openai.com/*`
+    - `https://chatgpt.com/*`
+    - `https://chat.openai.com/*`
 
 Automatic message submission to the AI website is not implemented in the current codebase. The extension does not click the send button.
 
 ## Additional Network Requests
 
-The dashboard contributors panel fetches:
-
-- `https://api.github.com/repos/Elaraby218/Frelancia/contributors`
-
-Request properties:
-
-- method: `GET`
-- body: none
-
-This request does not send project data, prompts, or API keys.
+The dashboard does not make additional contributor or profile lookup requests.
 
 ## What The Extension Does Not Send
 

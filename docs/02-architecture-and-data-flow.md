@@ -6,51 +6,51 @@
 flowchart TD
     BG[entrypoints/background.ts]
 
-    BG --> BAPP[src/application/background/create-background-services.ts]
-    BG --> BMSG[src/application/runtime/background-message-bus.ts]
+    BG --> BAPP[src/app/background/create-background-services.ts]
+    BG --> BMSG[src/app/background/background-message-bus.ts]
 
-    BAPP --> MON[src/application/monitoring/*]
-    BAPP --> PUB[src/application/monitoring/job-batch-publisher.ts]
-    BAPP --> PROP[src/application/proposals/*]
-    BAPP --> STORE[src/infrastructure/storage/extension-storage.ts]
-    BAPP --> NOTIF[src/infrastructure/notifications/service.ts]
-    BAPP --> AUDIO[src/infrastructure/audio/service.ts]
-    BAPP --> OFF[src/infrastructure/offscreen/manager.ts]
+    BAPP --> MON[src/features/monitoring/*]
+    BAPP --> PUB[src/features/monitoring/job-batch-publisher.ts]
+    BAPP --> PROP[src/features/proposals/*]
+    BAPP --> STORE[src/shared/storage/extension-storage.ts]
+    BAPP --> NOTIF[src/features/notifications/service.ts]
+    BAPP --> AUDIO[src/features/notifications/audio-service.ts]
+    BAPP --> OFF[src/shared/browser/offscreen/manager.ts]
     BAPP --> PHP[src/platforms/monitoring-html-parser.ts]
-    BAPP --> PMOD[src/platforms/platform-modules.ts]
-    BAPP --> SIG[src/infrastructure/realtime/signalr-manager.ts]
+    BAPP --> PMOD[src/platforms/registry.ts]
+    BAPP --> SIG[src/features/realtime/signalr-manager.ts]
 
-    SIG --> SIGRED[src/infrastructure/realtime/signalr-reducer.ts]
-    SIG --> SIGEFF[src/infrastructure/realtime/signalr-effects.ts]
+    SIG --> SIGRED[src/features/realtime/signalr-reducer.ts]
+    SIG --> SIGEFF[src/features/realtime/signalr-effects.ts]
 
-    POP[src/ui/popup/index.ts] --> MSG[src/application/runtime/background-messages.ts]
-    POP --> REPOS[src/infrastructure/storage/browser-repositories.ts]
+    POP[src/app/popup/index.ts] --> MSG[src/app/background/background-messages.ts]
+    POP --> REPOS[src/shared/browser/browser-repositories.ts]
 
-    DASH[src/ui/dashboard/*] --> MSG
+    DASH[src/app/dashboard/*] --> MSG
     DASH --> REPOS
 
-    MC[entrypoints/mostaql.content/index.ts] --> CBOOT[src/application/content/bootstrapPlatformContent.ts]
-    MC --> CAUTO[src/application/content/bootstrapPlatformAutofill.ts]
-    MC --> CDEPS[src/application/content/createPlatformContentServices.ts]
-    MC --> PMOD
+    MC[entrypoints/mostaql.content/index.ts] --> CBOOT[src/app/content/bootstrapPlatformContent.ts]
+    MC --> CAUTO[src/app/content/bootstrapPlatformAutofill.ts]
+    MC --> CDEPS[src/app/content/createPlatformContentServices.ts]
+    MC --> MADAPTER
     MC --> REPOS
 
     KC[entrypoints/khamsat.content/index.ts] --> CBOOT
     KC --> CAUTO
     KC --> CDEPS
-    KC --> PMOD
+    KC --> KADAPTER
     KC --> REPOS
 
     NC[entrypoints/nafezly.content/index.ts] --> CBOOT
     NC --> CAUTO
     NC --> CDEPS
-    NC --> PMOD
+    NC --> NADAPTER
     NC --> REPOS
 
     KFC[entrypoints/kafiil.content/index.ts] --> CBOOT
     KFC --> CAUTO
     KFC --> CDEPS
-    KFC --> PMOD
+    KFC --> KFADAPTER
     KFC --> REPOS
 
     PMOD --> MADAPTER[src/platforms/mostaql/adapter.ts]
@@ -65,23 +65,23 @@ flowchart TD
 
 It delegates:
 
-- dependency construction to `src/application/background/create-background-services.ts`
-- runtime message transport registration to `src/application/runtime/background-message-bus.ts`
+- dependency construction to `src/app/background/create-background-services.ts`
+- runtime message transport registration to `src/app/background/background-message-bus.ts`
 
 On startup the background app:
 
 1. creates storage, notifications, offscreen, audio, monitoring parser, monitoring adapters, AI providers, and the SignalR manager
 2. creates proposal-generation and runtime handler services
 3. runs:
-   - `storage.ensureDefaults()`
-   - `offscreen.bootstrap()`
-   - `signalr.bootstrap(reason)`
+    - `storage.ensureDefaults()`
+    - `offscreen.bootstrap()`
+    - `signalr.bootstrap(reason)`
 4. registers lifecycle listeners for:
-   - `runtime.onInstalled`
-   - `runtime.onStartup`
-   - `alarms.onAlarm`
-   - `runtime.onMessage`
-   - notification click handlers
+    - `runtime.onInstalled`
+    - `runtime.onStartup`
+    - `alarms.onAlarm`
+    - `runtime.onMessage`
+    - notification click handlers
 
 The background layer no longer owns platform registry wiring, notification policy duplication, or raw SignalR state transitions inline.
 
@@ -89,10 +89,10 @@ The background layer no longer owns platform registry wiring, notification polic
 
 Monitoring is driven by:
 
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/process-realtime-job-batch.ts`
-- `src/application/monitoring/job-batch-publisher.ts`
-- `src/infrastructure/realtime/signalr-manager.ts`
+- `src/features/monitoring/run-polling-cycle.ts`
+- `src/features/monitoring/process-realtime-job-batch.ts`
+- `src/features/monitoring/job-batch-publisher.ts`
+- `src/features/realtime/signalr-manager.ts`
 
 `signalr-manager.ts` decides between:
 
@@ -108,18 +108,18 @@ That decision depends on:
 
 The manager still owns connection orchestration, but state logic is now split into:
 
-- `src/infrastructure/realtime/signalr-reducer.ts`
+- `src/features/realtime/signalr-reducer.ts`
   pure state transitions
-- `src/infrastructure/realtime/signalr-effects.ts`
+- `src/features/realtime/signalr-effects.ts`
   alarm scheduling and clearing side effects
 
 ## Realtime Job Ingest
 
 Realtime job batches flow through:
 
-- `src/application/monitoring/job-records.ts`
-- `src/application/monitoring/process-realtime-job-batch.ts`
-- `src/application/monitoring/job-batch-publisher.ts`
+- `src/features/monitoring/job-records.ts`
+- `src/features/monitoring/process-realtime-job-batch.ts`
+- `src/features/monitoring/job-batch-publisher.ts`
 
 The realtime path:
 
@@ -141,16 +141,16 @@ The realtime path does not hydrate project HTML after the hub payload arrives.
 
 The polling path is owned by:
 
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/fetch-platform-html.ts`
-- `src/application/monitoring/job-batch-publisher.ts`
-- `src/platforms/platform-modules.ts`
+- `src/features/monitoring/run-polling-cycle.ts`
+- `src/features/monitoring/fetch-platform-html.ts`
+- `src/features/monitoring/job-batch-publisher.ts`
+- `src/platforms/registry.ts`
 - `src/platforms/*/monitoring.ts`
 - `src/platforms/*/html-parser.ts`
 
 The polling path:
 
-1. resolves enabled platform monitoring adapters from `platform-modules.ts`
+1. resolves enabled platform monitoring adapters from `registry.ts`
 2. resolves feed URLs from each adapter
 3. fetches listing HTML with `credentials: 'omit'`
 4. parses shallow `JobRecord[]` through the platform parser contract
@@ -166,37 +166,38 @@ The background layer never parses platform HTML inline. It always delegates thro
 
 There are three storage-facing layers worth keeping separate:
 
-- `src/infrastructure/storage/storage-client.ts`
+- `src/shared/browser/storage-client.ts`
   the raw `browser.storage.local` boundary
-- `src/infrastructure/storage/extension-storage.ts`
+- `src/shared/storage/extension-storage.ts`
   normalized storage access for settings, monitoring, runtime, and notification payloads
-- `src/infrastructure/storage/repositories/*`
+- `src/features/*/repository.ts`
   domain-focused repositories for popup, dashboard, content scripts, backup, prompts, proposals, and tracking
 
 Proposal bridge/autofill state is handled through:
 
-- `src/infrastructure/storage/modules/proposal-state-storage.ts`
+- `src/shared/storage/modules/proposal-state-storage.ts`
 
 Snapshot import/export normalization is handled through:
 
-- `src/infrastructure/storage/snapshot-state.ts`
-- `src/infrastructure/storage/repositories/backup-repository.ts`
+- `src/shared/storage/snapshot-state.ts`
+- `src/features/backup/repository.ts`
 
 ## Platform Layer
 
 Platform abstractions live in:
 
 - `src/platforms/contracts.ts`
-- `src/platforms/platform-modules.ts`
+- `src/platforms/registry.ts`
 - `src/platforms/monitoring-html-parser.ts`
 - `src/platforms/platform-ids.ts`
 
 Each supported platform module provides:
 
-- a content adapter
 - a monitoring adapter factory
 - a monitoring HTML parser
 - realtime capability metadata
+
+Content adapters are exported from `src/platforms/<platform>/index.ts` and imported directly by the matching content entrypoint so background/offscreen bundles do not pull page UI modules.
 
 Current concrete implementations live in:
 
@@ -213,12 +214,12 @@ Platform page entrypoints compose:
 
 - browser repositories
 - `PlatformContentServices`
-- the selected `PlatformAdapter`
+- the selected platform adapter imported from `src/platforms/<platform>/index.ts`
 
 The content runtime then uses:
 
-- `src/application/content/bootstrapPlatformContent.ts`
-- `src/application/content/bootstrapPlatformAutofill.ts`
+- `src/app/content/bootstrapPlatformContent.ts`
+- `src/app/content/bootstrapPlatformAutofill.ts`
 
 Key runtime rules:
 
@@ -231,11 +232,11 @@ Key runtime rules:
 
 Popup, dashboard, and content scripts talk to the background through:
 
-- `src/application/runtime/background-messages.ts`
+- `src/app/background/background-messages.ts`
 
 The background implements the contract in:
 
-- `src/application/runtime/background-runtime-handlers.ts`
+- `src/app/background/background-runtime-handlers.ts`
 
 Important message actions include:
 

@@ -6,46 +6,46 @@
 - Firefox build output: `dist/firefox-mv3`
 - Firefox minimum version from source config: `140.0`
 - Firefox for Android minimum version from source config: `142.0`
-- Gecko extension ID: `frelancia@mostaql-notifier`
+- Gecko extension ID: `rasid@mostaql-notifier`
 
 ## How To Build From Source
 
 1. Install Node.js and npm.
-   - Exact Node.js version: not pinned in the repository.
+    - Exact Node.js version: not pinned in the repository.
 2. Install dependencies:
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 3. If WXT generated files are missing, run:
 
-   ```bash
-   npm run postinstall
-   ```
+    ```bash
+    npm run postinstall
+    ```
 
 4. Build the Firefox package:
 
-   ```bash
-   npm run build:firefox
-   ```
+    ```bash
+    npm run build:firefox
+    ```
 
 5. The Firefox output is written to:
 
-   ```text
-   dist/firefox-mv3
-   ```
+    ```text
+    dist/firefox-mv3
+    ```
 
 6. Optional validation:
 
-   ```bash
-   npm run lint:firefox
-   ```
+    ```bash
+    npm run lint:firefox
+    ```
 
 7. Temporary load in Firefox:
-   - Open `about:debugging#/runtime/this-firefox`
-   - Choose `Load Temporary Add-on...`
-   - Select `dist/firefox-mv3/manifest.json`
+    - Open `about:debugging#/runtime/this-firefox`
+    - Choose `Load Temporary Add-on...`
+    - Select `dist/firefox-mv3/manifest.json`
 
 ## Permission Justification
 
@@ -53,7 +53,7 @@
 
 #### `alarms`
 
-Required for the background scheduler in `src/infrastructure/realtime/signalr-manager.ts`.
+Required for the background scheduler in `src/features/realtime/signalr-manager.ts`.
 
 The code creates and manages:
 
@@ -71,13 +71,13 @@ These alarms drive:
 
 #### `downloads`
 
-Required for `src/infrastructure/downloads/zip-downloads.ts`.
+Required for `src/features/downloads/zip-downloads.ts`.
 
-The extension builds ZIP archives from user-requested exports and then calls `browser.downloads.download(...)` to save them. The export path is triggered only from Mostaql UI buttons added by the content script.
+The extension builds ZIP archives from user-requested exports. In Firefox, the local background path calls `browser.downloads.download(...)`; in Chrome, ZIP Blob URL creation is routed to the offscreen document and the background still calls `browser.downloads.download(...)`. The export path is triggered only from Mostaql UI buttons added by the content script.
 
 #### `notifications`
 
-Required for `src/infrastructure/notifications/service.ts`.
+Required for `src/features/notifications/service.ts`.
 
 The extension creates browser notifications for newly detected projects on enabled platforms and for the dashboard test action. It also handles notification clicks by opening the stored project URL in a new tab.
 
@@ -113,12 +113,12 @@ Required for the extension’s primary functionality.
 The code uses this host permission for:
 
 - the Mostaql content script (`entrypoints/mostaql.content/index.ts`)
-- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
-- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- HTML feed polling in `src/features/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/features/monitoring/run-polling-cycle.ts`
 - Mostaql listing/detail parsing in `src/platforms/mostaql/html-parser.ts`
-- bid tracker requests in `src/ui/dashboard/bid-tracker.ts`
+- bid tracker requests in `src/app/dashboard/bid-tracker.ts`
 - Mostaql content extraction in `src/platforms/mostaql/content/data.ts`
-- export attachment downloads in `src/infrastructure/downloads/zip-downloads.ts`
+- export attachment downloads in `src/features/downloads/zip-downloads.ts`
 
 #### `https://khamsat.com/*`
 
@@ -127,8 +127,8 @@ Required for the Khamsat platform adapter.
 The code uses this host permission for:
 
 - the Khamsat content script (`entrypoints/khamsat.content/index.ts`)
-- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
-- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- HTML feed polling in `src/features/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/features/monitoring/run-polling-cycle.ts`
 - Khamsat listing/detail parsing in `src/platforms/khamsat/html-parser.ts`
 - Khamsat content extraction in `src/platforms/khamsat/content/data.ts`
 
@@ -139,8 +139,8 @@ Required for the Nafezly platform adapter.
 The code uses this host permission for:
 
 - the Nafezly content script (`entrypoints/nafezly.content/index.ts`)
-- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
-- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- HTML feed polling in `src/features/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/features/monitoring/run-polling-cycle.ts`
 - Nafezly listing/detail parsing in `src/platforms/nafezly/html-parser.ts`
 - Nafezly content extraction and autofill in `src/platforms/nafezly/content/*`
 
@@ -151,8 +151,8 @@ Required for the Kafiil monitoring adapter and future host expansion.
 The code uses this host permission for:
 
 - the Kafiil content script (`entrypoints/kafiil.content/index.ts`)
-- HTML feed polling in `src/application/monitoring/fetch-platform-html.ts`
-- polling orchestration in `src/application/monitoring/run-polling-cycle.ts`
+- HTML feed polling in `src/features/monitoring/fetch-platform-html.ts`
+- polling orchestration in `src/features/monitoring/run-polling-cycle.ts`
 - Kafiil listing/detail parsing in `src/platforms/kafiil/html-parser.ts`
 
 The v1 Kafiil adapter does not inject project-page UI or autofill forms.
@@ -167,11 +167,11 @@ The code injects a content script on this host in `entrypoints/chatgpt-bridge.co
 
 Required for the same optional bridge workflow on the legacy OpenAI chat host.
 
-#### `https://frelancia.runasp.net/*`
+#### `https://freelancia.runasp.net/*`
 
 Required for realtime job notifications.
 
-`src/infrastructure/realtime/signalr-manager.ts` connects to `https://frelancia.runasp.net/jobNotificationHub` by default unless the user overrides the hub URL in settings.
+`src/features/realtime/signalr-manager.ts` connects to `https://freelancia.runasp.net/jobNotificationHub` by default unless the user overrides the hub URL in settings.
 
 #### `https://api.openai.com/*`
 
@@ -197,18 +197,18 @@ Required for optional direct AI generation when the user chooses:
 ## Firefox-Specific Notes
 
 - Firefox does not use the Chrome offscreen document path.
-- In Firefox, audio playback and HTML parsing use the local task-handler path in:
-  - `src/infrastructure/audio/service.ts`
-  - `src/infrastructure/offscreen/manager.ts`
-  - `src/infrastructure/offscreen/tasks.ts`
-  - `src/platforms/monitoring-html-parser.ts`
+- In Firefox, audio playback, generated ZIP exports, and HTML parsing use the local task-handler path in:
+    - `src/features/notifications/audio-service.ts`
+    - `src/features/downloads/zip-downloads.ts`
+    - `src/shared/browser/offscreen/manager.ts`
+    - `src/platforms/monitoring-html-parser.ts`
 - The source config declares:
 
-  ```json
-  "data_collection_permissions": {
-    "required": ["websiteContent"]
-  }
-  ```
+    ```json
+    "data_collection_permissions": {
+      "required": ["websiteContent"]
+    }
+    ```
 
 This is because the extension reads supported platform page content to build notifications, tracked-project records, exports, and optional AI prompts.
 
@@ -218,27 +218,26 @@ This is because the extension reads supported platform page content to build not
 2. Open `https://mostaql.com/projects`.
 3. Open the popup and click `فحص الآن`.
 4. Open the dashboard and verify:
-   - settings save
-   - `فحص الإشعار`
-   - `فحص الصوت`
-   - connection status rendering
-   - tracked projects rendering
+    - settings save
+    - `فحص الإشعار`
+    - `فحص الصوت`
+    - connection status rendering
+    - tracked projects rendering
 5. Open a Mostaql project page and verify:
-   - `مراقبة` toggles tracked state
-   - `سريع` queues autofill
-   - `ذكاء` opens the AI workflow
-   - `تصدير` creates the ZIP export
+    - `مراقبة` toggles tracked state
+    - `سريع` queues autofill
+    - `ذكاء` opens the AI workflow
+    - `تصدير` creates the ZIP export
 6. Optional multi-platform verification:
-   - Open a Khamsat request page
-   - Verify `متابعة` toggles tracked state
-   - Verify `ولّد الرد` queues the reply autofill flow
-   - Open a Nafezly project page
-   - Verify the floating panel loads once and can queue proposal autofill
-   - Open a Kafiil project page
-   - Verify the content script loads without visible injected UI or console errors
+    - Open a Khamsat request page
+    - Verify `متابعة` toggles tracked state
+    - Verify `ولّد الرد` queues the reply autofill flow
+    - Open a Nafezly project page
+    - Verify the floating panel loads once and can queue proposal autofill
+    - Open a Kafiil project page
+    - Verify the content script loads without visible injected UI or console errors
 
 ## Additional Review Notes
 
-- The dashboard “contributors” panel fetches `https://api.github.com/repos/Elaraby218/Frelancia/contributors`, but that host is not declared as a host permission and is not part of the core extension workflow.
 - The extension does not request `webRequest`.
 - The extension does not use remote code execution. Runtime logic comes from the packaged WXT bundle and npm dependencies.

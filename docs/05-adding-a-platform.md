@@ -1,6 +1,6 @@
 # Adding A Platform
 
-This file is the implementation plan for adding a new freelancing platform to Frelancia after the current refactor. It is written against the current manifest-based platform architecture, not the older multi-registry layout.
+This file is the implementation plan for adding a new freelancing platform to Rasid after the current refactor. It is written against the current manifest-based platform architecture, not the older multi-registry layout.
 
 ## Goal
 
@@ -45,8 +45,8 @@ These are the main places you will touch for a brand-new platform ID.
 ### IDs, settings, and storage
 
 - `src/platforms/platform-ids.ts`
-- `src/models/settings.ts`
-- `src/infrastructure/storage/modules/proposal-state-storage.ts`
+- `src/entities/settings/model.ts`
+- `src/shared/storage/modules/proposal-state-storage.ts`
 - `wxt.config.ts`
 
 ### Platform implementation
@@ -64,7 +64,7 @@ Optional but common:
 
 ### Registration and entrypoints
 
-- `src/platforms/platform-modules.ts`
+- `src/platforms/registry.ts`
 - `entrypoints/<platform>.content/index.ts`
 - `entrypoints/<platform>.content/style.css`
 
@@ -87,8 +87,8 @@ in `src/platforms/platform-ids.ts`.
 
 Then update:
 
-- `DEFAULT_MONITORED_PLATFORMS` in `src/models/settings.ts`
-- `PLATFORM_AUTOFILL_KEYS` in `src/infrastructure/storage/modules/proposal-state-storage.ts`
+- `DEFAULT_MONITORED_PLATFORMS` in `src/entities/settings/model.ts`
+- `PLATFORM_AUTOFILL_KEYS` in `src/shared/storage/modules/proposal-state-storage.ts`
 
 If you are activating one of the predeclared IDs already present in `PlatformId`, you can skip the type addition and only implement the concrete platform files.
 
@@ -189,9 +189,9 @@ Create:
 
 The entrypoint should match the current content entrypoint pattern:
 
-1. create browser repositories with `createBrowserRepositories()`
-2. create `PlatformContentServices`
-3. resolve the adapter with `getPlatformAdapter('<platform>')`
+1. import the concrete adapter from `src/platforms/<platform>/index.ts`
+2. create browser repositories with `createBrowserRepositories()` inside the WXT `main()` callback
+3. create `PlatformContentServices`
 4. call `bootstrapPlatformContent(...)`
 5. call `bootstrapPlatformAutofill(...)`
 
@@ -199,7 +199,7 @@ This keeps composition at the entry surface instead of hiding it in platform mod
 
 ## Step 7. Register The Platform In One Place
 
-Add the module to `src/platforms/platform-modules.ts`.
+Add the module to `src/platforms/registry.ts`.
 
 That manifest must contain:
 
@@ -214,7 +214,6 @@ Example shape:
 ```ts
 example: {
     id: 'example',
-    content: exampleAdapter,
     realtime: {
         supportsSignalR: false,
     },
@@ -226,7 +225,8 @@ example: {
 },
 ```
 
-If you miss this step, the platform will not be visible to background monitoring, offscreen HTML parsing, or content entrypoints.
+If you miss this step, the platform will not be visible to background monitoring or offscreen HTML parsing.
+Content entrypoints should still import their concrete platform adapter directly so each content script only bundles the platform it runs on.
 
 ## Step 8. Wire Settings And UX Defaults
 
@@ -279,10 +279,10 @@ Then manually verify:
 5. Notifications open the correct project URL.
 6. Dashboard and popup still work with only the new platform enabled.
 7. If content UI exists:
-   - buttons or panel mount once
-   - tracking works
-   - proposal generation works
-   - autofill retries correctly until the form exists
+    - buttons or panel mount once
+    - tracking works
+    - proposal generation works
+    - autofill retries correctly until the form exists
 8. Backup export/import still round-trips settings and proposal state.
 
 ## Suggested Delivery Order
@@ -290,7 +290,7 @@ Then manually verify:
 Use this order to keep the work shippable:
 
 1. Add ID, host permission, feeds, HTML parser, and monitoring adapter.
-2. Register the platform in `platform-modules.ts`.
+2. Register the platform in `registry.ts`.
 3. Verify polling and notifications first.
 4. Add the content entrypoint and a minimal adapter.
 5. Add proposal extraction and autofill only after monitoring is stable.
@@ -300,7 +300,7 @@ Use this order to keep the work shippable:
 
 The platform addition is complete when:
 
-- the platform is registered in `src/platforms/platform-modules.ts`
+- the platform is registered in `src/platforms/registry.ts`
 - the host permission is present
 - the content entrypoint exists if page UI is required
 - monitoring works from real fetched HTML

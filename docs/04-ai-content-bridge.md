@@ -8,12 +8,12 @@ The content entrypoints bootstrap:
 
 - `entrypoints/mostaql.content/index.ts`
 - `entrypoints/khamsat.content/index.ts`
-- `src/application/content/createPlatformContentServices.ts`
-- `src/application/content/bootstrapPlatformContent.ts`
-- `src/application/content/bootstrapPlatformAutofill.ts`
-- `getPlatformAdapter(...)` from `src/platforms/platform-modules.ts`
+- `src/app/content/createPlatformContentServices.ts`
+- `src/app/content/bootstrapPlatformContent.ts`
+- `src/app/content/bootstrapPlatformAutofill.ts`
+- the concrete platform adapter exported from `src/platforms/<platform>/index.ts`
 
-The entrypoints create browser repositories, build explicit `PlatformContentServices`, resolve the platform adapter, then hand control to the shared content runtime.
+The entrypoints create browser repositories inside the WXT `main()` callback, build explicit `PlatformContentServices`, import the concrete platform adapter directly, then hand control to the shared content runtime.
 
 ## Prompt Source
 
@@ -21,10 +21,10 @@ Prompt templates are exposed to platform UI code through `PlatformContentService
 
 Those services are backed by:
 
-- `src/infrastructure/storage/browser-repositories.ts`
-- `src/infrastructure/storage/repositories/prompt-repository.ts`
-- `src/infrastructure/storage/repositories/proposal-repository.ts`
-- `src/infrastructure/storage/repositories/tracking-repository.ts`
+- `src/shared/browser/browser-repositories.ts`
+- `src/features/proposals/prompt-repository.ts`
+- `src/features/proposals/proposal-repository.ts`
+- `src/features/monitoring/tracking-repository.ts`
 
 This means platform UI code does not need to import storage singletons or raw background message helpers directly.
 
@@ -70,7 +70,7 @@ When the user clicks an AI action, the content script calls:
 
 - `requestGenerateProposal(...)`
 
-from `src/application/runtime/background-messages.ts`.
+from `src/app/background/background-messages.ts`.
 
 The payload shape is:
 
@@ -84,18 +84,18 @@ The payload shape is:
 
 That request crosses the typed runtime message bus and is handled in the background by:
 
-- `src/application/runtime/background-runtime-handlers.ts`
-- `src/application/proposals/generate-proposal.ts`
+- `src/app/background/background-runtime-handlers.ts`
+- `src/features/proposals/generate-proposal.ts`
 
 ## Background AI Handling
 
 The background proposal path is split across:
 
-- `src/application/proposals/generate-proposal.ts`
-- `src/application/proposals/generate-direct-proposal.ts`
-- `src/application/proposals/generate-bridge-proposal.ts`
-- `src/application/proposals/proposal-template-catalog.ts`
-- `src/infrastructure/ai/providers/*`
+- `src/features/proposals/generate-proposal.ts`
+- `src/features/proposals/generate-direct-proposal.ts`
+- `src/features/proposals/generate-bridge-proposal.ts`
+- `src/features/proposals/proposal-template-catalog.ts`
+- `src/entities/ai/providers/*`
 
 ### Direct mode
 
@@ -145,14 +145,14 @@ It matches:
 - `https://chatgpt.com/*`
 - `https://chat.openai.com/*`
 
-`src/ui/chatgpt-bridge/index.ts`:
+`src/app/chatgpt-bridge/index.ts`:
 
 1. reads the pending prompt from repository state
 2. waits for the chat input to appear
 3. writes the prompt into:
-   - `#prompt-textarea`, or
-   - `[contenteditable="true"]`, or
-   - fallback textarea selectors
+    - `#prompt-textarea`, or
+    - `[contenteditable="true"]`, or
+    - fallback textarea selectors
 4. dispatches an `input` event
 
 The bridge does not click the send button. Actual submission still requires user action on the chat site.

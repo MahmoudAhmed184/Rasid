@@ -1,161 +1,224 @@
-# Frelancia
+# Rasid | راصد
 
-Frelancia is a cross-browser Manifest V3 extension for Arabic freelancing platforms that helps freelancers discover new opportunities quickly, filter noise, and draft stronger proposals with AI-assisted workflows.
+Rasid is a private cross-browser Manifest V3 WebExtension for Arabic freelancing platforms. It monitors supported feeds, filters noisy jobs, sends browser notifications, tracks projects, and helps draft proposals through either direct AI provider calls or a ChatGPT bridge workflow.
 
-ملخص بالعربية: إضافة للعمل الحر تعمل على Chrome و Firefox لتنبيهك بالفرص الجديدة، تتبع المشاريع والطلبات، وتساعدك على تجهيز الردود والعروض بالذكاء الاصطناعي.
+ملخص بالعربية: راصد إضافة للمتصفحات تراقب فرص العمل الحر في المنصات العربية، ترسل تنبيهات، تحفظ المشاريع المتابعة، وتساعد في توليد العروض عبر الذكاء الاصطناعي أو عبر جسر ChatGPT.
 
-## Overview
+## Contents
 
-Frelancia combines project monitoring, browser-side workflow automation, and configurable AI drafting into a single extension. The codebase is built with WXT, TypeScript, and a layered `src/` layout that separates application flows from browser infrastructure and platform-specific DOM code.
+- [Project Status](#project-status)
+- [What Ships In This Repo](#what-ships-in-this-repo)
+- [Capabilities](#capabilities)
+- [Platform Support](#platform-support)
+- [Browser Support](#browser-support)
+- [How It Works](#how-it-works)
+- [Architecture](#architecture)
+- [Repository Layout](#repository-layout)
+- [Getting Started](#getting-started)
+- [Development Commands](#development-commands)
+- [Loading The Extension](#loading-the-extension)
+- [Optional SignalR Backend](#optional-signalr-backend)
+- [Configuration](#configuration)
+- [Permissions](#permissions)
+- [Privacy And Storage](#privacy-and-storage)
+- [Quality Checks](#quality-checks)
+- [Documentation](#documentation)
+- [Known Notes](#known-notes)
 
-The extension includes:
+## Project Status
 
-- Real-time project notifications through SignalR with automatic polling fallback
-- Configurable filtering by category, budget, hiring rate, duration, keywords, and quiet hours
-- AI proposal workflows with reusable prompt templates
-- Direct provider support for OpenAI, Gemini, and Claude
-- Bridge-mode drafting that can hand off proposal prompts to a configurable chat UI
-- Popup and dashboard surfaces for monitoring, settings, diagnostics, and prompt management
-- Platform page enhancements for autofill, tracking, export, and AI workflows where supported
-- Current platform adapters for Mostaql, Khamsat, Nafezly, and Kafiil
-- ZIP export for project details and conversation data
+- Package name: `rasid`
+- Extension name: `Rasid | راصد`
+- Extension version: `1.0.0`
+- Manifest version: `3`
+- Build system: `wxt`
+- Language: TypeScript
+- Runtime requirement: Node.js `>=20.19.0`
+- Target browsers: Chrome MV3 and Firefox MV3
 
-Current support level:
+## Capabilities
 
-- Mostaql: monitoring, content tools, autofill, and export
-- Khamsat: monitoring, content tools, and reply autofill
-- Nafezly: monitoring, project-page tools, and proposal autofill hooks
-- Kafiil: monitoring-only in the current release
+Rasid currently provides:
+
+- background monitoring for the registered freelancing platforms
+- SignalR-first realtime delivery with polling fallback, plus polling-only mode
+- browser notifications and notification sound playback
+- popup quick actions for manual checks, notification toggling, and source diagnostics
+- a dashboard for overview stats, tracked projects, Mostaql bid tracking, filters, prompts, proposal templates, advanced settings, and backup import/export
+- reusable prompt templates plus a separate quick proposal template
+- AI proposal generation through OpenAI, Gemini, or Claude in direct mode
+- ChatGPT bridge mode that injects a prepared prompt into ChatGPT for manual review and submission
+- platform-specific content tools for project extraction, tracking, and proposal autofill where supported
+- Mostaql export flows that generate downloadable ZIP bundles without remote code
+
+## Platform Support
+
+| Platform | Background Monitoring | SignalR | Content Tools | Proposal Drafting / Autofill | Export | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Mostaql | Yes | Yes | Yes | Yes | Yes | Richest integration surface, including project tracking and export tooling. |
+| Khamsat | Yes | Yes | Yes | Yes | No | Request/project helpers and proposal autofill are active. |
+| Nafezly | Yes | Yes | Yes | Yes | No | Project panel, extraction, and autofill are active. |
+| Kafiil | No | No | Placeholder only | No | No | A content script and parser code still exist, but the extension does not register Kafiil in `src/platforms/registry.ts`. |
+| Freelancer | No | No | No | No | No | Platform id placeholder only. |
+| Upwork | No | No | No | No | No | Platform id placeholder only. |
+
+The current background monitoring registry is owned by [`src/platforms/registry.ts`](src/platforms/registry.ts). As of May 22, 2026 it registers only `mostaql`, `khamsat`, and `nafezly`.
 
 ## Browser Support
 
-| Browser | Build Output | Notes |
+| Browser | Output Directory | Notes |
 | --- | --- | --- |
-| Chrome-based browsers | `dist/chrome-mv3` | Minimum Chrome version declared in the manifest: `120` |
-| Firefox | `dist/firefox-mv3` | Minimum Firefox version declared in the manifest: `140.0` |
+| Chrome / Chromium | `dist/chrome-mv3` | Uses a service worker plus a Chrome-only offscreen document. Minimum Chrome version is `120`. |
+| Firefox | `dist/firefox-mv3` | Uses the same MV3 codebase through WXT's Firefox output. Minimum Firefox version is `140.0`. |
+| Firefox for Android | `dist/firefox-mv3` | Shares the Firefox build output. Minimum version is `142.0`. |
 
-The Chrome build uses an offscreen document for supported background tasks. Firefox uses the same source tree but skips the offscreen entrypoint during packaging by design.
+Chrome receives the `offscreen` permission. Firefox intentionally skips the offscreen entrypoint and runs the same task contract through the local background path.
 
-## Source Layout
+## How It Works
 
-The repository keeps WXT entrypoints in `entrypoints/` and reusable code in `src/`.
+### Monitoring
 
-### `entrypoints/`
+The background app is composed in [`src/app/background/create-background-services.ts`](src/app/background/create-background-services.ts).
 
-Manifest-facing surfaces only:
+1. Startup creates storage, notifications, offscreen or local task handlers, platform monitoring adapters, AI providers, proposal generation services, and the SignalR manager.
+2. Polling resolves enabled platform feeds, fetches listing HTML, parses normalized job records, optionally enriches detail pages, applies filters, stores results, and publishes notifications.
+3. SignalR delivery uses the same downstream publishing path, so realtime and polling batches are processed consistently.
 
-- `entrypoints/background.ts`
-- `entrypoints/mostaql.content/index.ts`
-- `entrypoints/khamsat.content/index.ts`
-- `entrypoints/nafezly.content/index.ts`
-- `entrypoints/kafiil.content/index.ts`
-- `entrypoints/chatgpt-bridge.content.ts`
-- `entrypoints/popup/main.ts`
-- `entrypoints/dashboard/main.ts`
-- `entrypoints/offscreen/main.ts`
+### Content Scripts
 
-### `src/`
+Each platform content entrypoint imports exactly one platform adapter. Shared content runtime code lives under `src/app/content/`, while selectors and DOM logic stay inside each platform folder under `src/platforms/<platform>/`.
 
-- `src/application/`
-  Use cases and runtime contracts.
-  Includes monitoring flows, proposal generation orchestration, content bootstrap, and background message handling.
-- `src/infrastructure/`
-  Browser and transport details.
-  Includes storage, repositories, SignalR, notifications, downloads, offscreen RPC, audio, and AI provider clients.
-- `src/models/`
-  Shared TypeScript domain models.
-- `src/platforms/`
-  Platform abstractions and platform-specific implementations.
-  Mostaql, Khamsat, Nafezly, and Kafiil parsing, monitoring, and content injectors live under `src/platforms/`.
-- `src/ui/`
-  Generic extension surfaces that are not tied to one freelancing platform.
-  Includes popup, dashboard, ChatGPT bridge, and offscreen page bootstrap.
+### AI Proposal Flows
 
-This structure keeps platform-specific DOM code out of generic UI folders and keeps browser APIs out of application workflows.
+Proposal generation is owned by `src/features/proposals/`.
 
-## Runtime Split
+- `direct` mode sends the rendered prompt to the configured provider API.
+- `bridge` mode stores a pending prompt and relies on the ChatGPT bridge content script to inject it into ChatGPT.
 
-- `entrypoints/background.ts` is the WXT composition root. It delegates service wiring to `src/application/background/create-background-services.ts` and runtime transport registration to `src/application/runtime/background-message-bus.ts`.
-- `src/application/runtime/background-messages.ts` defines the typed request/response contract used by popup, dashboard, and content scripts.
-- `src/application/runtime/background-runtime-handlers.ts` maps those messages to use cases.
-- `src/platforms/platform-modules.ts` is the single manifest for supported platforms. It resolves content adapters, monitoring adapters, monitoring parsers, and realtime capability metadata.
-- `src/platforms/mostaql/adapter.ts`, `src/platforms/khamsat/adapter.ts`, `src/platforms/nafezly/adapter.ts`, and `src/platforms/kafiil/adapter.ts` implement platform-specific content behavior.
-- `src/platforms/*/content/*.ts` contains platform-specific DOM extraction, injection, autofill, and export logic.
-- `src/infrastructure/realtime/signalr-reducer.ts` and `src/infrastructure/realtime/signalr-effects.ts` make SignalR state transitions and alarm effects explicit while `src/infrastructure/realtime/signalr-manager.ts` stays focused on orchestration.
-- `src/infrastructure/offscreen/*` hides the Chrome offscreen-vs-Firefox local execution split.
+Direct mode supports:
 
-## Development
+- OpenAI
+- Gemini
+- Claude
 
-### Prerequisites
+Bridge mode currently ships only for:
 
-- Node.js
+- `https://chatgpt.com/*`
+- `https://chat.openai.com/*`
+
+### Offscreen Tasks
+
+Chrome MV3 service workers do not have DOM access, so Rasid uses an offscreen document for:
+
+- notification audio playback
+- `DOMParser`-based marketplace HTML parsing
+- ZIP Blob URL generation for downloads
+
+Firefox uses the same `OffscreenManager` contract in local mode instead of a separate document.
+
+## Architecture
+
+The extension follows a feature-first structure:
+
+- `entrypoints/` contains WXT-facing entrypoints only
+- `src/app/` contains composition roots and UI bootstraps
+- `src/entities/` contains domain models and AI provider adapters
+- `src/features/` contains monitoring, proposals, realtime, notifications, downloads, backup, and settings behavior
+- `src/platforms/` contains platform-specific adapters, parsers, feeds, selectors, and content UI
+- `src/shared/` contains browser wrappers, storage modules, DOM helpers, parsing helpers, and network utilities
+
+The recent refactor removed the old layer-first roots such as `src/application/`, `src/infrastructure/`, `src/models/`, and `src/ui/`.
+
+## Repository Layout
+
+```text
+entrypoints/
+  background.ts
+  chatgpt-bridge.content.ts
+  mostaql.content/
+  khamsat.content/
+  nafezly.content/
+  kafiil.content/
+  popup/
+  dashboard/
+  offscreen/
+
+src/
+  app/
+  entities/
+  features/
+  platforms/
+  shared/
+
+public/
+  icons/
+
+docs/
+  01-setup-and-workflow.md
+  02-architecture-and-data-flow.md
+  03-cross-browser-quirks.md
+  04-ai-content-bridge.md
+  05-adding-a-platform.md
+  firefox-testing.md
+  amo-review.md
+
+```
+
+### Key Files
+
+| File | Purpose |
+| --- | --- |
+| [`wxt.config.ts`](wxt.config.ts) | WXT config, manifest generation, permissions, browser-specific settings, and the SignalR pure-annotation workaround. |
+| [`entrypoints/background.ts`](entrypoints/background.ts) | Background entrypoint and lifecycle wiring. |
+| [`src/app/background/create-background-services.ts`](src/app/background/create-background-services.ts) | Background composition root. |
+| [`src/app/background/background-messages.ts`](src/app/background/background-messages.ts) | Typed runtime message contract for popup, dashboard, and content flows. |
+| [`src/platforms/registry.ts`](src/platforms/registry.ts) | Registered extension monitoring platforms and SignalR capability metadata. |
+| [`src/shared/storage/extension-storage.ts`](src/shared/storage/extension-storage.ts) | Storage facade for settings, jobs, prompts, tracking, runtime state, and pending proposal state. |
+| [`src/shared/browser/offscreen/manager.ts`](src/shared/browser/offscreen/manager.ts) | Chrome offscreen and Firefox local-task abstraction. |
+
+## Getting Started
+
+### Extension Prerequisites
+
+- Node.js `>=20.19.0`
 - npm
 
-A recent Node.js LTS release is recommended. The repository does not currently declare an `engines.node` field.
-
-### Install
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-`npm install` runs `wxt prepare` automatically through `postinstall`. If generated WXT files are missing after a cleanup or branch reset, run:
+`npm install` runs `wxt prepare` through the `postinstall` script.
 
-```bash
-npm run postinstall
-```
-
-### Development Builds
-
-```bash
-npm run dev:chrome
-npm run dev:firefox
-```
-
-### Production Builds
-
-```bash
-npm run build
-```
-
-Or per target:
-
-```bash
-npm run build:chrome
-npm run build:firefox
-```
-
-### Packaged ZIP Builds
-
-```bash
-npm run zip:chrome
-npm run zip:firefox
-```
-
-## Available Scripts
+## Development Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run postinstall` | Generate WXT types and prepared files |
-| `npm run dev:chrome` | Start Chrome MV3 development mode |
-| `npm run dev:firefox` | Start Firefox MV3 development mode |
-| `npm run build` | Build Chrome and Firefox packages |
-| `npm run build:chrome` | Build the Chrome package only |
-| `npm run build:firefox` | Build the Firefox package only |
-| `npm run zip:chrome` | Package the Chrome build as a zip |
-| `npm run zip:firefox` | Package the Firefox build as a zip |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Run ESLint with automatic fixes |
-| `npm run format` | Format the repository with Prettier |
-| `npm run format:check` | Check formatting with Prettier |
-| `npm run typecheck` | Run the TypeScript compiler in no-emit mode |
-| `npm run lint:firefox` | Run `web-ext lint` against `dist/firefox-mv3` |
+| `npm run dev:chrome` | Start WXT dev mode for Chrome MV3. |
+| `npm run dev:firefox` | Start WXT dev mode for Firefox MV3. |
+| `npm run build` | Build both browser outputs. |
+| `npm run build:chrome` | Build `dist/chrome-mv3`. |
+| `npm run build:firefox` | Build `dist/firefox-mv3`. |
+| `npm run zip:chrome` | Create the Chrome ZIP package. |
+| `npm run zip:firefox` | Create the Firefox ZIP package. |
+| `npm run lint` | Run ESLint. |
+| `npm run lint:fix` | Run ESLint with auto-fixes. |
+| `npm run typecheck` | Run TypeScript with `--noEmit`. |
+| `npm run format` | Format the repo with Prettier. |
+| `npm run format:check` | Check formatting with Prettier. |
+| `npm run lint:firefox` | Validate the Firefox build with `web-ext lint`. |
 
-## Load The Extension Locally
+## Loading The Extension
 
 ### Chrome
 
-1. Run `npm run build:chrome`.
+1. Build the Chrome output:
+
+    ```bash
+    npm run build:chrome
+    ```
+
 2. Open `chrome://extensions/`.
 3. Enable Developer mode.
 4. Click `Load unpacked`.
@@ -163,73 +226,125 @@ npm run zip:firefox
 
 ### Firefox
 
-1. Run `npm run build:firefox`.
+1. Build the Firefox output:
+
+    ```bash
+    npm run build:firefox
+    ```
+
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click `Load Temporary Add-on...`.
 4. Select `dist/firefox-mv3/manifest.json`.
 
-Additional Firefox-specific guidance is available in [docs/firefox-testing.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/firefox-testing.md).
+Additional Firefox notes live in [docs/firefox-testing.md](docs/firefox-testing.md).
 
-## Remote Services And Permissions
+## Configuration
 
-The manifest currently declares host permissions for:
+User-facing configuration is stored in browser local storage and managed through the dashboard.
 
-- `https://mostaql.com/*`
-- `https://khamsat.com/*`
-- `https://nafezly.com/*`
-- `https://kafiil.com/*`
-- `https://chatgpt.com/*`
-- `https://chat.openai.com/*`
-- `https://frelancia.runasp.net/*`
-- `https://api.openai.com/*`
-- `https://generativelanguage.googleapis.com/*`
-- `https://api.anthropic.com/*`
+Important settings include:
 
-These permissions are used for supported platform page access, optional AI drafting flows, and the SignalR notification backend.
+- global enable / disable
+- monitored platform toggles
+- notification mode: `auto`, `signalr`, or `polling`
+- polling interval from `1` to `30` minutes
+- SignalR server URL
+- include and exclude keywords
+- minimum budget, minimum hiring rate, maximum duration, and category filters
+- quiet hours
+- notification sound
+- AI mode: `bridge` or `direct`
+- AI provider, model, API key, and system prompt
+- ChatGPT bridge URL
+- reusable prompt templates
+- quick proposal template
+- backup export and import
 
-## Privacy And Data Handling
+The settings UI still renders a Kafiil toggle, but background monitoring currently acts only on `mostaql`, `khamsat`, and `nafezly`.
 
-Frelancia stores its operational state in browser local storage, including:
+## Permissions
 
-- notification and filter settings
-- prompt templates and proposal templates
+Permissions are generated from [`wxt.config.ts`](wxt.config.ts).
+
+### Extension Permissions
+
+| Permission | Chrome | Firefox | Reason |
+| --- | --- | --- | --- |
+| `alarms` | Yes | Yes | Scheduling polling, SignalR lease checks, and reconnects. |
+| `downloads` | Yes | Yes | Saving generated ZIP exports and backups. |
+| `notifications` | Yes | Yes | Browser notifications plus test notification flow. |
+| `storage` | Yes | Yes | Settings, jobs, prompts, runtime state, tracking, and pending proposal state. |
+| `offscreen` | Yes | No | Chrome-only document for DOM parsing, audio, and Blob URL work. |
+
+### Host Permissions
+
+| Host | Reason |
+| --- | --- |
+| `https://mostaql.com/*` | Mostaql monitoring, content scripts, extraction, autofill, and export flows. |
+| `https://khamsat.com/*` | Khamsat monitoring, parsing, and content tooling. |
+| `https://nafezly.com/*` | Nafezly monitoring, parsing, extraction, and autofill. |
+| `https://kafiil.com/*` | Kafiil content script and parser support. |
+| `https://chatgpt.com/*` | ChatGPT bridge content script. |
+| `https://chat.openai.com/*` | Legacy ChatGPT host for the bridge content script. |
+| `https://freelancia.runasp.net/*` | Default SignalR backend origin. |
+| `https://api.openai.com/*` | Direct OpenAI proposal generation. |
+| `https://generativelanguage.googleapis.com/*` | Direct Gemini proposal generation. |
+| `https://api.anthropic.com/*` | Direct Claude proposal generation. |
+
+Review-facing permission notes are maintained in [docs/amo-review.md](docs/amo-review.md).
+
+## Privacy And Storage
+
+Rasid stores extension state in browser local storage. That can include:
+
+- settings and filters
+- AI configuration and API keys when direct mode is used
+- prompt templates and quick proposal template text
+- seen job ids and recent job batches
 - tracked projects
-- recent jobs and seen job identifiers
-- lightweight runtime state used for notifications and connection management
-- temporary bridge/autofill payloads
+- runtime SignalR state
+- notification click payloads
+- pending autofill drafts
+- pending ChatGPT bridge prompt state
+- backup snapshots exported by the dashboard
 
-See [PRIVACY.md](/home/mahmoud-ahmed/Projects/Frelancia/PRIVACY.md) for the current privacy disclosure draft.
+Supported page content is read only when the relevant content script is active and only to support tracking, proposal drafting, autofill, and export features.
+
+See [PRIVACY.md](PRIVACY.md) for the privacy disclosure draft.
 
 ## Quality Checks
 
-Before opening a pull request, run:
+Typical extension verification:
 
 ```bash
-npm run lint
 npm run typecheck
+npm run lint
 npm run build
+npm run lint:firefox
 ```
 
-If you are validating Firefox packaging or release readiness, also run:
+Useful structural checks:
 
 ```bash
-npm run lint:firefox
+find src entrypoints docs -type d -empty -print
+legacy_roots="application|infrastructure|models|ui"
+rg "src/(${legacy_roots})|platform-modules" docs src entrypoints -n
 ```
 
 ## Documentation
 
-- [docs/01-setup-and-workflow.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/01-setup-and-workflow.md)
-- [docs/02-architecture-and-data-flow.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/02-architecture-and-data-flow.md)
-- [docs/03-cross-browser-quirks.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/03-cross-browser-quirks.md)
-- [docs/04-ai-content-bridge.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/04-ai-content-bridge.md)
-- [docs/05-adding-a-platform.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/05-adding-a-platform.md)
-- [docs/firefox-testing.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/firefox-testing.md)
-- [docs/amo-review.md](/home/mahmoud-ahmed/Projects/Frelancia/docs/amo-review.md)
+Extension docs:
 
-## Contributing
+- [docs/01-setup-and-workflow.md](docs/01-setup-and-workflow.md)
+- [docs/02-architecture-and-data-flow.md](docs/02-architecture-and-data-flow.md)
+- [docs/03-cross-browser-quirks.md](docs/03-cross-browser-quirks.md)
+- [docs/04-ai-content-bridge.md](docs/04-ai-content-bridge.md)
+- [docs/05-adding-a-platform.md](docs/05-adding-a-platform.md)
+- [docs/firefox-testing.md](docs/firefox-testing.md)
+- [docs/amo-review.md](docs/amo-review.md)
 
-Issues and pull requests are welcome. Keep changes scoped, document behavior changes, and include the relevant verification steps in your PR.
+## Known Notes
 
-## License
-
-This project is licensed under the MIT License. See [LICENSE](/home/mahmoud-ahmed/Projects/Frelancia/LICENSE).
+- The extension monitoring registry currently excludes Kafiil even though Kafiil code still exists under `src/platforms/kafiil/` and in the backend.
+- ChatGPT bridge injection is only shipped for `chatgpt.com` and `chat.openai.com`.
+- Firefox MV3 intentionally skips the `offscreen` entrypoint during build and uses the local background task path instead.
