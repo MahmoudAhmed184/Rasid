@@ -1,4 +1,4 @@
-import { isPlatformMonitoringEnabled } from '../../models/settings';
+import { isPlatformMonitoringEnabled } from '../../entities/settings/model';
 import type { PlatformMonitoringAdapter } from '../contracts';
 import type { PlatformMonitoringHtmlParser } from '../monitoring-html-parser';
 import { KAFIIL_FEEDS } from './feeds';

@@ -20,46 +20,44 @@ function createPanelRoot(doc: Document): HTMLElement {
 
     const root = doc.createElement('aside');
     root.id = KHAMSAT_SELECTORS.panel.rootId;
-    root.className = 'frelancia-khamsat-panel';
+    root.className = 'rasid-khamsat-panel';
     return root;
 }
 
 export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): PlatformDisposer {
     const root = createPanelRoot(input.document);
     const title = input.document.createElement('h3');
-    title.className = 'frelancia-khamsat-panel__title';
-    title.textContent = 'Frelancia';
+    title.className = 'rasid-khamsat-panel__title';
+    title.textContent = 'Rasid | راصد';
 
     const subtitle = input.document.createElement('p');
-    subtitle.className = 'frelancia-khamsat-panel__subtitle';
+    subtitle.className = 'rasid-khamsat-panel__subtitle';
     subtitle.textContent = 'لوحة سريعة لطلبات خمسات: متابعة وتوليد رد جاهز.';
 
     const promptLabel = input.document.createElement('label');
-    promptLabel.className = 'frelancia-khamsat-panel__label';
+    promptLabel.className = 'rasid-khamsat-panel__label';
     promptLabel.textContent = 'قالب الرد';
 
     const promptSelect = input.document.createElement('select');
-    promptSelect.className = 'frelancia-khamsat-panel__select';
+    promptSelect.className = 'rasid-khamsat-panel__select';
     promptSelect.disabled = true;
 
     const actions = input.document.createElement('div');
-    actions.className = 'frelancia-khamsat-panel__actions';
+    actions.className = 'rasid-khamsat-panel__actions';
 
     const trackButton = input.document.createElement('button');
     trackButton.type = 'button';
-    trackButton.className =
-        'frelancia-khamsat-panel__button frelancia-khamsat-panel__button--ghost';
+    trackButton.className = 'rasid-khamsat-panel__button rasid-khamsat-panel__button--ghost';
     trackButton.textContent = 'متابعة';
 
     const generateButton = input.document.createElement('button');
     generateButton.type = 'button';
-    generateButton.className =
-        'frelancia-khamsat-panel__button frelancia-khamsat-panel__button--primary';
+    generateButton.className = 'rasid-khamsat-panel__button rasid-khamsat-panel__button--primary';
     generateButton.textContent = 'ولّد الرد';
     generateButton.disabled = true;
 
     const status = input.document.createElement('p');
-    status.className = 'frelancia-khamsat-panel__status';
+    status.className = 'rasid-khamsat-panel__status';
     status.dataset.tone = 'info';
     status.textContent = 'جارِ تحميل القوالب...';
 
@@ -197,7 +195,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
 
             if (result.kind === 'bridge') {
                 await input.services.proposals.setPendingBridgePrompt(result.prompt);
-                window.open(result.chatUrl || 'https://chatgpt.com/', 'frelancia_ai_chat');
+                window.open(result.chatUrl || 'https://chatgpt.com/', 'rasid_ai_chat');
                 setStatus('تم فتح نافذة الذكاء الاصطناعي بالمطالبة الجاهزة.', 'success');
                 return;
             }

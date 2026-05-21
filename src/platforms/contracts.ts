@@ -1,7 +1,7 @@
-import type { AiRequestContext } from '../models/ai';
-import type { JobRecord, TrackedProject } from '../models/jobs';
-import type { PromptTemplate } from '../models/prompts';
-import type { ExtensionSettings } from '../models/settings';
+import type { AiRequestContext } from '../entities/ai/model';
+import type { JobRecord, TrackedProject } from '../entities/job/model';
+import type { PromptTemplate } from '../entities/prompt/model';
+import type { ExtensionSettings } from '../entities/settings/model';
 import type { PlatformId } from './platform-ids';
 export type { PlatformId } from './platform-ids';
 

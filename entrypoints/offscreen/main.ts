@@ -1,3 +1,3 @@
-import { initOffscreen } from '../../src/ui/offscreen'
+import { initOffscreen } from '../../src/app/offscreen/bootstrap-offscreen'
 
 initOffscreen()

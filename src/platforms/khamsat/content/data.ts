@@ -1,4 +1,4 @@
-import type { ProjectAttachment } from '../../../models/jobs';
+import type { ProjectAttachment } from '../../../entities/job/model';
 import type { PlatformPage, PlatformProposalSource } from '../../contracts';
 import { KHAMSAT_SELECTORS, queryAll, queryFirst } from '../selectors';
 

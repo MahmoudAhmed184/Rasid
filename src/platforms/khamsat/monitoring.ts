@@ -1,6 +1,6 @@
 import type { PlatformMonitoringAdapter } from '../contracts';
 import type { PlatformMonitoringHtmlParser } from '../monitoring-html-parser';
-import { isPlatformMonitoringEnabled } from '../../models/settings';
+import { isPlatformMonitoringEnabled } from '../../entities/settings/model';
 import { KHAMSAT_FEEDS } from './feeds';
 
 export function createKhamsatMonitoringAdapter(

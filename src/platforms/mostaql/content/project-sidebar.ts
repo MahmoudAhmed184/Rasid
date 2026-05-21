@@ -1,4 +1,4 @@
-import type { PromptTemplate } from '../../../models/prompts';
+import type { PromptTemplate } from '../../../entities/prompt/model';
 import type { PlatformContentServices } from '../../contracts';
 import { parseDurationDays } from '../../../shared/parsing/duration';
 import { MOSTAQL_SELECTORS } from '../selectors';

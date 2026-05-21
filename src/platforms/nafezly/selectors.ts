@@ -32,7 +32,7 @@ export const NAFEZLY_SELECTORS = {
         ],
     },
     panel: {
-        rootId: 'frelancia-nafezly-panel',
+        rootId: 'rasid-nafezly-panel',
     },
 } as const;
 

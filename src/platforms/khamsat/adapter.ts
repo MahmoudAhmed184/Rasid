@@ -14,7 +14,7 @@ import { extractKhamsatProposalSource } from './content/data';
 import { extractKhamsatProjectId, KHAMSAT_SELECTORS, queryFirst } from './selectors';
 
 const KHAMSAT_MATCHES = ['https://khamsat.com/*'] as const;
-const KHAMSAT_AUTOFILLED_CLASS = 'frelancia-autofilled';
+const KHAMSAT_AUTOFILLED_CLASS = 'rasid-autofilled';
 
 function isContextValid(): boolean {
     try {

@@ -1,14 +1,14 @@
-import { createBrowserRepositories } from '../../src/infrastructure/storage/browser-repositories'
-import { bootstrapDashboard } from '../../src/ui/dashboard/index'
-
-const repositories = createBrowserRepositories()
+import { createBrowserRepositories } from '../../src/shared/browser/browser-repositories';
+import { bootstrapDashboard } from '../../src/app/dashboard';
 
 function mount(): void {
-    bootstrapDashboard(document, repositories)
+    const repositories = createBrowserRepositories();
+
+    bootstrapDashboard(document, repositories);
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount, { once: true })
+    document.addEventListener('DOMContentLoaded', mount, { once: true });
 } else {
-    mount()
+    mount();
 }

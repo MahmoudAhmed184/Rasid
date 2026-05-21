@@ -1,13 +1,13 @@
-import type { JobRecord } from '../models/jobs';
-import type { OffscreenManager } from '../infrastructure/offscreen/manager';
+import type { JobRecord } from '../entities/job/model';
+import type { OffscreenManager } from '../shared/browser/offscreen/manager';
 import {
     registerMonitoringHtmlParserTasks,
     requestMonitoringListingHtmlParse,
     requestMonitoringProjectHtmlParse,
-} from '../infrastructure/offscreen/tasks';
+} from '../shared/browser/offscreen/tasks';
 import { looksLikeChallengePage } from '../shared/network/challenge-page';
 import type { PlatformId } from './contracts';
-import { getPlatformMonitoringHtmlParser } from './platform-modules';
+import { getPlatformMonitoringHtmlParser } from './registry';
 
 export interface PlatformMonitoringHtmlParser {
     parseListingHtml(platformId: PlatformId, html: string): Promise<readonly JobRecord[]>;

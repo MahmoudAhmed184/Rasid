@@ -1,4 +1,4 @@
-import type { ProjectAttachment } from '../../../models/jobs';
+import type { ProjectAttachment } from '../../../entities/job/model';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
 import { getProjectId } from './runtime';
 

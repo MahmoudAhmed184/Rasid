@@ -1,16 +1,16 @@
-import { createBrowserRepositories } from '../../src/infrastructure/storage/browser-repositories'
-import { bootstrapPopup } from '../../src/ui/popup/index'
-
-const repositories = createBrowserRepositories()
+import { createBrowserRepositories } from '../../src/shared/browser/browser-repositories';
+import { bootstrapPopup } from '../../src/app/popup';
 
 function mount(): void {
+    const repositories = createBrowserRepositories();
+
     bootstrapPopup(document, {
         monitoringRepository: repositories.monitoringRepository,
-    })
+    });
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount, { once: true })
+    document.addEventListener('DOMContentLoaded', mount, { once: true });
 } else {
-    mount()
+    mount();
 }

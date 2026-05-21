@@ -8,8 +8,8 @@ import { queryHtmlFragment } from '../../../shared/dom/html-fragments';
 
 declare global {
     interface Window {
-        _frelanciaStatsLoaded?: boolean;
-        frelanciaCountdownsInterval?: ReturnType<typeof setInterval>;
+        _rasidStatsLoaded?: boolean;
+        rasidCountdownsInterval?: ReturnType<typeof setInterval>;
     }
 }
 
@@ -73,9 +73,9 @@ function parseMostaqlBidPageResponse(value: unknown): MostaqlBidPageResponse {
         ? value.collection
               .map((item): MostaqlBidPageItem | null => {
                   if (typeof item === 'string') {
-                  return {
-                      id: null,
-                      rendered: item,
+                      return {
+                          id: null,
+                          rendered: item,
                       };
                   }
 
@@ -137,13 +137,13 @@ export function injectDashboardStats(tracking: TrackingServices) {
     actions.style.display = 'flex';
     actions.style.gap = '8px';
 
-    analyticsButton.id = 'frelancia-show-analytics-btn';
+    analyticsButton.id = 'rasid-show-analytics-btn';
     analyticsButton.className = 'btn btn-sm btn-primary';
     analyticsButton.style.flex = '1';
     analyticsIcon.className = 'fa fa-bar-chart';
     analyticsButton.append(analyticsIcon, ' التحليلات');
 
-    monitoredButton.id = 'frelancia-show-monitored-btn';
+    monitoredButton.id = 'rasid-show-monitored-btn';
     monitoredButton.className = 'btn btn-sm btn-default';
     monitoredButton.style.flex = '1';
     monitoredIcon.className = 'fa fa-eye';
@@ -182,7 +182,7 @@ export function injectDashboardStats(tracking: TrackingServices) {
 }
 
 function _injectAnalyticsModal() {
-    if (document.getElementById('frelancia-analytics-modal')) {
+    if (document.getElementById('rasid-analytics-modal')) {
         return;
     }
 
@@ -197,7 +197,7 @@ function _injectAnalyticsModal() {
     const loadingIcon = document.createElement('i');
     const loadingText = document.createElement('p');
 
-    modal.id = 'frelancia-analytics-modal';
+    modal.id = 'rasid-analytics-modal';
     modal.style.cssText = `
         display: none; position: fixed; top: 0; left: 0;
         width: 100%; height: 100%; z-index: 99999;
@@ -228,7 +228,7 @@ function _injectAnalyticsModal() {
     titleIcon.style.marginLeft = '8px';
     title.append(titleIcon, ' تحليلات العروض');
 
-    closeButton.id = 'frelancia-analytics-close';
+    closeButton.id = 'rasid-analytics-close';
     closeButton.style.background = 'none';
     closeButton.style.border = 'none';
     closeButton.style.fontSize = '24px';
@@ -238,7 +238,7 @@ function _injectAnalyticsModal() {
     closeButton.style.padding = '0 4px';
     closeButton.textContent = '×';
 
-    modalBody.id = 'frelancia-analytics-modal-body';
+    modalBody.id = 'rasid-analytics-modal-body';
 
     loading.style.textAlign = 'center';
     loading.style.padding = '50px';
@@ -266,20 +266,20 @@ function _injectAnalyticsModal() {
 }
 
 function _openAnalyticsModal() {
-    const modal = document.getElementById('frelancia-analytics-modal');
+    const modal = document.getElementById('rasid-analytics-modal');
     if (!modal) {
         return;
     }
     modal.style.display = 'block';
 
-    if (!window._frelanciaStatsLoaded) {
-        window._frelanciaStatsLoaded = true;
+    if (!window._rasidStatsLoaded) {
+        window._rasidStatsLoaded = true;
         _loadBidStats();
     }
 }
 
 function _injectMonitoredModal(tracking: TrackingServices) {
-    if (document.getElementById('frelancia-monitored-modal')) {
+    if (document.getElementById('rasid-monitored-modal')) {
         return;
     }
 
@@ -296,7 +296,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     const loading = document.createElement('div');
     const loadingIcon = document.createElement('i');
 
-    modal.id = 'frelancia-monitored-modal';
+    modal.id = 'rasid-monitored-modal';
     modal.style.cssText = `
         display: none; position: fixed; top: 0; left: 0;
         width: 100%; height: 100%; z-index: 99999;
@@ -331,12 +331,12 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     actions.style.gap = '8px';
     actions.style.alignItems = 'center';
 
-    refreshButton.id = 'frelancia-monitored-refresh';
+    refreshButton.id = 'rasid-monitored-refresh';
     refreshButton.className = 'btn btn-xs btn-default';
     refreshIcon.className = 'fa fa-refresh';
     refreshButton.append(refreshIcon, ' تحديث');
 
-    closeButton.id = 'frelancia-monitored-close';
+    closeButton.id = 'rasid-monitored-close';
     closeButton.style.background = 'none';
     closeButton.style.border = 'none';
     closeButton.style.fontSize = '24px';
@@ -346,7 +346,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     closeButton.style.padding = '0 4px';
     closeButton.textContent = '×';
 
-    modalBody.id = 'frelancia-monitored-modal-body';
+    modalBody.id = 'rasid-monitored-modal-body';
 
     loading.style.textAlign = 'center';
     loading.style.padding = '50px';
@@ -375,7 +375,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
 }
 
 function _openMonitoredModal(tracking: TrackingServices) {
-    const modal = document.getElementById('frelancia-monitored-modal');
+    const modal = document.getElementById('rasid-monitored-modal');
     if (!modal) {
         return;
     }
@@ -479,7 +479,7 @@ function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement 
 }
 
 async function _loadMonitoredData(tracking: TrackingServices) {
-    const listEl = document.getElementById('frelancia-monitored-modal-body');
+    const listEl = document.getElementById('rasid-monitored-modal-body');
     if (!listEl) {
         return;
     }
@@ -771,7 +771,9 @@ function _createBidStatsColumn(config: {
     return column;
 }
 
-function _createBidStatsCountdownCard(bid: StatusStats['recent24hBids'][number]): HTMLAnchorElement {
+function _createBidStatsCountdownCard(
+    bid: StatusStats['recent24hBids'][number]
+): HTMLAnchorElement {
     const totalMs = 24 * 60 * 60 * 1000;
     const msLeft = totalMs - bid.ageMs;
     const progress = Math.max(0, Math.min(100, Math.round(((totalMs - msLeft) / totalMs) * 100)));
@@ -812,7 +814,7 @@ function _createBidStatsCountdownCard(bid: StatusStats['recent24hBids'][number])
     title.textContent = bid.title || 'عرض';
 
     const countdown = document.createElement('div');
-    countdown.className = 'pull-left frelancia-countdown';
+    countdown.className = 'pull-left rasid-countdown';
     countdown.dataset.msLeft = String(msLeft);
     countdown.style.color = color;
     countdown.style.fontFamily = 'monospace';
@@ -827,7 +829,7 @@ function _createBidStatsCountdownCard(bid: StatusStats['recent24hBids'][number])
     progressWrapper.className = 'progress progress--slim';
 
     const progressBar = document.createElement('div');
-    progressBar.className = 'progress-bar frelancia-progress-bar';
+    progressBar.className = 'progress-bar rasid-progress-bar';
     progressBar.setAttribute('role', 'progressbar');
     progressBar.style.width = `${progress}%`;
     progressBar.style.backgroundColor = color;
@@ -953,7 +955,7 @@ function _renderBidStats(stats: StatusStats): void {
         }
     }
 
-    const modalBody = document.getElementById('frelancia-analytics-modal-body');
+    const modalBody = document.getElementById('rasid-analytics-modal-body');
     if (!modalBody) {
         return;
     }
@@ -977,13 +979,13 @@ function _renderBidStats(stats: StatusStats): void {
 }
 
 function _startSlotCountdowns() {
-    if (window.frelanciaCountdownsInterval) {
-        clearInterval(window.frelanciaCountdownsInterval);
+    if (window.rasidCountdownsInterval) {
+        clearInterval(window.rasidCountdownsInterval);
     }
 
     const updateTimers = () => {
         const totalMs = 24 * 60 * 60 * 1000;
-        document.querySelectorAll<HTMLElement>('.frelancia-countdown').forEach((el) => {
+        document.querySelectorAll<HTMLElement>('.rasid-countdown').forEach((el) => {
             let msLeft = parseInt(el.getAttribute('data-ms-left') ?? '0', 10);
             if (isNaN(msLeft) || msLeft <= 0) {
                 el.textContent = 'متاح الآن!';
@@ -1026,7 +1028,7 @@ function _startSlotCountdowns() {
     };
 
     updateTimers();
-    window.frelanciaCountdownsInterval = setInterval(updateTimers, 1000);
+    window.rasidCountdownsInterval = setInterval(updateTimers, 1000);
 }
 
 async function _loadBidStats(): Promise<void> {

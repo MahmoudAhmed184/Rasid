@@ -1,7 +1,7 @@
 import { MOSTAQL_FEEDS } from './feeds';
 import type { PlatformMonitoringAdapter } from '../contracts';
 import type { PlatformMonitoringHtmlParser } from '../monitoring-html-parser';
-import { isPlatformMonitoringEnabled } from '../../models/settings';
+import { isPlatformMonitoringEnabled } from '../../entities/settings/model';
 
 export function createMostaqlMonitoringAdapter(
     htmlParser: PlatformMonitoringHtmlParser

@@ -18,7 +18,7 @@ import {
     isContextValid as isContextValidUnsafe,
 } from './content/runtime';
 import { MOSTAQL_SELECTORS } from './selectors';
-import type { ProjectAttachment } from '../../models/jobs';
+import type { ProjectAttachment } from '../../entities/job/model';
 import { setFormControlValue } from '../../shared/dom/form-events';
 import { parseDurationDays } from '../../shared/parsing/duration';
 import { parseBudgetFloor } from '../../shared/parsing/numbers';

@@ -49,7 +49,7 @@ export const KHAMSAT_SELECTORS = {
         ],
     },
     panel: {
-        rootId: 'frelancia-khamsat-panel',
+        rootId: 'rasid-khamsat-panel',
     },
 } as const;
 

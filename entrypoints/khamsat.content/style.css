@@ -1,4 +1,4 @@
-#frelancia-khamsat-panel {
+#rasid-khamsat-panel {
     position: fixed;
     inset-block-end: 20px;
     inset-inline-start: 20px;
@@ -17,20 +17,20 @@
     backdrop-filter: blur(12px);
 }
 
-.frelancia-khamsat-panel__title {
+.rasid-khamsat-panel__title {
     margin: 0;
     font-size: 18px;
     font-weight: 800;
 }
 
-.frelancia-khamsat-panel__subtitle {
+.rasid-khamsat-panel__subtitle {
     margin: 8px 0 14px;
     color: #516356;
     font-size: 13px;
     line-height: 1.6;
 }
 
-.frelancia-khamsat-panel__label {
+.rasid-khamsat-panel__label {
     display: block;
     margin-bottom: 6px;
     font-size: 12px;
@@ -38,7 +38,7 @@
     color: #32523d;
 }
 
-.frelancia-khamsat-panel__select {
+.rasid-khamsat-panel__select {
     width: 100%;
     margin-bottom: 12px;
     padding: 10px 12px;
@@ -49,13 +49,13 @@
     font: inherit;
 }
 
-.frelancia-khamsat-panel__actions {
+.rasid-khamsat-panel__actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 
-.frelancia-khamsat-panel__button {
+.rasid-khamsat-panel__button {
     appearance: none;
     border: 0;
     border-radius: 12px;
@@ -69,58 +69,58 @@
         box-shadow 120ms ease;
 }
 
-.frelancia-khamsat-panel__button:hover:not(:disabled) {
+.rasid-khamsat-panel__button:hover:not(:disabled) {
     transform: translateY(-1px);
 }
 
-.frelancia-khamsat-panel__button:disabled {
+.rasid-khamsat-panel__button:disabled {
     opacity: 0.55;
     cursor: default;
 }
 
-.frelancia-khamsat-panel__button--primary {
+.rasid-khamsat-panel__button--primary {
     background: linear-gradient(135deg, #2d8a57, #1f6b41);
     color: #fff;
     box-shadow: 0 12px 22px rgba(45, 138, 87, 0.24);
 }
 
-.frelancia-khamsat-panel__button--ghost {
+.rasid-khamsat-panel__button--ghost {
     background: rgba(255, 255, 255, 0.82);
     color: #244633;
     border: 1px solid rgba(39, 82, 58, 0.14);
 }
 
-.frelancia-khamsat-panel__status {
+.rasid-khamsat-panel__status {
     margin: 12px 0 0;
     font-size: 12px;
     line-height: 1.7;
 }
 
-.frelancia-khamsat-panel__status[data-tone='info'] {
+.rasid-khamsat-panel__status[data-tone='info'] {
     color: #516356;
 }
 
-.frelancia-khamsat-panel__status[data-tone='success'] {
+.rasid-khamsat-panel__status[data-tone='success'] {
     color: #1e7146;
 }
 
-.frelancia-khamsat-panel__status[data-tone='error'] {
+.rasid-khamsat-panel__status[data-tone='error'] {
     color: #ab3f2d;
 }
 
-.frelancia-autofilled {
+.rasid-autofilled {
     background: #f2fff6 !important;
     box-shadow: 0 0 0 2px rgba(45, 138, 87, 0.28) !important;
 }
 
 @media (max-width: 640px) {
-    #frelancia-khamsat-panel {
+    #rasid-khamsat-panel {
         inset-inline: 12px;
         inset-block-end: 12px;
         width: auto;
     }
 
-    .frelancia-khamsat-panel__actions {
+    .rasid-khamsat-panel__actions {
         grid-template-columns: 1fr;
     }
 }

@@ -3,7 +3,9 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Frelancia Pro | لوحة التحكم</title>
+        <link rel="icon" type="image/png" sizes="16x16" href="../icons/icon16.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="../icons/icon48.png" />
+        <title>Rasid | راصد | لوحة التحكم</title>
         <script type="module" src="./main.ts"></script>
     </head>
     <body>
@@ -12,8 +14,8 @@
                 <div class="logo-section">
                     <img src="../icons/icon128.png" alt="Logo" class="logo-img" />
                     <div class="logo-text">
-                        <h1>Frelancia</h1>
-                        <span>مساعدك الذكي للعمل الحر</span>
+                        <h1>Rasid</h1>
+                        <span>راصد فرص العمل الحر</span>
                     </div>
                 </div>
 
@@ -42,19 +44,11 @@
                         <i class="fas fa-cog"></i>
                         <span>الإعدادات المتقدمة</span>
                     </button>
-                    <button class="nav-item" data-tab="contributors" type="button">
-                        <i class="fas fa-users"></i>
-                        <span>المساهمون</span>
-                    </button>
-                    <button class="nav-item" data-tab="about" type="button">
-                        <i class="fas fa-info-circle"></i>
-                        <span>من نحن</span>
-                    </button>
                 </nav>
 
-                <div style="margin-top: auto; padding-top: 20px">
-                    <div class="toggle-row" style="background: rgba(255, 255, 255, 0.4)">
-                        <span style="font-size: 13px">حالة المراقبة</span>
+                <div class="sidebar-footer">
+                    <div class="toggle-row monitoring-toggle">
+                        <span>حالة المراقبة</span>
                         <label class="switch">
                             <input type="checkbox" id="systemToggle" checked />
                             <span class="slider"></span>
@@ -105,7 +99,7 @@
                                 <i class="fas fa-wifi"></i>
                             </div>
                             <div class="stat-info">
-                                <span class="value" id="stat-connection" style="font-size: 14px"
+                                <span class="value value-compact" id="stat-connection"
                                     >جارٍ الاتصال...</span
                                 >
                                 <span class="label">حالة الاتصال</span>
@@ -118,19 +112,11 @@
                             <i class="fas fa-eye"></i>
                             <h3>
                                 المشاريع المراقبة
-                                <span
-                                    style="
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        color: var(--text-muted);
-                                        margin-right: 8px;
-                                    "
-                                    >آخر 7 مشاريع</span
-                                >
+                                <span class="section-eyebrow">آخر 7 مشاريع</span>
                             </h3>
                         </div>
                         <div id="recentProjectsList" class="recent-list">
-                            <p class="help-text" style="text-align: center; padding: 40px">
+                            <p class="help-text empty-state">
                                 سيتم عرض آخر المشاريع المرصودة هنا بمجرد توفرها.
                             </p>
                         </div>
@@ -177,9 +163,7 @@
                                 <i class="fas fa-hourglass-half"></i>
                             </div>
                             <div class="stat-info">
-                                <span class="value" id="bids-next-available" style="font-size: 16px"
-                                    >-</span
-                                >
+                                <span class="value value-compact" id="bids-next-available">-</span>
                                 <span class="label">أقرب عرض سيتاح</span>
                             </div>
                         </div>
@@ -533,7 +517,7 @@
                                     type="text"
                                     id="signalrServerUrl"
                                     class="form-control"
-                                    placeholder="https://frelancia.runasp.net/jobNotificationHub"
+                                    placeholder="https://your-server.example/jobNotificationHub"
                                     dir="ltr"
                                 />
                                 <p class="help-text">
@@ -555,12 +539,12 @@
                                     <span class="slider"></span>
                                 </label>
                             </div>
-                            <div class="form-group" style="display: flex; gap: 20px">
-                                <div style="flex: 1">
+                            <div class="form-group field-row">
+                                <div>
                                     <label>من</label>
                                     <input type="time" id="quietHoursStart" class="form-control" />
                                 </div>
-                                <div style="flex: 1">
+                                <div>
                                     <label>إلى</label>
                                     <input type="time" id="quietHoursEnd" class="form-control" />
                                 </div>
@@ -572,21 +556,15 @@
                                 <i class="fas fa-vial"></i>
                                 <h3>أدوات الفحص</h3>
                             </div>
-                            <div style="display: flex; gap: 10px; margin-top: 15px">
+                            <div class="action-row">
                                 <button
                                     id="testNotificationBtn"
                                     class="btn-secondary"
-                                    style="flex: 1; justify-content: center"
                                     type="button"
                                 >
                                     <i class="fas fa-bell"></i> فحص الإشعار
                                 </button>
-                                <button
-                                    id="testSoundBtn"
-                                    class="btn-secondary"
-                                    style="flex: 1; justify-content: center"
-                                    type="button"
-                                >
+                                <button id="testSoundBtn" class="btn-secondary" type="button">
                                     <i class="fas fa-volume-up"></i> فحص الصوت
                                 </button>
                             </div>
@@ -600,28 +578,18 @@
                                 <i class="fas fa-file-export"></i>
                                 <h3>النسخ الاحتياطي</h3>
                             </div>
-                            <div style="display: flex; gap: 10px; margin-top: 15px">
-                                <button
-                                    id="exportBackupBtn"
-                                    class="btn-primary"
-                                    style="flex: 1; justify-content: center"
-                                    type="button"
-                                >
+                            <div class="action-row">
+                                <button id="exportBackupBtn" class="btn-primary" type="button">
                                     <i class="fas fa-download"></i> تصدير البيانات
                                 </button>
-                                <button
-                                    id="importBackupBtn"
-                                    class="btn-secondary"
-                                    style="flex: 1; justify-content: center"
-                                    type="button"
-                                >
+                                <button id="importBackupBtn" class="btn-secondary" type="button">
                                     <i class="fas fa-upload"></i> استيراد البيانات
                                 </button>
                                 <input
                                     type="file"
                                     id="importBackupInput"
                                     accept=".json"
-                                    style="display: none"
+                                    class="hidden-input"
                                 />
                             </div>
                             <p class="help-text">
@@ -631,152 +599,8 @@
                     </div>
                 </div>
 
-                <div class="tab-container hidden" id="contributors-tab">
-                    <div class="content-header">
-                        <div class="header-title">
-                            <h2>شركاء النجاح (المساهمون)</h2>
-                            <p>شكر خاص لكل من ساهم في تطوير وتحسين هذه الإضافة.</p>
-                        </div>
-                    </div>
-
-                    <div id="contributors-list" class="about-grid">
-                        <div
-                            class="loading-spinner"
-                            style="grid-column: 1/-1; text-align: center; padding: 40px"
-                        >
-                            <i
-                                class="fas fa-spinner fa-spin"
-                                style="font-size: 32px; color: var(--primary)"
-                            ></i>
-                            <p style="margin-top: 10px">جاري تحميل قائمة المبدعين...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-container hidden" id="about-tab">
-                    <div class="content-header">
-                        <div class="header-title">
-                            <h2>من نحن</h2>
-                            <p>تعرف على الفريق المطور لمشروع Frelancia.</p>
-                        </div>
-                    </div>
-
-                    <div class="about-grid">
-                        <div class="about-card">
-                            <div class="profile-header">
-                                <div class="profile-avatar elaraby">
-                                    <i class="fas fa-code"></i>
-                                </div>
-                                <div class="profile-info">
-                                    <h3>Mohammed Ramadan Elaraby</h3>
-                                </div>
-                            </div>
-                            <div class="profile-social">
-                                <a
-                                    href="https://www.linkedin.com/in/mohammed-ramadan-elaraby-097245242/"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    class="social-btn linkedin"
-                                >
-                                    <i class="fab fa-linkedin"></i>
-                                    LinkedIn
-                                </a>
-                                <a
-                                    href="https://github.com/Elaraby218"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    class="social-btn github"
-                                >
-                                    <i class="fab fa-github"></i>
-                                    GitHub
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="about-card">
-                            <div class="profile-header">
-                                <div class="profile-avatar omar">
-                                    <i class="fas fa-rocket"></i>
-                                </div>
-                                <div class="profile-info">
-                                    <h3>TryOmar</h3>
-                                </div>
-                            </div>
-                            <div class="profile-social">
-                                <a
-                                    href="https://www.linkedin.com/in/tryomar/"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    class="social-btn linkedin"
-                                >
-                                    <i class="fab fa-linkedin"></i>
-                                    LinkedIn
-                                </a>
-                                <a
-                                    href="https://github.com/TryOmar"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    class="social-btn github"
-                                >
-                                    <i class="fab fa-github"></i>
-                                    GitHub
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mission-section">
-                        <div class="mission-content">
-                            <i class="fas fa-heart mission-icon"></i>
-                            <h3>هدفنا ورؤيتنا</h3>
-                            <p>
-                                لقد قمنا بتطوير هذه الإضافة بهدف واحد أساسي: تمكين المستقلين العرب
-                                من الوصول إلى الفرص والمشاريع المناسبة بأسرع وقت ممكن. نحن نؤمن
-                                أن السرعة والدقة في التقديم هما مفتاح النجاح في عالم العمل الحر،
-                                ولذلك سخرنا تقنيات الذكاء الاصطناعي والمراقبة اللحظية لتكون رفيقك
-                                الدائم في رحلة نجاحك.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <footer class="dashboard-footer">
-                    <div class="footer-content">
-                        <span class="footer-text">جميع الحقوق محفوظة لـ</span>
-                        <div class="footer-links">
-                            <a
-                                href="https://github.com/Elaraby218"
-                                target="_blank"
-                                rel="noreferrer"
-                                class="footer-link"
-                                >Elaraby</a
-                            >
-                            <span class="footer-sep">و</span>
-                            <a
-                                href="https://github.com/TryOmar"
-                                target="_blank"
-                                rel="noreferrer"
-                                class="footer-link"
-                                >TryOmar</a
-                            >
-                        </div>
-                        <span class="footer-copy">&copy; 2026</span>
-                    </div>
-                    <div class="footer-version">v2.0.0 Premium</div>
-                </footer>
-
                 <div class="sticky-footer">
-                    <span
-                        id="saveStatus"
-                        style="
-                            font-size: 14px;
-                            font-weight: 700;
-                            color: var(--success);
-                            opacity: 0;
-                            transition: opacity 0.3s;
-                        "
-                        >تم حفظ التغييرات بنجاح</span
-                    >
+                    <span id="saveStatus" class="save-status">تم حفظ التغييرات بنجاح</span>
                     <button id="saveAllBtn" class="btn-primary" type="button">
                         <i class="fas fa-save"></i> حفظ جميع الإعدادات
                     </button>
@@ -784,24 +608,8 @@
             </main>
         </div>
 
-        <div
-            id="promptModal"
-            class="hidden"
-            style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(5px);
-            "
-        >
-            <div class="settings-section" style="width: 500px; margin-bottom: 0">
+        <div id="promptModal" class="modal-overlay hidden">
+            <div class="settings-section modal-panel">
                 <div class="section-header">
                     <h3 id="modalTitle">إضافة أمر جديد</h3>
                 </div>
@@ -824,21 +632,9 @@
                         placeholder="اكتب الأمر هنا..."
                     ></textarea>
                 </div>
-                <div style="display: flex; gap: 12px; margin-top: 24px">
-                    <button
-                        id="closeModalBtn"
-                        class="nav-item"
-                        style="background: #f1f5f9; text-align: center; justify-content: center"
-                        type="button"
-                    >
-                        إلغاء
-                    </button>
-                    <button
-                        id="confirmSavePrompt"
-                        class="btn-primary"
-                        style="flex: 1; justify-content: center"
-                        type="button"
-                    >
+                <div class="modal-actions">
+                    <button id="closeModalBtn" class="btn-secondary" type="button">إلغاء</button>
+                    <button id="confirmSavePrompt" class="btn-primary" type="button">
                         حفظ الأمر
                     </button>
                 </div>

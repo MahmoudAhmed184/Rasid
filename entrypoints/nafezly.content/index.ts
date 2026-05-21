@@ -1,19 +1,18 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 
 import './style.css';
-import { bootstrapPlatformAutofill } from '../../src/application/content/bootstrapPlatformAutofill';
-import { createPlatformContentServices } from '../../src/application/content/createPlatformContentServices';
-import { bootstrapPlatformContent } from '../../src/application/content/bootstrapPlatformContent';
-import { createBrowserRepositories } from '../../src/infrastructure/storage/browser-repositories';
-import { getPlatformAdapter } from '../../src/platforms/platform-modules';
-
-const nafezlyAdapter = getPlatformAdapter('nafezly');
-const repositories = createBrowserRepositories();
+import { bootstrapPlatformAutofill } from '../../src/app/content/bootstrapPlatformAutofill';
+import { createPlatformContentServices } from '../../src/app/content/createPlatformContentServices';
+import { bootstrapPlatformContent } from '../../src/app/content/bootstrapPlatformContent';
+import { createBrowserRepositories } from '../../src/shared/browser/browser-repositories';
+import { nafezlyAdapter } from '../../src/platforms/nafezly';
 
 export default defineContentScript({
     matches: [...nafezlyAdapter.matches],
     runAt: 'document_idle',
     main() {
+        const repositories = createBrowserRepositories();
+
         bootstrapPlatformContent({
             adapter: nafezlyAdapter,
             document,

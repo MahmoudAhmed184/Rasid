@@ -1,4 +1,4 @@
-import type { JobCategory } from '../../models/jobs';
+import type { JobCategory } from '../../entities/job/model';
 
 export const MOSTAQL_FEEDS: Record<JobCategory, string> = {
     development: 'https://mostaql.com/projects?category=development&sort=latest',

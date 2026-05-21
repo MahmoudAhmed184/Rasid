@@ -1,4 +1,4 @@
-import type { JobRecord } from '../../models/jobs';
+import type { JobRecord } from '../../entities/job/model';
 
 function parseDocument(html: string): Document {
     return new DOMParser().parseFromString(html, 'text/html');

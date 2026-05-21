@@ -3,75 +3,70 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Frelancia | رصد العمل الحر</title>
+        <link rel="icon" type="image/png" sizes="16x16" href="../icons/icon16.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="../icons/icon48.png" />
+        <title>Rasid | راصد</title>
         <script type="module" src="./main.ts"></script>
     </head>
     <body>
-        <div class="minimal-container">
-            <div class="header">
-                <div class="logo-area">
-                    <h1>Frelancia Pro</h1>
-                    <p class="tagline">مساعدك الذكي لمراقبة الفرص والردود السريعة</p>
+        <div class="popup-shell">
+            <header class="popup-header">
+                <div class="brand-mark">
+                    <img src="../icons/icon128.png" alt="" />
                 </div>
-            </div>
+                <div class="brand-copy">
+                    <h1>Rasid</h1>
+                    <p>راصد فرص العمل الحر والردود السريعة</p>
+                </div>
+            </header>
 
-            <div class="content-body">
-                <div class="stats-overview">
+            <main class="popup-content">
+                <section class="stats-panel" aria-label="إحصائيات الرصد">
                     <div class="stat-box">
-                        <span class="stat-num" id="todayCount">0</span>
                         <span class="stat-label">مشاريع اليوم</span>
+                        <strong class="stat-num" id="todayCount">0</strong>
                     </div>
-                    <div class="stat-divider"></div>
                     <div class="stat-box">
-                        <span class="stat-num" id="totalSeen">0</span>
                         <span class="stat-label">إجمالي الرصد</span>
+                        <strong class="stat-num" id="totalSeen">0</strong>
                     </div>
-                </div>
+                </section>
 
-                <div class="status-indicator">
+                <div class="status-indicator" aria-live="polite">
                     <span class="dot active"></span>
                     <span id="lastCheck">جاري التحميل...</span>
                 </div>
 
-                <div class="main-actions">
-                    <button id="open-dashboard-btn" class="btn primary" type="button">
+                <section class="main-actions" aria-label="إجراءات سريعة">
+                    <button id="open-dashboard-btn" class="btn action primary" type="button">
                         <i class="fas fa-desktop"></i>
                         <span>فتح لوحة التحكم</span>
                     </button>
-                    <button id="checkNowBtn" class="btn secondary" type="button">
+                    <button id="checkNowBtn" class="btn action secondary" type="button">
                         <i class="fas fa-sync-alt"></i>
                         <span>فحص الآن</span>
                     </button>
-                    <button id="toggleNotificationsBtn" class="btn secondary" type="button">
+                    <button id="toggleNotificationsBtn" class="btn action secondary" type="button">
                         <i class="fas fa-bell"></i>
                         <span>الإشعارات: مفعلة</span>
                     </button>
-
-                    <button id="checkConnectionBtn" class="btn connection" type="button">
+                    <button id="checkConnectionBtn" class="btn diagnostic" type="button">
                         <i class="fas fa-plug"></i>
-                        <span>فحص الاتصال بالمصادر (Diagnostics)</span>
+                        <span>فحص الاتصال بالمصادر</span>
                     </button>
-                </div>
+                </section>
 
                 <div id="connectionReport" class="connection-report hidden"></div>
-            </div>
+            </main>
 
-                <div class="footer">
-                    <div class="footer-links">
-                        <a href="https://mostaql.com/projects" target="_blank" rel="noreferrer"
-                            >مستقل</a
-                        >
-                        <a href="https://khamsat.com/community/requests" target="_blank" rel="noreferrer"
-                            >خمسات</a
-                        >
-                        <a href="https://nafezly.com/projects" target="_blank" rel="noreferrer"
-                            >نفذلي</a
-                        >
-                        <a href="https://kafiil.com/projects" target="_blank" rel="noreferrer"
-                            >كفيل</a
-                        >
-                    </div>
-                </div>
-            </div>
+            <footer class="popup-footer">
+                <a href="https://mostaql.com/projects" target="_blank" rel="noreferrer">مستقل</a>
+                <a href="https://khamsat.com/community/requests" target="_blank" rel="noreferrer"
+                    >خمسات</a
+                >
+                <a href="https://nafezly.com/projects" target="_blank" rel="noreferrer">نفذلي</a>
+                <a href="https://kafiil.com/projects" target="_blank" rel="noreferrer">كفيل</a>
+            </footer>
+        </div>
     </body>
 </html>

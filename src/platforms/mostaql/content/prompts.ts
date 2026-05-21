@@ -1,5 +1,5 @@
-import { AI_PROMPT_VARIABLES } from '../../../application/proposals/prompt-variables';
-import type { PromptTemplate } from '../../../models/prompts';
+import { AI_PROMPT_VARIABLES } from '../../../features/proposals/prompt-variables';
+import type { PromptTemplate } from '../../../entities/prompt/model';
 import type { PlatformContentServices } from '../../contracts';
 import { isContextValid } from './runtime';
 

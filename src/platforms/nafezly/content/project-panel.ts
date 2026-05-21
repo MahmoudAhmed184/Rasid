@@ -14,52 +14,48 @@ function getCurrentUrl(doc: Document): URL {
 }
 
 function createPanelRoot(doc: Document): HTMLElement {
-    doc.getElementById('frelancia-nafezly-panel')?.remove();
+    doc.getElementById('rasid-nafezly-panel')?.remove();
 
     const root = doc.createElement('aside');
-    root.id = 'frelancia-nafezly-panel';
-    root.className = 'frelancia-nafezly-panel';
+    root.id = 'rasid-nafezly-panel';
+    root.className = 'rasid-nafezly-panel';
     return root;
 }
 
-export function mountNafezlyProjectPanel(
-    input: MountNafezlyProjectPanelInput
-): PlatformDisposer {
+export function mountNafezlyProjectPanel(input: MountNafezlyProjectPanelInput): PlatformDisposer {
     const root = createPanelRoot(input.document);
     const title = input.document.createElement('h3');
-    title.className = 'frelancia-nafezly-panel__title';
-    title.textContent = 'Frelancia';
+    title.className = 'rasid-nafezly-panel__title';
+    title.textContent = 'Rasid | راصد';
 
     const subtitle = input.document.createElement('p');
-    subtitle.className = 'frelancia-nafezly-panel__subtitle';
+    subtitle.className = 'rasid-nafezly-panel__subtitle';
     subtitle.textContent = 'لوحة سريعة لمشاريع نفذلي: متابعة وتوليد عرض جاهز.';
 
     const promptLabel = input.document.createElement('label');
-    promptLabel.className = 'frelancia-nafezly-panel__label';
+    promptLabel.className = 'rasid-nafezly-panel__label';
     promptLabel.textContent = 'قالب العرض';
 
     const promptSelect = input.document.createElement('select');
-    promptSelect.className = 'frelancia-nafezly-panel__select';
+    promptSelect.className = 'rasid-nafezly-panel__select';
     promptSelect.disabled = true;
 
     const actions = input.document.createElement('div');
-    actions.className = 'frelancia-nafezly-panel__actions';
+    actions.className = 'rasid-nafezly-panel__actions';
 
     const trackButton = input.document.createElement('button');
     trackButton.type = 'button';
-    trackButton.className =
-        'frelancia-nafezly-panel__button frelancia-nafezly-panel__button--ghost';
+    trackButton.className = 'rasid-nafezly-panel__button rasid-nafezly-panel__button--ghost';
     trackButton.textContent = 'متابعة';
 
     const generateButton = input.document.createElement('button');
     generateButton.type = 'button';
-    generateButton.className =
-        'frelancia-nafezly-panel__button frelancia-nafezly-panel__button--primary';
+    generateButton.className = 'rasid-nafezly-panel__button rasid-nafezly-panel__button--primary';
     generateButton.textContent = 'ولّد العرض';
     generateButton.disabled = true;
 
     const status = input.document.createElement('p');
-    status.className = 'frelancia-nafezly-panel__status';
+    status.className = 'rasid-nafezly-panel__status';
     status.dataset.tone = 'info';
     status.textContent = 'جارِ تحميل القوالب...';
 
@@ -197,7 +193,7 @@ export function mountNafezlyProjectPanel(
 
             if (result.kind === 'bridge') {
                 await input.services.proposals.setPendingBridgePrompt(result.prompt);
-                window.open(result.chatUrl || 'https://chatgpt.com/', 'frelancia_ai_chat');
+                window.open(result.chatUrl || 'https://chatgpt.com/', 'rasid_ai_chat');
                 setStatus('تم فتح نافذة الذكاء الاصطناعي بالمطالبة الجاهزة.', 'success');
                 return;
             }

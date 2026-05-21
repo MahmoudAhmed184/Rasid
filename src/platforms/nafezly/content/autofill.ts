@@ -2,7 +2,7 @@ import { setFormControlValue } from '../../../shared/dom/form-events';
 import type { AutofillApplyResult, PlatformAutofillDraft, PlatformPage } from '../../contracts';
 import { NAFEZLY_SELECTORS, queryFirst } from '../selectors';
 
-const NAFEZLY_AUTOFILLED_CLASS = 'frelancia-nafezly-autofilled';
+const NAFEZLY_AUTOFILLED_CLASS = 'rasid-nafezly-autofilled';
 
 function getAuthState(doc: Document): boolean {
     return doc.querySelector<HTMLMetaElement>(NAFEZLY_SELECTORS.project.authMeta)?.content === '1';

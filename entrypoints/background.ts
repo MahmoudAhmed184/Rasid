@@ -1,10 +1,8 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 
-import { createBackgroundApp } from '../src/application/background/create-background-services';
-import { registerBackgroundRuntimeMessageBus } from '../src/application/runtime/background-message-bus';
-
-const backgroundApp = createBackgroundApp();
+import { createBackgroundApp } from '../src/app/background/create-background-services';
+import { registerBackgroundRuntimeMessageBus } from '../src/app/background/background-message-bus';
 
 function runTask(label: string, task: () => Promise<void>): void {
     void task().catch((error) => {
@@ -15,6 +13,8 @@ function runTask(label: string, task: () => Promise<void>): void {
 export default defineBackground({
     type: 'module',
     main() {
+        const backgroundApp = createBackgroundApp();
+
         backgroundApp.notifications.registerHandlers();
 
         browser.runtime.onInstalled.addListener(() => {
