@@ -1,4 +1,6 @@
-export default [
+import { defineConfig } from 'eslint/config';
+
+export default defineConfig([
     {
         ignores: [
             '.wxt/**',
@@ -29,4 +31,4 @@ export default [
             curly: ['error', 'all'],
         },
     },
-];
+]);

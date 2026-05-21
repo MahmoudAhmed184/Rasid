@@ -1,9 +1,12 @@
 {
-    "name": "frelancia",
+    "name": "rasid",
     "version": "1.0.0",
     "private": true,
     "type": "module",
-    "description": "Cross-browser Manifest V3 build pipeline for the Frelancia WebExtension",
+    "description": "Cross-browser Manifest V3 build pipeline for the Rasid (راصد) WebExtension",
+    "engines": {
+        "node": ">=20.19.0"
+    },
     "scripts": {
         "postinstall": "wxt prepare",
         "dev:chrome": "wxt -b chrome --mv3",
@@ -21,14 +24,18 @@
         "lint:firefox": "web-ext lint --source-dir dist/firefox-mv3"
     },
     "devDependencies": {
-        "eslint": "^9.38.0",
-        "prettier": "^3.6.2",
-        "typescript": "^6.0.2",
-        "web-ext": "^10.1.0",
-        "wxt": "^0.20.20"
+        "eslint": "~10.4.0",
+        "prettier": "^3.8.3",
+        "typescript": "^6.0.3",
+        "web-ext": "^10.2.0",
+        "wxt": "^0.20.26"
     },
     "dependencies": {
-        "@microsoft/signalr": "^10.0.0",
-        "jszip": "^3.10.1"
+        "@microsoft/signalr": "^10.0.0"
+    },
+    "overrides": {
+        "node-notifier": {
+            "uuid": "^11.1.1"
+        }
     }
 }

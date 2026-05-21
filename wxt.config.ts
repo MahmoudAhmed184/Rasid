@@ -1,9 +1,5 @@
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig } from 'wxt';
-
-const projectRoot = fileURLToPath(new URL('.', import.meta.url));
+import type { Plugin } from 'vite';
 
 const icons = {
     16: 'icons/icon16.png',
@@ -18,13 +14,34 @@ const hostPermissions = [
     'https://kafiil.com/*',
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
-    'https://frelancia.runasp.net/*',
+    'https://freelancia.runasp.net/*',
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
 ] as const;
 
 const sharedPermissions = ['alarms', 'downloads', 'notifications', 'storage'] as const;
+
+function stripSignalRInvalidPureAnnotations(): Plugin {
+    return {
+        name: 'strip-signalr-invalid-pure-annotations',
+        enforce: 'pre',
+        transform(code, id) {
+            const normalizedId = id.replace(/\\/g, '/');
+
+            if (!normalizedId.endsWith('/node_modules/@microsoft/signalr/dist/esm/Utils.js')) {
+                return null;
+            }
+
+            const updatedCode = code.replace(
+                /\/\/ eslint-disable-next-line spaced-comment\r?\n\/\*#__PURE__\*\/ function (getOsName|getRuntimeVersion)\(/g,
+                'function $1('
+            );
+
+            return updatedCode === code ? null : { code: updatedCode, map: null };
+        },
+    };
+}
 
 export default defineConfig({
     // Keep WXT entrypoints separate from reusable source modules.
@@ -34,22 +51,18 @@ export default defineConfig({
     outDir: 'dist',
     outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
     vite: () => ({
-        resolve: {
-            alias: {
-                '@': resolve(projectRoot, 'src'),
-            },
-        },
+        plugins: [stripSignalRInvalidPureAnnotations()],
     }),
     manifest: ({ browser }) => {
         const isChrome = browser === 'chrome';
 
         return {
-            name: 'Frelancia',
-            short_name: 'Frelancia',
+            name: 'Rasid | راصد',
+            short_name: 'Rasid',
             version: '1.0.0',
             description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
             action: {
-                default_title: 'Frelancia',
+                default_title: 'Rasid | راصد',
                 default_popup: 'popup/index.html',
                 default_icon: icons,
             },
@@ -65,7 +78,7 @@ export default defineConfig({
                 ? undefined
                 : {
                       gecko: {
-                          id: 'frelancia@mostaql-notifier',
+                          id: 'rasid@mostaql-notifier',
                           strict_min_version: '140.0',
                           data_collection_permissions: {
                               required: ['websiteContent'],
