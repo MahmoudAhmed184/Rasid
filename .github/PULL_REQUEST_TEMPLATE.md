@@ -1,49 +1,86 @@
-## Description
+## Summary
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+<!-- What changed, why it changed, and the user/reviewer impact. -->
 
-Fixes # (issue)
+Fixes #
 
-## Type of change
+## Change Type
 
-Please delete options that are not relevant.
+- [ ] Bug fix
+- [ ] Feature
+- [ ] Refactor
+- [ ] Documentation
+- [ ] Test or validation
+- [ ] Build, packaging, or release
+- [ ] Security or privacy
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Refactoring (internal code improvements without behavior changes)
-- [ ] Documentation update
+## Affected Area
 
-## Platform / Context
-
-Which platform(s) does this affect?
-- [ ] Global / Core Extension
+- [ ] Background runtime, alarms, SignalR, polling, notifications, downloads, or offscreen/local tasks
+- [ ] Popup or dashboard UI
+- [ ] Content scripts or platform adapters
 - [ ] Mostaql
 - [ ] Khamsat
 - [ ] Nafezly
-- [ ] Kafiil
-- [ ] Chat Bridge / AI
+- [ ] AI direct provider mode
+- [ ] ChatGPT bridge mode
+- [ ] Storage, backup, import, export, or secret handling
+- [ ] Manifest permissions, host permissions, or generated build output
+- [ ] Documentation or GitHub metadata
 
-## How Has This Been Tested?
+## Release And Store-Review Impact
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration.
+- [ ] No browser permission or host-permission changes
+- [ ] No new network destination
+- [ ] No new stored data, exported data, or backup schema change
+- [ ] No change to supported platform scope
+- [ ] No change to AI provider or ChatGPT bridge behavior
+- [ ] Store-review notes and privacy text are updated when needed
 
-- [ ] Tested on Chrome (Manifest V3)
-- [ ] Tested on Firefox (Manifest V3)
-- [ ] Tested Popup / Dashboard UI
-- [ ] Tested Content Scripts on target platforms
+Explain any checked item that is not true:
 
-**Test Configuration**:
-* OS:
-* Browser & Version:
-* Extension Build (`npm run build` or `npm run dev`):
+```text
 
-## Checklist:
+```
 
-- [ ] My code follows the style guidelines of this project (`npm run lint` passes)
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation (e.g., `README.md`, `docs/`)
-- [ ] My changes generate no new warnings (`npm run typecheck` passes)
-- [ ] No secrets, API keys, or personal data have been committed
-- [ ] I have checked that browser-specific behavior is intentional and documented
+## Validation
+
+Commands run:
+
+- [ ] `npm run typecheck`
+- [ ] `npm run lint`
+- [ ] `npm run format:check`
+- [ ] `npm test`
+- [ ] `npm run build`
+- [ ] `npm run lint:firefox`
+
+Manual testing:
+
+- [ ] Chrome / Chromium MV3
+- [ ] Firefox MV3
+- [ ] Popup
+- [ ] Dashboard
+- [ ] Content script on affected platform
+- [ ] Notifications, realtime, or polling
+- [ ] AI direct provider mode
+- [ ] ChatGPT bridge mode
+- [ ] Backup, import, export, or download flow
+
+Environment:
+
+- OS:
+- Browser and version:
+- Build output or dev command used:
+
+## Documentation
+
+- [ ] README updated when public behavior changed
+- [ ] PRIVACY updated when data handling changed
+- [ ] Relevant docs under `docs/` updated
+- [ ] Source-reference docs updated when files, functions, storage keys, or contracts changed
+- [ ] GitHub templates updated when contributor or release workflow changed
+- [ ] Not applicable
+
+## Reviewer Notes
+
+<!-- Risks, tradeoffs, screenshots, logs, skipped checks, or follow-up work reviewers should know about. Do not include secrets or personal data. -->

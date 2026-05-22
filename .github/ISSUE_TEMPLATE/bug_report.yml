@@ -1,0 +1,112 @@
+name: Bug Report
+description: Report a reproducible Rasid extension defect.
+title: '[Bug]: '
+labels: ['bug', 'needs triage']
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Use this form for reproducible extension defects. Do not include AI API keys, private proposals, cookies, marketplace account data, or personal client data.
+
+              Security vulnerabilities should be reported through the repository security policy, not through a public issue.
+    - type: checkboxes
+      id: preflight
+      attributes:
+          label: Preflight
+          options:
+              - label: I searched existing issues and did not find a duplicate.
+                required: true
+              - label: This is not a security vulnerability report.
+                required: true
+              - label: I removed secrets and personal data from logs, screenshots, and examples.
+                required: true
+    - type: dropdown
+      id: affected-area
+      attributes:
+          label: Affected area
+          multiple: true
+          options:
+              - Background runtime
+              - Popup
+              - Dashboard
+              - Content script
+              - Mostaql
+              - Khamsat
+              - Nafezly
+              - Notifications
+              - SignalR or polling
+              - AI direct provider mode
+              - ChatGPT bridge mode
+              - Backup, import, export, or downloads
+              - Build, packaging, or release
+              - Documentation
+              - Unknown
+      validations:
+          required: true
+    - type: dropdown
+      id: browser
+      attributes:
+          label: Browser
+          options:
+              - Chrome or Chromium
+              - Firefox desktop
+              - Firefox for Android
+              - Edge, Brave, or another Chromium browser
+              - Not browser-specific
+              - Unknown
+      validations:
+          required: true
+    - type: input
+      id: browser-version
+      attributes:
+          label: Browser version
+          description: 'Example: Chrome 126, Firefox 140.'
+      validations:
+          required: false
+    - type: input
+      id: extension-version
+      attributes:
+          label: Extension version or build
+          description: 'Example: 1.0.0, `npm run dev:chrome`, `dist/chrome-mv3`, `dist/firefox-mv3`.'
+      validations:
+          required: true
+    - type: textarea
+      id: current-behavior
+      attributes:
+          label: Current behavior
+          description: Describe what happened.
+      validations:
+          required: true
+    - type: textarea
+      id: expected-behavior
+      attributes:
+          label: Expected behavior
+          description: Describe what you expected Rasid to do.
+      validations:
+          required: true
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: Reproduction steps
+          description: Provide exact steps a maintainer can follow.
+          value: |
+              1.
+              2.
+              3.
+      validations:
+          required: true
+    - type: textarea
+      id: logs
+      attributes:
+          label: Logs, screenshots, or diagnostics
+          description: Include sanitized console output, background worker logs, screenshots, or relevant dashboard diagnostics.
+          render: text
+      validations:
+          required: false
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context
+          description: Add any affected settings, AI provider mode, platform page type, or recent changes that help reproduce the issue.
+      validations:
+          required: false

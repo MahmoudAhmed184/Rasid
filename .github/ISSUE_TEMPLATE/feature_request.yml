@@ -1,0 +1,86 @@
+name: Feature Request
+description: Propose a scoped Rasid enhancement.
+title: '[Feature]: '
+labels: ['enhancement', 'needs triage']
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Use this form for product, platform, AI, workflow, documentation, or release-process improvements. Do not include secrets, private proposals, marketplace account data, or client data.
+    - type: checkboxes
+      id: preflight
+      attributes:
+          label: Preflight
+          options:
+              - label: I searched existing issues and did not find a duplicate.
+                required: true
+              - label: I understand platform, permission, storage, AI, or privacy changes need documentation updates.
+                required: true
+    - type: dropdown
+      id: feature-area
+      attributes:
+          label: Feature area
+          multiple: true
+          options:
+              - Background monitoring
+              - SignalR or polling
+              - Notifications
+              - Popup
+              - Dashboard
+              - Content script UI
+              - Platform adapter
+              - Mostaql
+              - Khamsat
+              - Nafezly
+              - AI direct provider mode
+              - ChatGPT bridge mode
+              - Backup, import, export, or downloads
+              - Build, packaging, or release
+              - Documentation
+      validations:
+          required: true
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problem or use case
+          description: What user, maintainer, reviewer, or release problem should this solve?
+      validations:
+          required: true
+    - type: textarea
+      id: proposal
+      attributes:
+          label: Proposed solution
+          description: Describe the smallest useful change.
+      validations:
+          required: true
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: List current workarounds or other approaches.
+      validations:
+          required: false
+    - type: checkboxes
+      id: impact
+      attributes:
+          label: Impact checklist
+          options:
+              - label: This may require new browser permissions or host permissions.
+              - label: This may require new storage keys, backup fields, or import behavior.
+              - label: This may require new network destinations or AI provider behavior.
+              - label: This may require platform support, parser, selector, or content-script changes.
+              - label: This may affect Chrome Web Store or AMO review notes.
+    - type: textarea
+      id: validation
+      attributes:
+          label: Suggested validation
+          description: Describe tests or manual browser checks that would prove the feature works.
+      validations:
+          required: false
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context
+          description: Add screenshots, diagrams, references, or constraints. Remove private data first.
+      validations:
+          required: false

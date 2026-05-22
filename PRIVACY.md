@@ -6,7 +6,7 @@ This disclosure is based on the code in this repository as provided. It describe
 
 ## Local Storage
 
-The extension stores operational state in `browser.storage.local`.
+The extension stores operational state in `browser.storage.local`. Direct-mode AI API keys are stored separately in `browser.storage.session` for trusted extension contexts while the browser session is active.
 
 ### Persistent snapshot keys
 
@@ -22,28 +22,25 @@ The extension stores operational state in `browser.storage.local`.
 
 ### Temporary or auxiliary keys
 
-- `pendingChatGptPrompt`
+- `pendingChatGptPrompt` as a short-lived one-shot record
 - `mostaql_pending_autofill`
 - `khamsat_pending_autofill`
 - `nafezly_pending_autofill`
-- `kafiil_pending_autofill`
-- `freelancer_pending_autofill`
-- `upwork_pending_autofill`
 - `notification:<notificationId>`
 
 ### AI API keys
 
-AI API keys are stored locally in:
+AI API keys are stored in browser session storage under the extension-managed secret key:
 
-- `settings.aiApiKey`
+- `aiApiKeySecret`
 
-The repository does not encrypt that value before writing it to browser storage.
+The persistent `settings` object stores `settings.aiApiKey` as an empty string. Legacy keys found in persistent settings are migrated to session storage and removed from the persistent settings snapshot. The repository does not encrypt the session value before writing it to browser storage, and the key may need to be re-entered after a browser session restart.
 
 ### Backup exports
 
-The backup export path normalizes and exports the stored settings snapshot plus proposal-state keys. As implemented, that export includes `settings.aiApiKey`.
+The backup export path normalizes and exports the stored settings snapshot plus non-secret proposal-state keys. Default backups do not include `settings.aiApiKey`, `aiApiKeySecret`, or `pendingChatGptPrompt`.
 
-Important consequence: if a user exports a backup, the resulting JSON backup includes the API key unless the application changes that policy.
+Importing a backup does not import API keys or stale ChatGPT bridge prompts. Import clears the current session API key so the user must explicitly enter any direct-mode key again.
 
 ## What Is Sent To Mostaql
 
@@ -53,8 +50,8 @@ The extension makes several requests to `https://mostaql.com/*`.
 
 Background monitoring is orchestrated by:
 
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/fetch-platform-html.ts`
+- `src/features/monitoring/run-polling-cycle.ts`
+- `src/features/monitoring/fetch-platform-html.ts`
 - `src/platforms/mostaql/monitoring.ts`
 
 The current Mostaql feed set is:
@@ -145,8 +142,8 @@ The extension makes monitoring requests to `https://khamsat.com/*`.
 
 Khamsat monitoring is implemented through:
 
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/fetch-platform-html.ts`
+- `src/features/monitoring/run-polling-cycle.ts`
+- `src/features/monitoring/fetch-platform-html.ts`
 - `src/platforms/khamsat/monitoring.ts`
 
 The current Khamsat monitoring feed is:
@@ -185,8 +182,8 @@ The extension makes monitoring requests to `https://nafezly.com/*`.
 
 Nafezly monitoring is implemented through:
 
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/fetch-platform-html.ts`
+- `src/features/monitoring/run-polling-cycle.ts`
+- `src/features/monitoring/fetch-platform-html.ts`
 - `src/platforms/nafezly/monitoring.ts`
 
 The current Nafezly monitoring feed is:
@@ -217,58 +214,19 @@ The Nafezly content script reads the currently open project page DOM for trackin
 
 The current Nafezly content workflow does not add custom platform-origin network requests beyond the page the user already opened.
 
-## What Is Sent To Kafiil
-
-The extension makes monitoring requests to `https://kafiil.com/*`.
-
-### Background polling requests
-
-Kafiil monitoring is implemented through:
-
-- `src/application/monitoring/run-polling-cycle.ts`
-- `src/application/monitoring/fetch-platform-html.ts`
-- `src/platforms/kafiil/monitoring.ts`
-
-The current Kafiil monitoring feed is:
-
-- `https://kafiil.com/projects`
-
-Request properties:
-
-- method: `GET`
-- body: none
-- credentials: `omit`
-- cache: `no-store`
-- referrerPolicy: `no-referrer`
-
-### Project/detail hydration requests
-
-When polling finds a new Kafiil project, the background may fetch the project URL and parse it locally for richer metadata.
-
-Request properties:
-
-- method: `GET`
-- body: none
-- credentials: `omit`
-
-### Page-side content features
-
-The Kafiil content script currently exists only to classify supported URLs and keep the host registration path consistent.
-
-The v1 Kafiil adapter does not inject UI, does not autofill forms, and does not initiate additional Kafiil network requests from the content script.
-
 ## What Is Sent To The Custom SignalR Server
 
 The extension connects to:
 
-- `settings.signalrServerUrl`, or
 - `https://freelancia.runasp.net/jobNotificationHub`
+
+The store build uses only this packaged default backend origin. Custom backend origins require a custom build with matching host permissions.
 
 This connection is managed by:
 
-- `src/infrastructure/realtime/signalr-manager.ts`
-- `src/infrastructure/realtime/signalr-reducer.ts`
-- `src/infrastructure/realtime/signalr-effects.ts`
+- `src/features/realtime/signalr-manager.ts`
+- `src/features/realtime/signalr-reducer.ts`
+- `src/features/realtime/signalr-effects.ts`
 
 Configured transports:
 
@@ -327,19 +285,20 @@ JSON body:
 - `model`
 - `instructions`
 - `input`
-- optional `temperature`
-- optional `max_output_tokens`
+- `temperature`
+- `max_output_tokens`
 - optional `metadata`
 
 ### Gemini
 
 Endpoint:
 
-- `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}`
+- `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
 
 Headers:
 
 - `content-type: application/json`
+- `x-goog-api-key: <apiKey>`
 
 JSON body:
 
@@ -375,8 +334,8 @@ When `settings.aiExecutionMode !== 'direct'`, the extension does not call an AI 
 Instead it:
 
 1. renders the proposal prompt locally
-2. stores that text in `browser.storage.local.pendingChatGptPrompt`
-3. opens `settings.aiChatUrl` or `https://chatgpt.com/`
+2. stores that text as a short-lived one-shot `browser.storage.local.pendingChatGptPrompt` record with an expiry and target ChatGPT host
+3. opens the normalized ChatGPT URL, restricted to `https://chatgpt.com/` or `https://chat.openai.com/`
 4. injects the prompt into the DOM on:
     - `https://chatgpt.com/*`
     - `https://chat.openai.com/*`
@@ -391,7 +350,8 @@ The dashboard does not make additional contributor or profile lookup requests.
 
 Based on the repository code:
 
-- it does not send custom POST or PUT payloads to Mostaql, Khamsat, Nafezly, or Kafiil
+- it does not send custom POST or PUT payloads to Mostaql, Khamsat, or Nafezly
 - it does not send user prompts or project payloads to the SignalR server
 - it does not auto-submit bridge-mode prompts to ChatGPT
-- it does not encrypt AI API keys before storing them locally
+- it does not include AI API keys or pending bridge prompts in default backup exports
+- it does not encrypt AI API keys before storing them in browser session storage
