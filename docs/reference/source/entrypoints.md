@@ -2,6 +2,11 @@
 
 Runtime contexts: WXT background, content scripts, extension pages, and Chrome offscreen page.
 
+Automated coverage:
+
+- `tests/e2e/chrome/extension-smoke.spec.ts` loads the built Chrome extension with Playwright and smokes service worker, popup, dashboard, and a fixture-routed content page.
+- `tests/e2e/firefox/manifest-smoke.test.ts` keeps Firefox coverage to build/lint/generated-manifest smoke unless full Firefox extension E2E becomes practical.
+
 ## `entrypoints/background.ts`
 
 Purpose: WXT background entrypoint.

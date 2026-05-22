@@ -87,7 +87,7 @@ WXT rewrites the source popup/dashboard entrypoints into generated extension pag
 
 - WebExtension source under `entrypoints/` and `src/`.
 - Static icons under `public/icons/`.
-- WXT, TypeScript, ESLint, Prettier, web-ext, and no-dependency Node test configuration.
+- WXT, TypeScript, ESLint, Prettier, web-ext, Vitest, and Playwright test configuration.
 - Optional backend source under `server/`, which is out of the WebExtension release package unless the repository owner decides otherwise.
 
 The browser extension does not execute remote scripts. AI provider calls and marketplace/backend fetches are network requests made by bundled extension code.
@@ -149,7 +149,6 @@ public/
   icons/
 
 docs/
-  reviews/
   reference/
 
 tests/
@@ -194,16 +193,20 @@ npm ci
 
 ## Development Commands
 
-| Command                | Purpose                                                      |
-| ---------------------- | ------------------------------------------------------------ |
-| `npm run dev:chrome`   | Start WXT dev mode for Chrome MV3.                           |
-| `npm run dev:firefox`  | Start WXT dev mode for Firefox MV3.                          |
-| `npm run typecheck`    | Run TypeScript with `--noEmit`.                              |
-| `npm run lint`         | Run TypeScript unused checks through `lint:ts`, then ESLint. |
-| `npm run lint:fix`     | Run ESLint with auto-fixes.                                  |
-| `npm test`             | Compile and run the dependency-free Node unit tests.         |
-| `npm run format`       | Format the repository with Prettier.                         |
-| `npm run format:check` | Check formatting with Prettier.                              |
+| Command                    | Purpose                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| `npm run dev:chrome`       | Start WXT dev mode for Chrome MV3.                           |
+| `npm run dev:firefox`      | Start WXT dev mode for Firefox MV3.                          |
+| `npm run typecheck`        | Run TypeScript with `--noEmit`.                              |
+| `npm run lint`             | Run TypeScript unused checks through `lint:ts`, then ESLint. |
+| `npm run lint:fix`         | Run ESLint with auto-fixes.                                  |
+| `npm test`                 | Typecheck and run Vitest unit and integration tests.         |
+| `npm run test:unit`        | Run the source-mirrored unit test slice.                     |
+| `npm run test:integration` | Run background, feature, entrypoint, and policy tests.       |
+| `npm run test:e2e:chrome`  | Run Playwright Chromium extension smoke tests.               |
+| `npm run test:coverage`    | Run Vitest with V8 coverage reporting.                       |
+| `npm run format`           | Format the repository with Prettier.                         |
+| `npm run format:check`     | Check formatting with Prettier.                              |
 
 ## Build Commands
 
@@ -417,6 +420,8 @@ Targeted consistency checks should verify unsupported-platform references, delet
 
 Current unit tests cover AI chat URL normalization, settings normalization, backup secret handling, and Mostaql bid tracker calculations.
 
+The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafezly, storage/message contracts, AI provider payloads, prompt rendering, monitoring/realtime reducers, ZIP export safety, dashboard tab behavior, generated-manifest, and Chrome Playwright E2E scaffolding. See [`tests/README.md`](tests/README.md) and [`docs/20-testing-strategy.md`](docs/20-testing-strategy.md).
+
 ## Release Checklist
 
 1. Install with `npm ci`.
@@ -465,7 +470,7 @@ Start with [`docs/README.md`](docs/README.md). Key docs:
 
 - Direct AI mode necessarily sends prompt content and the user-provided API key to the selected provider from the browser extension runtime.
 - ChatGPT bridge mode writes a prompt into the ChatGPT page but does not submit it.
-- Browser E2E tests are not present; current automated tests are focused Node unit tests.
+- Chrome browser E2E is available through Playwright after `npm run build:chrome`; Firefox remains build/lint/manifest smoke rather than full browser automation.
 - Full TypeScript-aware ESLint is not configured because no TypeScript ESLint dependency has been added.
 - The optional `server/` tree remains a repository-scope decision and is not part of the documented WebExtension release package.
 

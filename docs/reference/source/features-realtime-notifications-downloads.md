@@ -52,11 +52,10 @@ Purpose: converts reducer effects into browser alarms.
 
 Functions:
 
-| Function                                                           | Purpose                                                       | Inputs              | Outputs         | Side effects, errors, security                  |
-| ------------------------------------------------------------------ | ------------------------------------------------------------- | ------------------- | --------------- | ----------------------------------------------- |
-| `createAlarmInfo(options)`                                         | Adds Chrome `persistAcrossSessions` when building for Chrome. | alarm create info   | create info     | Browser-specific alarm option.                  |
-| `createRecurringSignalREffects(desiredTransport, pollingInterval)` | Returns recurring alarm effects for transport mode.           | transport, interval | effect array    | Clears irrelevant alarms when disabled/polling. |
-| `executeSignalREffects(effects)`                                   | Applies alarm effects.                                        | effect array        | `Promise<void>` | Calls `browser.alarms.clear/create`.            |
+| Function                                                           | Purpose                                             | Inputs              | Outputs         | Side effects, errors, security                  |
+| ------------------------------------------------------------------ | --------------------------------------------------- | ------------------- | --------------- | ----------------------------------------------- |
+| `createRecurringSignalREffects(desiredTransport, pollingInterval)` | Returns recurring alarm effects for transport mode. | transport, interval | effect array    | Clears irrelevant alarms when disabled/polling. |
+| `executeSignalREffects(effects)`                                   | Applies alarm effects.                              | effect array        | `Promise<void>` | Calls `browser.alarms.clear/create`.            |
 
 ### `src/features/realtime/signalr-manager.ts`
 

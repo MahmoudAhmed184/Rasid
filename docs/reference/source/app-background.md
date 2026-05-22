@@ -29,6 +29,10 @@ Functions and nested functions:
 
 Purpose: typed background runtime message contract, validators, transport helpers, and callers.
 
+Automated coverage:
+
+- `tests/src/app/background/background-messages.test.ts` validates action recognition, proposal-context bounds, ZIP message bounds, transport response guards, and dispatch routing.
+
 Key imports:
 
 - `browser`
@@ -116,6 +120,8 @@ Functions:
 | `registerBackgroundRuntimeMessageBus(options)` | Registers `browser.runtime.onMessage` listener.                    | `ensureReady`, handlers, optional logger | `void`  | Ignores offscreen RPC, validates action/sender/payload, bootstraps background before dispatch, sends typed success/failure responses. |
 
 Browser APIs: `browser.runtime.onMessage`, `browser.runtime.id`, `browser.runtime.getURL`.
+
+Testing note: sender trust and malformed-payload rejection are release-critical and should remain covered by background integration tests when the message bus changes.
 
 ## `src/app/background/background-runtime-handlers.ts`
 

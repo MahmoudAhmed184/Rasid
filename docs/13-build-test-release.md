@@ -40,6 +40,9 @@ The ZIP commands are WXT package commands for the browser target and MV3 manifes
 ## Validation Commands
 
 ```bash
+npm run test:typecheck
+npm run test:unit
+npm run test:integration
 npm run typecheck
 npm run lint
 npm test
@@ -55,20 +58,21 @@ npm run lint:firefox
 
 `npm run lint:ts` runs TypeScript with `--noEmit --noUnusedLocals --noUnusedParameters`.
 
-## Unit Tests
+## Automated Tests
 
 `npm test` runs:
 
-1. removes `.test-dist`
-2. compiles `tsconfig.test.json`
-3. runs Node's test runner with `tests/extensionless-loader.mjs`
+1. `npm run test:typecheck`
+2. `npm run test:unit`
+3. `npm run test:integration`
 
-Current test files:
+The test suite uses Vitest with WXT's official test plugin. Tests live under `tests/src/**` and `tests/entrypoints/**`, mirroring source ownership where practical.
 
-- `tests/ai-chat-url.test.ts`
-- `tests/settings-storage.test.ts`
-- `tests/backup-repository.test.ts`
-- `tests/mostaql-bid-tracker.test.ts`
+Additional test commands:
+
+- `npm run test:coverage` writes Vitest V8 coverage under `coverage/vitest`.
+- `npm run test:e2e:chrome` runs Playwright Chromium extension smoke tests against `dist/chrome-mv3`.
+- `npm run test:e2e:firefox` builds and lints Firefox output, then runs generated-manifest smoke tests.
 
 ## Generated Manifest Inspection
 
