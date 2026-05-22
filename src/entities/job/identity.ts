@@ -1,9 +1,5 @@
 import type { JobRecord, TrackedProject } from './model';
-import {
-    isPlatformId,
-    resolvePlatformId,
-    type PlatformId,
-} from '../../platforms/platform-ids';
+import { isPlatformId, resolvePlatformId, type PlatformId } from '../platform/model';
 
 export function resolveJobPlatformId(
     job: Pick<JobRecord, 'platformId' | 'url'>
@@ -35,9 +31,7 @@ export function getTrackedProjectKey(
     return createTrackedProjectKey(project.id, resolveTrackedProjectPlatformId(project));
 }
 
-export function parseQualifiedProjectKey(
-    key: string
-): {
+export function parseQualifiedProjectKey(key: string): {
     readonly platformId: PlatformId;
     readonly id: string;
 } | null {

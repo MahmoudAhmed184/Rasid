@@ -11,7 +11,6 @@ const hostPermissions = [
     'https://mostaql.com/*',
     'https://khamsat.com/*',
     'https://nafezly.com/*',
-    'https://kafiil.com/*',
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
     'https://freelancia.runasp.net/*',

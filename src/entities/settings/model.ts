@@ -1,5 +1,5 @@
 import type { AiProviderId } from '../ai/model';
-import type { PlatformId } from '../../platforms/platform-ids';
+import type { PlatformId } from '../platform/model';
 
 export type NotificationMode = 'auto' | 'signalr' | 'polling';
 export type AiExecutionMode = 'bridge' | 'direct';
@@ -8,13 +8,13 @@ export type MonitoredPlatforms = Record<PlatformId, boolean>;
 export const DEFAULT_POLLING_INTERVAL = 1;
 export const MIN_POLLING_INTERVAL = 1;
 export const MAX_POLLING_INTERVAL = 30;
+export const SUPPORTED_MONITORING_PLATFORM_IDS = ['mostaql', 'khamsat', 'nafezly'] as const;
+export type SupportedMonitoringPlatformId = (typeof SUPPORTED_MONITORING_PLATFORM_IDS)[number];
+
 export const DEFAULT_MONITORED_PLATFORMS: MonitoredPlatforms = {
     mostaql: true,
     khamsat: true,
     nafezly: true,
-    kafiil: true,
-    freelancer: false,
-    upwork: false,
 };
 
 export interface ExtensionSettings {

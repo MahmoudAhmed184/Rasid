@@ -1,6 +1,6 @@
 import { MAX_RECENT_JOBS } from '../schema';
 import type { JobRecord, ProjectAttachment } from '../../../entities/job/model';
-import { resolvePlatformId } from '../../../platforms/platform-ids';
+import { inferSupportedPlatformIdFromUrl, isPlatformId } from '../../../entities/platform/model';
 import { getJobRecordKey } from '../../../entities/job/identity';
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -50,11 +50,19 @@ export function normalizeJob(value: unknown): JobRecord | null {
         return null;
     }
 
+    const platformId = isPlatformId(value.platformId)
+        ? value.platformId
+        : inferSupportedPlatformIdFromUrl(url);
+
+    if (!platformId) {
+        return null;
+    }
+
     return {
         id,
         title,
         url,
-        platformId: resolvePlatformId(value.platformId, { url }),
+        platformId,
         budget: normalizeOptionalText(value.budget),
         description: normalizeOptionalText(value.description),
         duration: normalizeOptionalText(value.duration),

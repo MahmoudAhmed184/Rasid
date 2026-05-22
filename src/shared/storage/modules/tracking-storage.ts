@@ -2,7 +2,7 @@ import type { StorageClient } from '../../browser/storage-client';
 import { STORAGE_FIELDS } from '../storage-keys';
 import type { TrackedProject } from '../../../entities/job/model';
 import { parseQualifiedProjectKey } from '../../../entities/job/identity';
-import { resolvePlatformId } from '../../../platforms/platform-ids';
+import { resolvePlatformId } from '../../../entities/platform/model';
 import {
     cloneAttachments,
     normalizeAttachments,

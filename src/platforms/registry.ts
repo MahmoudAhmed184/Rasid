@@ -1,8 +1,6 @@
 import type { JobRecord } from '../entities/job/model';
 import { isPlatformMonitoringEnabled, type ExtensionSettings } from '../entities/settings/model';
 import type { PlatformId, PlatformMonitoringAdapter } from './contracts';
-import { parseKafiilListingHtml, parseKafiilProjectHtml } from './kafiil/html-parser';
-import { createKafiilMonitoringAdapter } from './kafiil/monitoring';
 import type { PlatformMonitoringHtmlParser } from './monitoring-html-parser';
 import { parseNafezlyListingHtml, parseNafezlyProjectHtml } from './nafezly/html-parser';
 import { createNafezlyMonitoringAdapter } from './nafezly/monitoring';
@@ -26,17 +24,6 @@ export interface PlatformModule {
 }
 
 const PLATFORM_MODULES = {
-    kafiil: {
-        id: 'kafiil',
-        realtime: {
-            supportsSignalR: true,
-        },
-        monitoringParser: {
-            parseListingHtml: parseKafiilListingHtml,
-            parseProjectHtml: parseKafiilProjectHtml,
-        },
-        createMonitoringAdapter: createKafiilMonitoringAdapter,
-    },
     khamsat: {
         id: 'khamsat',
         realtime: {
@@ -88,34 +75,16 @@ export function getPlatformModules(): readonly PlatformModule[] {
     return Object.values(PLATFORM_MODULES);
 }
 
-export function getPlatformModule(platformId: PlatformId): PlatformModule {
-    return resolvePlatformModule(platformId);
-}
-
 export function createPlatformMonitoringAdapters(
     htmlParser: PlatformMonitoringHtmlParser
 ): readonly PlatformMonitoringAdapter[] {
     return getPlatformModules().map((module) => module.createMonitoringAdapter(htmlParser));
 }
 
-export function getPlatformMonitoringAdapter(
-    platformId: PlatformId,
-    htmlParser: PlatformMonitoringHtmlParser
-): PlatformMonitoringAdapter {
-    return resolvePlatformModule(platformId).createMonitoringAdapter(htmlParser);
-}
-
 export function getPlatformMonitoringHtmlParser(
     platformId: PlatformId
 ): PlatformMonitoringHtmlParserEntry {
     return resolvePlatformModule(platformId).monitoringParser;
-}
-
-export function platformSupportsSignalR(platformId: PlatformId): boolean {
-    return (
-        PLATFORM_MODULES[platformId as RegisteredPlatformModuleId]?.realtime.supportsSignalR ??
-        false
-    );
 }
 
 export function hasEnabledSignalRPlatform(settings: Readonly<ExtensionSettings>): boolean {

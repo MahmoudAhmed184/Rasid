@@ -1,5 +1,5 @@
 import type { JobRecord } from '../../entities/job/model';
-import { resolvePlatformId } from '../../platforms/platform-ids';
+import { inferSupportedPlatformIdFromUrl, isPlatformId } from '../../platforms/platform-ids';
 
 export function normalizeJobRecord(value: unknown): JobRecord | null {
     if (!value || typeof value !== 'object') {
@@ -15,11 +15,19 @@ export function normalizeJobRecord(value: unknown): JobRecord | null {
         return null;
     }
 
+    const platformId = isPlatformId(record.platformId)
+        ? record.platformId
+        : inferSupportedPlatformIdFromUrl(url);
+
+    if (!platformId) {
+        return null;
+    }
+
     return {
         id,
         title,
         url,
-        platformId: resolvePlatformId(record.platformId, { url }),
+        platformId,
         budget: typeof record.budget === 'string' ? record.budget : undefined,
         description: typeof record.description === 'string' ? record.description : undefined,
         duration: typeof record.duration === 'string' ? record.duration : undefined,

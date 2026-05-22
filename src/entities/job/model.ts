@@ -1,4 +1,4 @@
-import type { PlatformId } from '../../platforms/platform-ids';
+import type { PlatformId } from '../platform/model';
 
 export type JobCategory = 'development' | 'ai' | 'all';
 
