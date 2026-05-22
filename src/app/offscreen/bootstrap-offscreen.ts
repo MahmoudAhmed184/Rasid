@@ -68,22 +68,24 @@ export function initOffscreen(): void {
         // The offscreen page is the Chrome execution target for audio and DOM work,
         // so it responds directly to the worker's task envelopes. Chrome MV3
         // requires callback-style async replies for broad version compatibility.
-        void Promise.resolve(handleTask(message)).then(
-            (result: Awaited<ReturnType<typeof handleTask>>) => {
-                sendResponse(
-                    createOffscreenTransportSuccess(message.task, result, message.requestId)
-                );
-            },
-            (error: unknown) => {
-                sendResponse(
-                    createOffscreenTransportFailure(
-                        message.task,
-                        error instanceof Error ? error.message : String(error),
-                        message.requestId
-                    )
-                );
-            }
-        );
+        void Promise.resolve()
+            .then(() => handleTask(message))
+            .then(
+                (result: Awaited<ReturnType<typeof handleTask>>) => {
+                    sendResponse(
+                        createOffscreenTransportSuccess(message.task, result, message.requestId)
+                    );
+                },
+                (error: unknown) => {
+                    sendResponse(
+                        createOffscreenTransportFailure(
+                            message.task,
+                            error instanceof Error ? error.message : String(error),
+                            message.requestId
+                        )
+                    );
+                }
+            );
 
         return true;
     });

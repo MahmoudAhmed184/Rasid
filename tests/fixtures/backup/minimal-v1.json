@@ -1,0 +1,13 @@
+{
+    "schemaVersion": 1,
+    "settings": {
+        "interval": 7,
+        "aiApiKey": "legacy-secret",
+        "monitoredPlatforms": {
+            "mostaql": true,
+            "khamsat": false,
+            "nafezly": true
+        }
+    },
+    "prompts": []
+}

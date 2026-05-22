@@ -5,6 +5,10 @@ export default defineConfig([
         ignores: [
             '.wxt/**',
             'dist/**',
+            '.test-dist/**',
+            'coverage/**',
+            'test-results/**',
+            'playwright-report/**',
             'node_modules/**',
             '**/vendor/**',
             '**/*.min.js',

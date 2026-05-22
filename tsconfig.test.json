@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowJs": false,
+        "noEmit": false,
+        "outDir": ".test-dist",
+        "rootDir": ".",
+        "types": ["node"]
+    },
+    "include": ["tests/**/*.ts", ".wxt/wxt.d.ts"],
+    "exclude": ["dist", "node_modules", ".test-dist"]
+}

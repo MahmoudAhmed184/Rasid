@@ -1,0 +1,16 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "allowJs": false,
+        "noEmit": true,
+        "types": ["node", "vitest"],
+        "rootDir": ".."
+    },
+    "include": [
+        "../vitest.config.ts",
+        "../playwright.config.ts",
+        "../tests/**/*.ts",
+        "../.wxt/wxt.d.ts"
+    ],
+    "exclude": ["../dist", "../node_modules", "../.test-dist", "../coverage"]
+}

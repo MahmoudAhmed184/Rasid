@@ -1,6 +1,10 @@
 .wxt/
 dist/
 node_modules/
+.test-dist/
+coverage/
+test-results/
+playwright-report/
 public/vendor/
 package-lock.json
 *.min.js

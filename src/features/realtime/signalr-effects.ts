@@ -4,21 +4,6 @@ import { ALARM_NAMES, SIGNALR_HEALTH_INTERVAL_MINUTES } from './constants';
 import type { DesiredTransport, SignalREffect } from './signalr-reducer';
 import { clampPollingInterval } from '../../entities/settings/model';
 
-type AlarmCreateInfo = Browser.alarms.AlarmCreateInfo & {
-    persistAcrossSessions?: boolean;
-};
-
-function createAlarmInfo(options: AlarmCreateInfo): AlarmCreateInfo {
-    if (import.meta.env.CHROME) {
-        return {
-            ...options,
-            persistAcrossSessions: true,
-        };
-    }
-
-    return options;
-}
-
 export function createRecurringSignalREffects(
     desiredTransport: DesiredTransport,
     pollingInterval: number
@@ -66,20 +51,14 @@ export async function executeSignalREffects(effects: readonly SignalREffect[]): 
         }
 
         if ('periodInMinutes' in effect) {
-            await browser.alarms.create(
-                effect.name,
-                createAlarmInfo({
-                    periodInMinutes: effect.periodInMinutes,
-                })
-            );
+            await browser.alarms.create(effect.name, {
+                periodInMinutes: effect.periodInMinutes,
+            });
             continue;
         }
 
-        await browser.alarms.create(
-            effect.name,
-            createAlarmInfo({
-                delayInMinutes: effect.delayInMinutes,
-            })
-        );
+        await browser.alarms.create(effect.name, {
+            delayInMinutes: effect.delayInMinutes,
+        });
     }
 }

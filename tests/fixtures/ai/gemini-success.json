@@ -1,0 +1,14 @@
+{
+    "candidates": [
+        {
+            "finishReason": "STOP",
+            "content": {
+                "parts": [
+                    {
+                        "text": "اقتراح Gemini جاهز."
+                    }
+                ]
+            }
+        }
+    ]
+}
