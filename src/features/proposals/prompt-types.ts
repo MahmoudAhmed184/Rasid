@@ -1,4 +1,4 @@
-import type { AiPromptVariable } from './prompt-variables';
+export type { NormalizedAiPrompt } from '../../entities/ai/prompt';
 
 export interface PromptTemplateRecord {
     id: string;
@@ -6,11 +6,4 @@ export interface PromptTemplateRecord {
     description?: string;
     system?: string;
     user: string;
-}
-
-export interface NormalizedAiPrompt {
-    system: string;
-    user: string;
-    combined: string;
-    variables: Record<AiPromptVariable, string>;
 }

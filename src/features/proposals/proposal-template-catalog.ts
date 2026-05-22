@@ -5,7 +5,6 @@ import type { PromptTemplateRecord } from './prompt-types';
 
 export interface ResolvedProposalTemplate {
     readonly id: string;
-    readonly legacyPrompt: string;
     readonly aiTemplate: PromptTemplateRecord;
 }
 
@@ -54,7 +53,6 @@ export function createProposalTemplateCatalog(
 
             return {
                 id: selectedTemplate.id,
-                legacyPrompt: selectedTemplate.content,
                 aiTemplate: toPromptTemplateRecord(selectedTemplate, sharedSystemPrompt),
             };
         },

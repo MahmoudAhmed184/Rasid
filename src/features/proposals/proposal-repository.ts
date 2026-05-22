@@ -3,28 +3,23 @@ import { browser } from 'wxt/browser';
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 import {
     createProposalStateStorage,
+    normalizePendingBridgePromptRecord,
     PENDING_BRIDGE_PROMPT_STORAGE_KEY,
+    type PendingBridgePrompt,
 } from '../../shared/storage/modules/proposal-state-storage';
 import type { StorageClient } from '../../shared/browser/storage-client';
-import type {
-    PlatformAutofillDraft,
-    PlatformId,
-} from '../../platforms/contracts';
+import type { PlatformAutofillDraft, PlatformId } from '../../platforms/contracts';
 
 export interface ProposalRepository {
     getQuickTemplate(): Promise<string>;
     setQuickTemplate(template: string): Promise<string>;
-    getPendingBridgePrompt(): Promise<string | null>;
-    setPendingBridgePrompt(prompt: string): Promise<void>;
-    clearPendingBridgePrompt(): Promise<void>;
-    onPendingBridgePromptChanged(listener: (prompt: string) => void): () => void;
+    getPendingBridgePrompt(): Promise<PendingBridgePrompt | null>;
+    setPendingBridgePrompt(prompt: string, chatUrl?: string): Promise<void>;
+    clearPendingBridgePrompt(id?: string): Promise<void>;
+    onPendingBridgePromptChanged(listener: (prompt: PendingBridgePrompt) => void): () => void;
     getQueuedAutofill(platformId: PlatformId): Promise<PlatformAutofillDraft | null>;
     queueAutofill(draft: PlatformAutofillDraft): Promise<void>;
     clearQueuedAutofill(platformId: PlatformId): Promise<void>;
-}
-
-function normalizeBridgePrompt(value: unknown): string | null {
-    return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 export function createProposalRepository(
@@ -43,11 +38,11 @@ export function createProposalRepository(
         getPendingBridgePrompt() {
             return proposalStateStorage.getPendingBridgePrompt();
         },
-        setPendingBridgePrompt(prompt) {
-            return proposalStateStorage.setPendingBridgePrompt(prompt);
+        setPendingBridgePrompt(prompt, chatUrl) {
+            return proposalStateStorage.setPendingBridgePrompt(prompt, chatUrl);
         },
-        clearPendingBridgePrompt() {
-            return proposalStateStorage.clearPendingBridgePrompt();
+        clearPendingBridgePrompt(id) {
+            return proposalStateStorage.clearPendingBridgePrompt(id);
         },
         onPendingBridgePromptChanged(listener) {
             const handleChange: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
@@ -60,7 +55,7 @@ export function createProposalRepository(
                     return;
                 }
 
-                const prompt = normalizeBridgePrompt(nextValue);
+                const prompt = normalizePendingBridgePromptRecord(nextValue);
 
                 if (prompt) {
                     listener(prompt);

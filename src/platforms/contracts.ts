@@ -2,8 +2,8 @@ import type { AiRequestContext } from '../entities/ai/model';
 import type { JobRecord, TrackedProject } from '../entities/job/model';
 import type { PromptTemplate } from '../entities/prompt/model';
 import type { ExtensionSettings } from '../entities/settings/model';
-import type { PlatformId } from './platform-ids';
-export type { PlatformId } from './platform-ids';
+import type { PlatformAutofillDraft, PlatformId } from '../entities/platform/model';
+export type { PlatformAutofillDraft, PlatformId } from '../entities/platform/model';
 
 export type PlatformPageKind = 'home' | 'project' | 'message' | 'profile' | 'other';
 
@@ -46,15 +46,6 @@ export interface PlatformProposalSource {
     readonly aiContext: AiRequestContext;
     readonly minBudget: number;
     readonly durationDays: number;
-}
-
-export interface PlatformAutofillDraft {
-    readonly platformId: PlatformId;
-    readonly projectId: string;
-    readonly proposal: string;
-    readonly amount: number;
-    readonly durationDays: number;
-    readonly createdAt: number;
 }
 
 export interface PlatformPromptDraft {
@@ -107,7 +98,7 @@ export interface PlatformContentServices {
         getQuickTemplate(): Promise<string>;
         generate(templateId: string, context: AiRequestContext): Promise<ProposalGenerationResult>;
         queueAutofill(draft: PlatformAutofillDraft): Promise<void>;
-        setPendingBridgePrompt(prompt: string): Promise<void>;
+        setPendingBridgePrompt(prompt: string, chatUrl?: string): Promise<void>;
     };
     readonly downloads: {
         downloadZip(

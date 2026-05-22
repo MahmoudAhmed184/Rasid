@@ -1,26 +1,28 @@
-import type { AiProviderAdapter } from '../provider-adapter'
-import { getDefaultFetch, type FetchLike } from '../provider-adapter'
+import type { AiProviderAdapter } from '../provider-adapter';
+import { getDefaultFetch, type FetchLike } from '../provider-adapter';
 import {
     ensureOutput,
     extractGeminiOutput,
+    fetchWithTimeout,
     parseJsonResponse,
     withoutUndefined,
-} from './shared'
+} from './shared';
 
-export function createGeminiAdapter(
-    fetchImpl: FetchLike = getDefaultFetch()
-): AiProviderAdapter {
+export function createGeminiAdapter(fetchImpl: FetchLike = getDefaultFetch()): AiProviderAdapter {
     return {
         id: 'gemini',
         async generate(request) {
-            const response = await fetchImpl(
+            const response = await fetchWithTimeout(
+                'gemini',
+                fetchImpl,
                 `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
                     request.model
-                )}:generateContent?key=${encodeURIComponent(request.apiKey)}`,
+                )}:generateContent`,
                 {
                     method: 'POST',
                     headers: {
                         'content-type': 'application/json',
+                        'x-goog-api-key': request.apiKey,
                     },
                     body: JSON.stringify(
                         withoutUndefined({
@@ -42,14 +44,14 @@ export function createGeminiAdapter(
                         })
                     ),
                 }
-            )
+            );
 
-            const payload = await parseJsonResponse('gemini', response)
+            const payload = await parseJsonResponse('gemini', response);
 
             return {
                 output: ensureOutput('gemini', extractGeminiOutput(payload)),
                 raw: payload,
-            }
+            };
         },
-    }
+    };
 }

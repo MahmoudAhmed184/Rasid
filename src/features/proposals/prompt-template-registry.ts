@@ -1,11 +1,17 @@
-import {
-    type AiRequestContext,
-} from '../../entities/ai/model';
+import { type AiRequestContext } from '../../entities/ai/model';
 import type { NormalizedAiPrompt, PromptTemplateRecord } from './prompt-types';
 import { type AiPromptVariable } from './prompt-variables';
 
 function cleanText(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
+}
+
+function wrapUntrustedField(field: AiPromptVariable, value: string): string {
+    if (!value) {
+        return '';
+    }
+
+    return `[[BEGIN_UNTRUSTED_${field.toUpperCase()}]]\n${value}\n[[END_UNTRUSTED_${field.toUpperCase()}]]`;
 }
 
 function joinTags(tags: AiRequestContext['tags']): string {
@@ -25,15 +31,9 @@ function joinAttachments(attachments: AiRequestContext['attachments']): string {
     }
 
     return attachments
-        .map((attachment) => {
+        .map((attachment, index) => {
             const name = cleanText(attachment.name);
-            const url = cleanText(attachment.url);
-
-            if (name && url) {
-                return `${name}: ${url}`;
-            }
-
-            return name || url;
+            return name || `مرفق ${index + 1}`;
         })
         .filter(Boolean)
         .join('\n');
@@ -44,7 +44,7 @@ function interpolate(template: string, values: Record<string, string>): string {
 }
 
 function buildPromptVariables(context: AiRequestContext): Record<AiPromptVariable, string> {
-    return {
+    const variables: Record<AiPromptVariable, string> = {
         title: cleanText(context.title),
         description: cleanText(context.description),
         url: cleanText(context.url),
@@ -64,10 +64,13 @@ function buildPromptVariables(context: AiRequestContext): Record<AiPromptVariabl
         communications: cleanText(context.communications),
         attachments: joinAttachments(context.attachments),
     };
-}
 
-export function renderLegacyPromptTemplate(template: string, context: AiRequestContext): string {
-    return interpolate(template, buildPromptVariables(context));
+    return Object.fromEntries(
+        Object.entries(variables).map(([field, value]) => [
+            field,
+            wrapUntrustedField(field as AiPromptVariable, value),
+        ])
+    ) as Record<AiPromptVariable, string>;
 }
 
 export function renderPromptTemplate(
@@ -81,7 +84,6 @@ export function renderPromptTemplate(
     return {
         system,
         user,
-        combined: [system, user].filter(Boolean).join('\n\n'),
         variables,
     };
 }

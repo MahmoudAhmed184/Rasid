@@ -1,5 +1,5 @@
 import type { PromptTemplate } from '../../../entities/prompt/model';
-import type { PlatformContentServices } from '../../contracts';
+import type { PlatformContentServices, PlatformDisposer } from '../../contracts';
 import { parseDurationDays } from '../../../shared/parsing/duration';
 import { MOSTAQL_SELECTORS } from '../selectors';
 import { handleQuickBidClick, queueProposalAutofill } from './autofill';
@@ -25,7 +25,11 @@ function createActionText(text: string): HTMLSpanElement {
 }
 
 function setActionButtonContent(element: HTMLElement, iconClassName: string, label: string): void {
-    element.replaceChildren(createIcon(iconClassName), document.createTextNode(' '), createActionText(label));
+    element.replaceChildren(
+        createIcon(iconClassName),
+        document.createTextNode(' '),
+        createActionText(label)
+    );
 }
 
 function setInlineIconText(element: HTMLElement, iconClassName: string, text: string): void {
@@ -36,13 +40,26 @@ function setIconOnlyContent(element: HTMLElement, iconClassName: string): void {
     element.replaceChildren(createIcon(iconClassName));
 }
 
-export function injectTrackButton(services: PlatformContentServices) {
+function stylePromptMenuButton(button: HTMLButtonElement): void {
+    button.type = 'button';
+    button.style.background = 'none';
+    button.style.border = '0';
+    button.style.display = 'block';
+    button.style.width = '100%';
+    button.style.padding = '5px 10px';
+    button.style.color = 'inherit';
+    button.style.textAlign = 'right';
+    button.style.textDecoration = 'none';
+}
+
+export function injectTrackButton(services: PlatformContentServices): PlatformDisposer | undefined {
     const metaCardBody = document.querySelector(MOSTAQL_SELECTORS.sidebar.metaPanel);
     if (!metaCardBody) {
-        return;
+        return undefined;
     }
 
     let buttonContainer = document.getElementById(MOSTAQL_SELECTORS.sidebar.buttonContainerId);
+    let createdSeparator: HTMLElement | null = null;
 
     if (buttonContainer && buttonContainer.parentElement !== metaCardBody) {
         buttonContainer.remove();
@@ -54,6 +71,7 @@ export function injectTrackButton(services: PlatformContentServices) {
             const hr = document.createElement('hr');
             hr.className = `separator ${MOSTAQL_SELECTORS.sidebar.separator.slice(1)}`;
             metaCardBody.appendChild(hr);
+            createdSeparator = hr;
         }
 
         buttonContainer = document.createElement('div');
@@ -114,18 +132,22 @@ export function injectTrackButton(services: PlatformContentServices) {
         group.id = MOSTAQL_SELECTORS.sidebar.promptGroupId;
         group.className = 'btn-group dropdown mostaql-custom-dropdown';
 
-        const mainBtn = document.createElement('a');
+        const mainBtn = document.createElement('button');
         mainBtn.id = 'chatgpt-main-btn';
+        mainBtn.type = 'button';
         mainBtn.className = 'btn btn-primary';
-        mainBtn.href = 'javascript:void(0);';
         setActionButtonContent(mainBtn, 'fa fa-fw fa-magic', 'ذكاء');
         mainBtn.title = 'استشارة الذكاء الاصطناعي';
         mainBtn.dataset.promptId = 'default_proposal';
+        let opacityTimer: ReturnType<typeof setTimeout> | null = null;
 
         mainBtn.addEventListener('click', (e) => {
             e.preventDefault();
             mainBtn.style.opacity = '0.8';
-            setTimeout(() => (mainBtn.style.opacity = '1'), 200);
+            if (opacityTimer) {
+                clearTimeout(opacityTimer);
+            }
+            opacityTimer = setTimeout(() => (mainBtn.style.opacity = '1'), 200);
             void handleChatGptClick(services, mainBtn.dataset.promptId);
         });
 
@@ -140,11 +162,13 @@ export function injectTrackButton(services: PlatformContentServices) {
             group.classList.toggle('open');
         });
 
-        document.addEventListener('click', (e) => {
+        const handleDocumentClick = (e: MouseEvent) => {
             if (!(e.target instanceof Node) || !group.contains(e.target)) {
                 group.classList.remove('open');
             }
-        });
+        };
+
+        document.addEventListener('click', handleDocumentClick);
 
         const menuList = document.createElement('ul');
         menuList.className = 'dropdown-menu dropdown-left dropdown-menu-left';
@@ -167,36 +191,36 @@ export function injectTrackButton(services: PlatformContentServices) {
                     itemContainer.style.justifyContent = 'space-between';
                     itemContainer.style.width = '100%';
 
-                    const a = document.createElement('a');
-                    a.href = 'javascript:void(0);';
-                    a.textContent = p.title;
-                    a.style.flex = '1';
-                    a.style.padding = '5px 10px';
-                    a.style.color = 'inherit';
-                    a.style.textDecoration = 'none';
-                    a.onclick = (e) => {
+                    const itemButton = document.createElement('button');
+                    stylePromptMenuButton(itemButton);
+                    itemButton.textContent = p.title;
+                    itemButton.style.flex = '1';
+                    itemButton.addEventListener('click', (e) => {
                         e.preventDefault();
                         void handleChatGptClick(services, p.id);
                         group.classList.remove('open');
                         renderMenu();
-                    };
+                    });
 
-                    const editBtn = document.createElement('span');
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
                     setIconOnlyContent(editBtn, 'fa fa-pencil');
                     editBtn.style.cursor = 'pointer';
                     editBtn.style.padding = '5px 10px';
                     editBtn.style.color = '#777';
+                    editBtn.style.background = 'none';
+                    editBtn.style.border = '0';
                     editBtn.title = 'تعديل القالب';
-                    editBtn.onclick = (e) => {
+                    editBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         group.classList.remove('open');
                         createPromptModal(services.prompts, renderMenu, p);
-                    };
+                    });
                     editBtn.onmouseover = () => (editBtn.style.color = '#2386c8');
                     editBtn.onmouseout = () => (editBtn.style.color = '#777');
 
-                    itemContainer.appendChild(a);
+                    itemContainer.appendChild(itemButton);
                     itemContainer.appendChild(editBtn);
 
                     li.appendChild(itemContainer);
@@ -208,10 +232,10 @@ export function injectTrackButton(services: PlatformContentServices) {
                 menuList.appendChild(divLi);
 
                 const addLi = document.createElement('li');
-                const addLink = document.createElement('a');
-                addLink.href = 'javascript:void(0);';
-                setInlineIconText(addLink, 'fa fa-plus', 'إضافة قالب جديد');
-                addLink.onclick = (e) => {
+                const addButton = document.createElement('button');
+                stylePromptMenuButton(addButton);
+                setInlineIconText(addButton, 'fa fa-plus', 'إضافة قالب جديد');
+                addButton.addEventListener('click', (e) => {
                     e.preventDefault();
                     group.classList.remove('open');
                     createPromptModal(
@@ -235,8 +259,8 @@ export function injectTrackButton(services: PlatformContentServices) {
                         },
                         null
                     );
-                };
-                addLi.appendChild(addLink);
+                });
+                addLi.appendChild(addButton);
                 menuList.appendChild(addLi);
             });
         };
@@ -248,7 +272,21 @@ export function injectTrackButton(services: PlatformContentServices) {
         group.appendChild(menuList);
 
         buttonContainer.appendChild(group);
+
+        return () => {
+            document.removeEventListener('click', handleDocumentClick);
+            if (opacityTimer) {
+                clearTimeout(opacityTimer);
+            }
+            buttonContainer?.remove();
+            createdSeparator?.remove();
+        };
     }
+
+    return () => {
+        buttonContainer?.remove();
+        createdSeparator?.remove();
+    };
 }
 
 async function handleTrackClick(
@@ -289,10 +327,7 @@ function setButtonUntracked(btn: HTMLButtonElement): void {
     btn.title = 'مراقبة هذا المشروع';
 }
 
-function handleChatGptClick(
-    services: PlatformContentServices,
-    promptId?: string
-): void {
+function handleChatGptClick(services: PlatformContentServices, promptId?: string): void {
     if (!isContextValid()) {
         console.warn('Mostaql Ext: Extension context invalidated. Please refresh the page.');
         return;
@@ -361,7 +396,7 @@ function handleChatGptClick(
             }
 
             if (result.kind === 'bridge') {
-                await services.proposals.setPendingBridgePrompt(result.prompt);
+                await services.proposals.setPendingBridgePrompt(result.prompt, result.chatUrl);
                 window.open(result.chatUrl || 'https://chatgpt.com/', 'mostaql_ai_chat');
                 return;
             }

@@ -1,8 +1,5 @@
 import type { GenerateProposalResponse } from '../../features/proposals/proposal-contract';
-import {
-    requestDownloadZip,
-    requestGenerateProposal,
-} from '../background/background-messages';
+import { requestDownloadZip, requestGenerateProposal } from '../background/background-messages';
 import type { AiRequestContext } from '../../entities/ai/model';
 import type { PromptRepository } from '../../features/proposals/prompt-repository';
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
@@ -87,8 +84,8 @@ export function createPlatformContentServices(
             queueAutofill(draft: PlatformAutofillDraft) {
                 return deps.proposalRepository.queueAutofill(draft);
             },
-            setPendingBridgePrompt(prompt: string) {
-                return deps.proposalRepository.setPendingBridgePrompt(prompt);
+            setPendingBridgePrompt(prompt: string, chatUrl?: string) {
+                return deps.proposalRepository.setPendingBridgePrompt(prompt, chatUrl);
             },
         },
         downloads: {

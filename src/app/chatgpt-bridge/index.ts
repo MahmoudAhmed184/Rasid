@@ -1,4 +1,6 @@
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
+import { isAllowedAiChatHost } from '../../entities/ai/chat-url';
+import type { PendingBridgePrompt } from '../../shared/storage/modules/proposal-state-storage';
 
 // ==========================================
 // chatgpt-bridge/index.js — Prompt injection bridge
@@ -7,9 +9,11 @@ import type { ProposalRepository } from '../../features/proposals/proposal-repos
 interface ChatgptBridgeDependencies {
     readonly proposalRepository: Pick<
         ProposalRepository,
-        'getPendingBridgePrompt' | 'onPendingBridgePromptChanged'
+        'clearPendingBridgePrompt' | 'getPendingBridgePrompt' | 'onPendingBridgePromptChanged'
     >;
 }
+
+const injectedPromptIds = new Set<string>();
 
 function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
     // Selectors for ChatGPT's input box (subject to change)
@@ -44,12 +48,21 @@ function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
     inputField.replaceChildren(paragraph);
 }
 
-async function injectPrompt(deps: ChatgptBridgeDependencies): Promise<void> {
-    const prompt = await deps.proposalRepository.getPendingBridgePrompt();
+async function injectPrompt(
+    deps: ChatgptBridgeDependencies,
+    pendingPrompt?: PendingBridgePrompt
+): Promise<void> {
+    const record = pendingPrompt ?? (await deps.proposalRepository.getPendingBridgePrompt());
 
-    if (!prompt) {
+    if (!record || injectedPromptIds.has(record.id)) {
         return;
-    } // No pending prompt
+    }
+
+    const currentHost = window.location.hostname.toLowerCase();
+
+    if (!isAllowedAiChatHost(currentHost) || record.targetHost !== currentHost) {
+        return;
+    }
 
     // Try to find the input box. It might take a moment to load.
     // We'll retry a few times.
@@ -69,7 +82,7 @@ async function injectPrompt(deps: ChatgptBridgeDependencies): Promise<void> {
             // Small delay to ensure focus
             setTimeout(() => {
                 if (inputField.isContentEditable) {
-                    writePromptToEditable(inputField, prompt);
+                    writePromptToEditable(inputField, record.prompt);
                 } else if (inputField instanceof HTMLTextAreaElement) {
                     const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
                         window.HTMLTextAreaElement.prototype,
@@ -77,16 +90,19 @@ async function injectPrompt(deps: ChatgptBridgeDependencies): Promise<void> {
                     )?.set;
 
                     if (nativeTextAreaValueSetter) {
-                        nativeTextAreaValueSetter.call(inputField, prompt);
+                        nativeTextAreaValueSetter.call(inputField, record.prompt);
                     } else {
-                        inputField.value = prompt;
+                        inputField.value = record.prompt;
                     }
                 }
 
                 inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                injectedPromptIds.add(record.id);
+                void deps.proposalRepository.clearPendingBridgePrompt(record.id);
             }, 500);
         } else if (attempts >= maxAttempts) {
             clearInterval(interval);
+            void deps.proposalRepository.clearPendingBridgePrompt(record.id);
             console.error(
                 'Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.'
             );
@@ -96,9 +112,9 @@ async function injectPrompt(deps: ChatgptBridgeDependencies): Promise<void> {
 
 // Listen for changes in storage (for when tab is reused/focused without reload)
 export function initChatgptBridge(deps: ChatgptBridgeDependencies) {
-    deps.proposalRepository.onPendingBridgePromptChanged(() => {
+    deps.proposalRepository.onPendingBridgePromptChanged((record) => {
         setTimeout(() => {
-            void injectPrompt(deps);
+            void injectPrompt(deps, record);
         }, 500);
     });
 

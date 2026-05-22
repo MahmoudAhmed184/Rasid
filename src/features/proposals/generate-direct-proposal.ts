@@ -1,10 +1,14 @@
 import type { AiProviderId, AiRequestContext } from '../../entities/ai/model';
 import type { AiProviderAdapter } from '../../entities/ai/provider-adapter';
+import { formatAiProviderError } from '../../entities/ai/provider-adapter';
 import { createAiProviderRegistry } from '../../entities/ai/provider-registry';
 import type { ExtensionSettings } from '../../entities/settings/model';
 import type { GenerateProposalResponse } from './proposal-contract';
 import type { ResolvedProposalTemplate } from './proposal-template-catalog';
 import { renderPromptTemplate } from './prompt-template-registry';
+
+const DEFAULT_DIRECT_PROPOSAL_MAX_OUTPUT_TOKENS = 900;
+const DEFAULT_DIRECT_PROPOSAL_TEMPERATURE = 0.4;
 
 interface DirectProposalDependencies {
     readonly providers?: Record<AiProviderId, AiProviderAdapter>;
@@ -47,6 +51,8 @@ export async function generateDirectProposal(
             apiKey: input.settings.aiApiKey,
             model: input.settings.aiModel,
             prompt: renderPromptTemplate(input.template.aiTemplate, input.context),
+            maxOutputTokens: DEFAULT_DIRECT_PROPOSAL_MAX_OUTPUT_TOKENS,
+            temperature: DEFAULT_DIRECT_PROPOSAL_TEMPERATURE,
         });
 
         return {
@@ -59,7 +65,7 @@ export async function generateDirectProposal(
     } catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: formatAiProviderError(error),
         };
     }
 }
