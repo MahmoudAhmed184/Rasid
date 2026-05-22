@@ -2,7 +2,7 @@
 
 ## Current Automated Tests
 
-The repository uses a TypeScript-first Vitest suite with WXT's official Vitest plugin plus Playwright scaffolding for Chrome extension smoke tests.
+The repository uses a TypeScript-first Vitest suite with WXT's official Vitest plugin plus Playwright scaffolding for browser smoke tests.
 
 Current automated coverage includes:
 
@@ -14,7 +14,6 @@ Current automated coverage includes:
 - platform fixtures: Mostaql, Khamsat, and Nafezly listing/project HTML parsers
 - proposals/AI: prompt rendering with untrusted delimiters, direct-provider request settings, OpenAI/Gemini/Claude payload/error behavior
 - UI behavior: dashboard tab ARIA state and keyboard behavior
-
 
 ## Validation Commands
 
@@ -48,15 +47,16 @@ npm run test:e2e:chrome
 
 The Chrome smoke tests verify service-worker discovery, extension popup/dashboard URLs, fixture-routed content pages, and console-error absence without live marketplace traffic.
 
-Firefox browser automation is intentionally limited. The Firefox gate remains:
+Firefox E2E uses the generated `dist/firefox-mv3` output. Because Playwright's extension-loading flow is Chromium-specific, Firefox coverage is split across official Mozilla tooling and Firefox browser rendering:
 
 ```bash
+npx playwright install firefox
 npm run build:firefox
 npm run lint:firefox
 npm run test:e2e:firefox
 ```
 
-This validates build output, `web-ext` linting, and generated-manifest smoke behavior rather than assuming full Firefox MV3 extension-service-worker E2E support.
+This validates build output, `web-ext` linting, generated-manifest smoke behavior, a headless `web-ext run` temporary add-on install, and Playwright Firefox rendering of generated popup/dashboard pages with console-error checks.
 
 ## Manual Smoke Tests
 
@@ -80,7 +80,7 @@ Current automated tests still do not fully exercise:
 - browser notification UI
 - native browser downloads shelf/UI and Blob URL lifecycle across real download events
 - offscreen document creation in Chrome
-- Firefox runtime behavior beyond build/lint/manifest smoke
+- Firefox MV3 service-worker lifecycle beyond temporary add-on startup
 - full popup/dashboard accessibility tree coverage
 - every content-script DOM contribution on every supported platform page kind
 - SignalR hub lifecycle in a browser

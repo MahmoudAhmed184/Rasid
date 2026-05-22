@@ -420,7 +420,7 @@ Targeted consistency checks should verify unsupported-platform references, delet
 
 Current unit tests cover AI chat URL normalization, settings normalization, backup secret handling, and Mostaql bid tracker calculations.
 
-The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafezly, storage/message contracts, AI provider payloads, prompt rendering, monitoring/realtime reducers, ZIP export safety, dashboard tab behavior, generated-manifest, and Chrome Playwright E2E scaffolding. See [`tests/README.md`](tests/README.md) and [`docs/20-testing-strategy.md`](docs/20-testing-strategy.md).
+The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafezly, storage/message contracts, AI provider payloads, prompt rendering, monitoring/realtime reducers, ZIP export safety, dashboard tab behavior, generated manifests, Chrome Playwright extension E2E, and Firefox `web-ext`/Playwright browser smoke coverage. See [`tests/README.md`](tests/README.md) and [`docs/20-testing-strategy.md`](docs/20-testing-strategy.md).
 
 ## Release Checklist
 
@@ -470,7 +470,7 @@ Start with [`docs/README.md`](docs/README.md). Key docs:
 
 - Direct AI mode necessarily sends prompt content and the user-provided API key to the selected provider from the browser extension runtime.
 - ChatGPT bridge mode writes a prompt into the ChatGPT page but does not submit it.
-- Chrome browser E2E is available through Playwright after `npm run build:chrome`; Firefox remains build/lint/manifest smoke rather than full browser automation.
+- Chrome browser E2E is available through Playwright after `npm run build:chrome`; Firefox automation covers generated-manifest checks, `web-ext run` temporary installation, and Playwright Firefox rendering of generated popup/dashboard pages.
 - Full TypeScript-aware ESLint is not configured because no TypeScript ESLint dependency has been added.
 - The optional `server/` tree remains a repository-scope decision and is not part of the documented WebExtension release package.
 

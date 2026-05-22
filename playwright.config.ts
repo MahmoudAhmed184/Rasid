@@ -15,5 +15,13 @@ export default defineConfig({
             name: 'chromium-extension',
             testMatch: /chrome\/.*\.spec\.ts/,
         },
+        {
+            name: 'firefox-browser',
+            testMatch: /firefox\/.*\.spec\.ts/,
+            use: {
+                browserName: 'firefox',
+                headless: true,
+            },
+        },
     ],
 });

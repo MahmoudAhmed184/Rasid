@@ -72,7 +72,7 @@ Additional test commands:
 
 - `npm run test:coverage` writes Vitest V8 coverage under `coverage/vitest`.
 - `npm run test:e2e:chrome` runs Playwright Chromium extension smoke tests against `dist/chrome-mv3`.
-- `npm run test:e2e:firefox` builds and lints Firefox output, then runs generated-manifest smoke tests.
+- `npm run test:e2e:firefox` builds and lints Firefox output, runs generated-manifest smoke tests, verifies temporary add-on installation with `web-ext run`, and renders generated popup/dashboard pages in Playwright Firefox. Run `npx playwright install firefox` once if the Playwright Firefox runtime is missing.
 
 ## Generated Manifest Inspection
 
