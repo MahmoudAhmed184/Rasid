@@ -12,19 +12,46 @@ type HtmlFetchResult =
           readonly reason: string;
       };
 
+export type PlatformFeedJobsResult =
+    | {
+          readonly kind: 'success';
+          readonly jobs: readonly JobRecord[];
+      }
+    | {
+          readonly kind: 'error';
+          readonly reason: string;
+      };
+
+function sanitizeFetchError(error: unknown): string {
+    if (error instanceof TypeError) {
+        return 'Network request failed.';
+    }
+
+    return error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240);
+}
+
 async function fetchHtml(url: string): Promise<HtmlFetchResult> {
-    const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'omit',
-        cache: 'no-store',
-        referrerPolicy: 'no-referrer',
-        headers: {
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'ar,en;q=0.9',
-            'Cache-Control': 'no-cache',
-            Pragma: 'no-cache',
-        },
-    });
+    let response: Response;
+
+    try {
+        response = await fetch(url, {
+            method: 'GET',
+            credentials: 'omit',
+            cache: 'no-store',
+            referrerPolicy: 'no-referrer',
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'ar,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                Pragma: 'no-cache',
+            },
+        });
+    } catch (error) {
+        return {
+            kind: 'error',
+            reason: sanitizeFetchError(error),
+        };
+    }
 
     if (!response.ok) {
         return {
@@ -55,17 +82,23 @@ async function fetchHtml(url: string): Promise<HtmlFetchResult> {
     };
 }
 
-export async function fetchPlatformFeedJobs(
+export async function fetchPlatformFeedJobsResult(
     monitoring: PlatformMonitoringAdapter,
     url: string
-): Promise<readonly JobRecord[]> {
+): Promise<PlatformFeedJobsResult> {
     const result = await fetchHtml(`${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`);
 
     if (result.kind !== 'success') {
-        return [];
+        return {
+            kind: 'error',
+            reason: result.reason,
+        };
     }
 
-    return monitoring.parseListingHtml(result.html);
+    return {
+        kind: 'success',
+        jobs: await monitoring.parseListingHtml(result.html),
+    };
 }
 
 export async function hydratePlatformJob(

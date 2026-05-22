@@ -4,14 +4,14 @@ import './style.css';
 import { bootstrapPlatformAutofill } from '../../src/app/content/bootstrapPlatformAutofill';
 import { createPlatformContentServices } from '../../src/app/content/createPlatformContentServices';
 import { bootstrapPlatformContent } from '../../src/app/content/bootstrapPlatformContent';
-import { createBrowserRepositories } from '../../src/shared/browser/browser-repositories';
+import { createPlatformContentRepositories } from '../../src/app/repositories/browser-repositories';
 import { mostaqlAdapter } from '../../src/platforms/mostaql';
 
 export default defineContentScript({
     matches: [...mostaqlAdapter.matches],
     runAt: 'document_idle',
     main() {
-        const repositories = createBrowserRepositories();
+        const repositories = createPlatformContentRepositories();
 
         bootstrapPlatformContent({
             adapter: mostaqlAdapter,

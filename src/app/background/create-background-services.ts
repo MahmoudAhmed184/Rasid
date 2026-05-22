@@ -5,8 +5,9 @@ import { createProposalGenerator } from '../../features/proposals/generate-propo
 import { createProposalTemplateCatalog } from '../../features/proposals/proposal-template-catalog';
 import { createBackgroundRuntimeHandlers } from './background-runtime-handlers';
 import { createAiProviderRegistry } from '../../entities/ai/provider-registry';
+import { createDownloadCleanupService } from '../../features/downloads/download-cleanup-service';
 import { createAudioService } from '../../features/notifications/audio-service';
-import { createOffscreenManager } from '../../shared/browser/offscreen/manager';
+import { createOffscreenManager } from '../../features/offscreen/manager';
 import { createNotificationService } from '../../features/notifications/service';
 import { createSignalRManager } from '../../features/realtime/signalr-manager';
 import { createExtensionStorage } from '../../shared/storage/extension-storage';
@@ -15,6 +16,7 @@ import { createPlatformMonitoringAdapters } from '../../platforms/registry';
 
 export interface BackgroundApp {
     readonly notifications: ReturnType<typeof createNotificationService>;
+    readonly downloads: ReturnType<typeof createDownloadCleanupService>;
     readonly signalr: ReturnType<typeof createSignalRManager>;
     readonly runtimeMessageHandlers: ReturnType<typeof createBackgroundRuntimeHandlers>;
     ensureReady(reason: string): Promise<void>;
@@ -29,14 +31,21 @@ export function createBackgroundApp(): BackgroundApp {
     });
 
     if (!import.meta.env.CHROME) {
-        offscreen.registerLocalHandler('downloads.download-zip', async (payload) => {
-            const { downloadZipArchive } = await import('../../features/downloads/zip-downloads');
+        offscreen.registerLocalHandler('downloads.create-zip-url', async (payload) => {
+            const { createZipObjectUrl } = await import('../../features/downloads/zip-downloads');
 
-            return downloadZipArchive(payload.filename, payload.files);
+            return createZipObjectUrl(payload.filename, payload.files);
+        });
+        offscreen.registerLocalHandler('downloads.revoke-object-url', async (payload) => {
+            const { revokeZipObjectUrl } = await import('../../features/downloads/zip-downloads');
+
+            revokeZipObjectUrl(payload.objectUrl);
+            return { success: true };
         });
     }
 
     const audio = createAudioService(offscreen);
+    const downloads = createDownloadCleanupService(storage, offscreen);
     const monitoringHtmlParser = createPlatformMonitoringHtmlParser(offscreen);
     const platformMonitoring = createPlatformMonitoringAdapters(monitoringHtmlParser);
     const aiProviders = createAiProviderRegistry();
@@ -46,26 +55,40 @@ export function createBackgroundApp(): BackgroundApp {
         templates: proposalTemplates,
         providers: aiProviders,
     });
+    let ingestionQueue: Promise<void> = Promise.resolve();
+
+    function enqueueIngestion<T>(task: () => Promise<T>): Promise<T> {
+        const run = ingestionQueue.then(task, task);
+        ingestionQueue = run.then(
+            () => undefined,
+            () => undefined
+        );
+        return run;
+    }
 
     async function runPolling(reason: string): Promise<JobBatchResult> {
-        return runPollingCycle({
-            storage,
-            notifyJobs: (jobs) => notifications.showJobsNotification(jobs),
-            playNotificationSound: () => audio.playNotification(),
-            reason,
-            monitoring: platformMonitoring,
-        });
+        return enqueueIngestion(() =>
+            runPollingCycle({
+                storage,
+                notifyJobs: (jobs) => notifications.showJobsNotification(jobs),
+                playNotificationSound: () => audio.playNotification(),
+                reason,
+                monitoring: platformMonitoring,
+            })
+        );
     }
 
     const signalr = createSignalRManager({
         storage,
         onJobsReceived: async (jobs) => {
-            await processRealtimeJobBatch({
-                jobs,
-                storage,
-                notifyJobs: (batch) => notifications.showJobsNotification(batch),
-                playNotificationSound: () => audio.playNotification(),
-            });
+            await enqueueIngestion(() =>
+                processRealtimeJobBatch({
+                    jobs,
+                    storage,
+                    notifyJobs: (batch) => notifications.showJobsNotification(batch),
+                    playNotificationSound: () => audio.playNotification(),
+                })
+            );
         },
         onPollingFallback: async (reason) => {
             await runPolling(reason);
@@ -75,6 +98,7 @@ export function createBackgroundApp(): BackgroundApp {
     const runtimeMessageHandlers = createBackgroundRuntimeHandlers({
         storage,
         notifications,
+        downloads,
         audio,
         offscreen,
         signalr,
@@ -89,6 +113,7 @@ export function createBackgroundApp(): BackgroundApp {
     async function bootstrap(reason: string): Promise<void> {
         await storage.ensureDefaults();
         await offscreen.bootstrap();
+        await downloads.reconcilePendingCleanups();
         await signalr.bootstrap(reason);
     }
 
@@ -112,6 +137,7 @@ export function createBackgroundApp(): BackgroundApp {
 
     return {
         notifications,
+        downloads,
         signalr,
         runtimeMessageHandlers,
         ensureReady,

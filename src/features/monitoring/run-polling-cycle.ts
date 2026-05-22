@@ -1,5 +1,5 @@
 import { applyJobFilters } from './job-filters';
-import { fetchPlatformFeedJobs, hydratePlatformJob } from './fetch-platform-html';
+import { fetchPlatformFeedJobsResult, hydratePlatformJob } from './fetch-platform-html';
 import {
     createNoopJobBatchResult,
     publishJobBatch,
@@ -22,6 +22,8 @@ export async function runPollingCycle(options: {
     const { storage, notifyJobs, reason, monitoring, playNotificationSound } = options;
     const snapshot = await storage.getSnapshot();
     const settings = snapshot.settings;
+    const attemptedAt = new Date().toISOString();
+    const monitoringErrors: Record<string, { message: string; failedAt: string }> = {};
 
     if (settings.systemEnabled === false) {
         await storage.touchLastCheck(`${reason}:disabled`);
@@ -35,13 +37,31 @@ export async function runPollingCycle(options: {
 
     if (activeMonitoring.length === 0) {
         await storage.touchLastCheck(`${reason}:no-platforms`);
-        await storage.patchRuntimeState({ lastPollingReason: reason });
+        await storage.patchRuntimeState({
+            lastPollingReason: reason,
+            lastMonitoringAttemptAt: attemptedAt,
+            lastMonitoringErrors: {},
+        });
         return createNoopJobBatchResult('polling', snapshot.seenJobs.length, 'no-platforms');
     }
 
+    const successfulPlatforms = new Set<PlatformId>();
+
     for (const adapter of activeMonitoring) {
         for (const url of adapter.resolveFeeds(settings)) {
-            for (const job of await fetchPlatformFeedJobs(adapter, url)) {
+            const result = await fetchPlatformFeedJobsResult(adapter, url);
+
+            if (result.kind !== 'success') {
+                monitoringErrors[adapter.id] = {
+                    message: `${adapter.displayName}: ${result.reason}`,
+                    failedAt: attemptedAt,
+                };
+                continue;
+            }
+
+            successfulPlatforms.add(adapter.id);
+
+            for (const job of result.jobs) {
                 const jobWithPlatform = {
                     ...job,
                     platformId: job.platformId ?? adapter.id,
@@ -56,8 +76,22 @@ export async function runPollingCycle(options: {
         }
     }
 
+    if (successfulPlatforms.size === 0) {
+        await storage.patchRuntimeState({
+            lastPollingReason: `${reason}:fetch-failed`,
+            lastMonitoringAttemptAt: attemptedAt,
+            lastMonitoringErrors: monitoringErrors,
+        });
+        return createNoopJobBatchResult('polling', snapshot.seenJobs.length, 'no-new-jobs');
+    }
+
     const ingested = await storage.ingestJobs([...feedJobs.values()]);
-    await storage.patchRuntimeState({ lastPollingReason: reason });
+    await storage.patchRuntimeState({
+        lastPollingReason: reason,
+        lastMonitoringAttemptAt: attemptedAt,
+        lastMonitoringSuccessAt: attemptedAt,
+        lastMonitoringErrors: monitoringErrors,
+    });
 
     const hydratedJobs: JobRecord[] = [];
     const monitoringById = new Map<PlatformId, PlatformMonitoringAdapter>(

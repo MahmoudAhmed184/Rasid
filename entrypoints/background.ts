@@ -3,6 +3,7 @@ import { defineBackground } from 'wxt/utils/define-background';
 
 import { createBackgroundApp } from '../src/app/background/create-background-services';
 import { registerBackgroundRuntimeMessageBus } from '../src/app/background/background-message-bus';
+import { restrictBrowserSessionStorageToTrustedContexts } from '../src/shared/browser/storage-client';
 
 function runTask(label: string, task: () => Promise<void>): void {
     void task().catch((error) => {
@@ -13,9 +14,12 @@ function runTask(label: string, task: () => Promise<void>): void {
 export default defineBackground({
     type: 'module',
     main() {
+        runTask('restrict-session-storage-access', restrictBrowserSessionStorageToTrustedContexts);
+
         const backgroundApp = createBackgroundApp();
 
         backgroundApp.notifications.registerHandlers();
+        backgroundApp.downloads.registerHandlers();
 
         browser.runtime.onInstalled.addListener(() => {
             runTask('runtime-installed-bootstrap', () =>

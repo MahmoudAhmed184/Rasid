@@ -157,14 +157,6 @@ export function evaluateJobFilters(
     };
 }
 
-export function firstJobFilterFailure(
-    job: Readonly<JobRecord>,
-    settings: Readonly<ExtensionSettings>,
-    now: Date = new Date()
-): JobFilterFailure | null {
-    return evaluateJobFilters(job, settings, now).failures[0] ?? null;
-}
-
 export function applyJobFilters(
     job: Readonly<JobRecord>,
     settings: Readonly<ExtensionSettings>,

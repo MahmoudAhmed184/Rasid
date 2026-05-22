@@ -1,15 +1,25 @@
-import { type StoredNotificationPayload, type StoredState } from './schema';
-import { createBrowserStorageClient, type StorageClient } from '../browser/storage-client';
+import {
+    type PendingDownloadCleanup,
+    type StoredNotificationPayload,
+    type StoredState,
+} from './schema';
+import {
+    createBrowserSessionStorageClient,
+    createBrowserStorageClient,
+    type StorageClient,
+} from '../browser/storage-client';
 import { SNAPSHOT_KEYS } from './storage-keys';
+import { createDownloadCleanupStorage } from './modules/download-cleanup-storage';
+import { createAiSecretStorage } from './modules/ai-secret-storage';
 import { createMonitoringStorage, type IngestedJobsResult } from './modules/monitoring-storage';
 import { createNotificationPayloadStorage } from './modules/notification-payload-storage';
 import { createPromptStorage } from './modules/prompt-storage';
 import { createRuntimeStorage, type RuntimeStatePatch } from './modules/runtime-storage';
-import { createSettingsStorage } from './modules/settings-storage';
+import { createSettingsStorage, getLegacySettingsApiKey } from './modules/settings-storage';
 import { normalizeStoredStateSnapshot } from './snapshot-state';
 import { createTrackingStorage } from './modules/tracking-storage';
 import type { JobRecord, TrackedProject } from '../../entities/job/model';
-import type { ExtensionStats } from '../../features/monitoring/model';
+import type { ExtensionStats } from '../../entities/monitoring/model';
 import type { PromptTemplate } from '../../entities/prompt/model';
 import type { RuntimeState, SignalRState } from '../../entities/runtime/model';
 import type { ExtensionSettings } from '../../entities/settings/model';
@@ -42,7 +52,13 @@ export interface ExtensionStorage {
         notificationId: string,
         payload: StoredNotificationPayload
     ): Promise<void>;
+    removeNotificationPayload(notificationId: string): Promise<void>;
     consumeNotificationPayload(notificationId: string): Promise<StoredNotificationPayload | null>;
+    pruneNotificationPayloads(): Promise<number>;
+    storePendingDownloadCleanup(payload: PendingDownloadCleanup): Promise<void>;
+    consumePendingDownloadCleanup(downloadId: number): Promise<PendingDownloadCleanup | null>;
+    listPendingDownloadCleanups(): Promise<PendingDownloadCleanup[]>;
+    pruneExpiredDownloadCleanups(): Promise<PendingDownloadCleanup[]>;
 }
 
 function jsonEqual(left: unknown, right: unknown): boolean {
@@ -50,14 +66,17 @@ function jsonEqual(left: unknown, right: unknown): boolean {
 }
 
 export function createExtensionStorage(
-    client: StorageClient = createBrowserStorageClient()
+    client: StorageClient = createBrowserStorageClient(),
+    secretClient: StorageClient = createBrowserSessionStorageClient()
 ): ExtensionStorage {
-    const settingsStorage = createSettingsStorage(client);
+    const aiSecretStorage = createAiSecretStorage(secretClient);
+    const settingsStorage = createSettingsStorage(client, aiSecretStorage);
     const promptStorage = createPromptStorage(client);
     const trackingStorage = createTrackingStorage(client);
     const runtimeStorage = createRuntimeStorage(client);
     const monitoringStorage = createMonitoringStorage(client);
     const notificationPayloadStorage = createNotificationPayloadStorage(client);
+    const downloadCleanupStorage = createDownloadCleanupStorage(client);
 
     async function readSnapshotFields(): Promise<Record<string, unknown>> {
         return client.get(SNAPSHOT_KEYS);
@@ -77,6 +96,12 @@ export function createExtensionStorage(
 
     async function ensureDefaults(): Promise<StoredState> {
         const raw = await readSnapshotFields();
+        const legacyApiKey = getLegacySettingsApiKey(raw.settings);
+
+        if (legacyApiKey) {
+            await aiSecretStorage.setAiApiKey(legacyApiKey);
+        }
+
         const normalized = normalizeStoredStateSnapshot(raw);
         const patchEntries: Array<[keyof StoredState, StoredState[keyof StoredState]]> = [];
 
@@ -128,6 +153,12 @@ export function createExtensionStorage(
         mergeRecentJobs,
         touchLastCheck,
         storeNotificationPayload: notificationPayloadStorage.storeNotificationPayload,
+        removeNotificationPayload: notificationPayloadStorage.removeNotificationPayload,
         consumeNotificationPayload: notificationPayloadStorage.consumeNotificationPayload,
+        pruneNotificationPayloads: notificationPayloadStorage.pruneNotificationPayloads,
+        storePendingDownloadCleanup: downloadCleanupStorage.storePendingDownloadCleanup,
+        consumePendingDownloadCleanup: downloadCleanupStorage.consumePendingDownloadCleanup,
+        listPendingDownloadCleanups: downloadCleanupStorage.listPendingDownloadCleanups,
+        pruneExpiredDownloadCleanups: downloadCleanupStorage.pruneExpiredDownloadCleanups,
     };
 }

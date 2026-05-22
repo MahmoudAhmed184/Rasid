@@ -14,3 +14,4 @@ export const STORAGE_FIELDS = {
 
 export const SNAPSHOT_KEYS = Object.values(STORAGE_FIELDS) as Array<keyof StoredState>;
 export const NOTIFICATION_KEY_PREFIX = 'notification:';
+export const DOWNLOAD_CLEANUP_KEY_PREFIX = 'download-cleanup:';

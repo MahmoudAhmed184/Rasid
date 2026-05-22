@@ -71,9 +71,17 @@ export type SignalRState =
     | BackoffSignalRState
     | SuspendedSignalRState;
 
+export interface MonitoringFetchFailure {
+    readonly message: string;
+    readonly failedAt: string;
+}
+
 export interface RuntimeState {
     signalr: SignalRState;
     lastPollingReason: string | null;
+    lastMonitoringAttemptAt: string | null;
+    lastMonitoringSuccessAt: string | null;
+    lastMonitoringErrors: Record<string, MonitoringFetchFailure>;
 }
 
 export function isSignalRLiveState(

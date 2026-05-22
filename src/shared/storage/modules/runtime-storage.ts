@@ -1,8 +1,13 @@
-import { DEFAULT_SIGNALR_URL } from '../../../features/realtime/constants';
+import { resolveSignalRServerUrl } from '../../../entities/runtime/signalr';
 import { DEFAULT_RUNTIME_STATE } from '../schema';
 import type { StorageClient } from '../../browser/storage-client';
 import { STORAGE_FIELDS } from '../storage-keys';
-import type { RuntimeState, SignalRState, SignalRStatus } from '../../../entities/runtime/model';
+import type {
+    MonitoringFetchFailure,
+    RuntimeState,
+    SignalRState,
+    SignalRStatus,
+} from '../../../entities/runtime/model';
 
 const SIGNALR_STATUSES: ReadonlySet<SignalRStatus> = new Set([
     'idle',
@@ -27,6 +32,31 @@ function isSignalRStatus(value: unknown): value is SignalRStatus {
 
 function normalizeNullableText(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function normalizeMonitoringErrors(value: unknown): Record<string, MonitoringFetchFailure> {
+    if (!isObject(value)) {
+        return {};
+    }
+
+    const errors: Record<string, MonitoringFetchFailure> = {};
+
+    for (const [platformId, candidate] of Object.entries(value)) {
+        if (!isObject(candidate)) {
+            continue;
+        }
+
+        if (typeof candidate.message !== 'string' || typeof candidate.failedAt !== 'string') {
+            continue;
+        }
+
+        errors[platformId] = {
+            message: candidate.message.slice(0, 240),
+            failedAt: candidate.failedAt,
+        };
+    }
+
+    return errors;
 }
 
 function normalizeReconnectAttempt(value: unknown): number {
@@ -75,10 +105,7 @@ export function normalizeSignalRState(value: unknown): SignalRState {
         return { ...DEFAULT_RUNTIME_STATE.signalr };
     }
 
-    const serverUrl =
-        typeof value.serverUrl === 'string' && value.serverUrl.length > 0
-            ? value.serverUrl
-            : DEFAULT_SIGNALR_URL;
+    const serverUrl = resolveSignalRServerUrl(value.serverUrl);
     const reconnectAttempt = normalizeReconnectAttempt(value.reconnectAttempt);
     const lastConnectedAt =
         normalizeNullableText(value.lastConnectedAt) ?? normalizeNullableText(value.lastEventAt);
@@ -219,11 +246,12 @@ export function normalizeRuntime(value: unknown): RuntimeState {
     }
 
     return {
-        ...DEFAULT_RUNTIME_STATE,
-        ...value,
         signalr: normalizeSignalRState(value.signalr),
         lastPollingReason:
             typeof value.lastPollingReason === 'string' ? value.lastPollingReason : null,
+        lastMonitoringAttemptAt: normalizeNullableText(value.lastMonitoringAttemptAt),
+        lastMonitoringSuccessAt: normalizeNullableText(value.lastMonitoringSuccessAt),
+        lastMonitoringErrors: normalizeMonitoringErrors(value.lastMonitoringErrors),
     };
 }
 

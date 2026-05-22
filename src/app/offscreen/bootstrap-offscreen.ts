@@ -1,10 +1,6 @@
 import { browser } from 'wxt/browser';
 
-import {
-    createZipObjectUrl,
-    downloadZipArchive,
-    revokeZipObjectUrl,
-} from '../../features/downloads/zip-downloads';
+import { createZipObjectUrl, revokeZipObjectUrl } from '../../features/downloads/zip-downloads';
 import { playNotificationAudioDirect } from '../../features/notifications/audio-service';
 import {
     createOffscreenTransportFailure,
@@ -13,7 +9,7 @@ import {
     isOffscreenProtocolMessage,
     type OffscreenTaskHandlerMap,
     type OffscreenTaskEnvelope,
-} from '../../shared/browser/offscreen/manager';
+} from '../../features/offscreen/manager';
 import { getPlatformMonitoringHtmlParser } from '../../platforms/registry';
 
 let initialized = false;
@@ -21,10 +17,13 @@ let initialized = false;
 const offscreenTaskHandlers = {
     async 'audio.play-notification'() {
         await playNotificationAudioDirect();
+        return { success: true };
     },
     'downloads.create-zip-url': (payload) => createZipObjectUrl(payload.filename, payload.files),
-    'downloads.download-zip': (payload) => downloadZipArchive(payload.filename, payload.files),
-    'downloads.revoke-object-url': (payload) => revokeZipObjectUrl(payload.objectUrl),
+    'downloads.revoke-object-url': (payload) => {
+        revokeZipObjectUrl(payload.objectUrl);
+        return { success: true };
+    },
     'monitoring.parse-listing-html': (payload) =>
         getPlatformMonitoringHtmlParser(payload.platformId).parseListingHtml(payload.html),
     'monitoring.parse-project-html': (payload) =>
@@ -35,6 +34,14 @@ function handleTask(message: OffscreenTaskEnvelope) {
     return dispatchOffscreenTask(offscreenTaskHandlers, message);
 }
 
+function isTrustedOffscreenSender(sender: Browser.runtime.MessageSender): boolean {
+    if (sender.id && sender.id !== browser.runtime.id) {
+        return false;
+    }
+
+    return sender.tab === undefined;
+}
+
 export function initOffscreen(): void {
     if (initialized) {
         return;
@@ -42,8 +49,19 @@ export function initOffscreen(): void {
 
     initialized = true;
 
-    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!isOffscreenProtocolMessage(message)) {
+            return undefined;
+        }
+
+        if (!isTrustedOffscreenSender(sender)) {
+            sendResponse(
+                createOffscreenTransportFailure(
+                    message.task,
+                    'Untrusted offscreen message sender.',
+                    message.requestId
+                )
+            );
             return undefined;
         }
 
@@ -52,13 +70,16 @@ export function initOffscreen(): void {
         // requires callback-style async replies for broad version compatibility.
         void Promise.resolve(handleTask(message)).then(
             (result: Awaited<ReturnType<typeof handleTask>>) => {
-                sendResponse(createOffscreenTransportSuccess(message.task, result));
+                sendResponse(
+                    createOffscreenTransportSuccess(message.task, result, message.requestId)
+                );
             },
             (error: unknown) => {
                 sendResponse(
                     createOffscreenTransportFailure(
                         message.task,
-                        error instanceof Error ? error.message : String(error)
+                        error instanceof Error ? error.message : String(error),
+                        message.requestId
                     )
                 );
             }

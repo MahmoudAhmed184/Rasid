@@ -1,16 +1,11 @@
-import type { OffscreenManager } from '../../shared/browser/offscreen/manager';
-import {
-    registerNotificationAudioTask,
-    requestNotificationAudioTask,
-} from '../../shared/browser/offscreen/tasks';
+import type { OffscreenManager } from '../offscreen/manager';
+import { registerNotificationAudioTask, requestNotificationAudioTask } from '../offscreen/tasks';
 
 export interface AudioService {
     playNotification(): Promise<void>;
 }
 
-function getAudioContextCtor():
-    | (new () => AudioContext)
-    | undefined {
+function getAudioContextCtor(): (new () => AudioContext) | undefined {
     return globalThis.AudioContext;
 }
 
@@ -39,7 +34,9 @@ function playTone(
     return oscillator;
 }
 
-async function playSequence(steps: Array<{ frequency: number; startTime: number; duration: number }>) {
+async function playSequence(
+    steps: Array<{ frequency: number; startTime: number; duration: number }>
+) {
     const AudioContextCtor = getAudioContextCtor();
 
     if (!AudioContextCtor) {
@@ -56,12 +53,7 @@ async function playSequence(steps: Array<{ frequency: number; startTime: number;
         let lastOscillator: OscillatorNode | null = null;
 
         for (const step of steps) {
-            lastOscillator = playTone(
-                audioContext,
-                step.frequency,
-                step.startTime,
-                step.duration
-            );
+            lastOscillator = playTone(audioContext, step.frequency, step.startTime, step.duration);
         }
 
         await new Promise<void>((resolve) => {

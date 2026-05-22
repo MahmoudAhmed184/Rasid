@@ -128,7 +128,9 @@ export function createTrackingRepository(storage: ExtensionStorage): TrackingRep
         },
         async get(projectId, platformId) {
             const trackedProjects = await storage.getTrackedProjects();
-            return findTrackedProjectMatches(trackedProjects, projectId, platformId)[0]?.record ?? null;
+            return (
+                findTrackedProjectMatches(trackedProjects, projectId, platformId)[0]?.record ?? null
+            );
         },
         async isTracked(projectId, platformId) {
             const trackedProject = await this.get(projectId, platformId);

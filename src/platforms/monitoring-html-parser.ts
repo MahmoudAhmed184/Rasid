@@ -1,10 +1,10 @@
 import type { JobRecord } from '../entities/job/model';
-import type { OffscreenManager } from '../shared/browser/offscreen/manager';
+import type { OffscreenManager } from '../features/offscreen/manager';
 import {
     registerMonitoringHtmlParserTasks,
     requestMonitoringListingHtmlParse,
     requestMonitoringProjectHtmlParse,
-} from '../shared/browser/offscreen/tasks';
+} from '../features/offscreen/tasks';
 import { looksLikeChallengePage } from '../shared/network/challenge-page';
 import type { PlatformId } from './contracts';
 import { getPlatformMonitoringHtmlParser } from './registry';

@@ -2,7 +2,11 @@ import type { StoredState } from './schema';
 import { normalizeMonitoringFields } from './modules/monitoring-storage';
 import { normalizePrompts } from './modules/prompt-storage';
 import { normalizeRuntime } from './modules/runtime-storage';
-import { normalizeProposalTemplate, normalizeSettings } from './modules/settings-storage';
+import {
+    normalizeProposalTemplate,
+    normalizeSettings,
+    sanitizeSettingsForPersistentStorage,
+} from './modules/settings-storage';
 import { normalizeTrackedProjects } from './modules/tracking-storage';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -11,7 +15,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function normalizeStoredStateSnapshot(value: Record<string, unknown>): StoredState {
     return {
-        settings: normalizeSettings(value.settings),
+        settings: sanitizeSettingsForPersistentStorage(normalizeSettings(value.settings)),
         ...normalizeMonitoringFields(value),
         trackedProjects: normalizeTrackedProjects(value.trackedProjects),
         prompts: normalizePrompts(value.prompts),

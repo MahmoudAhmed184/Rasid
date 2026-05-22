@@ -1,4 +1,4 @@
-import { createBrowserRepositories } from '../../src/shared/browser/browser-repositories';
+import { createBrowserRepositories } from '../../src/app/repositories/browser-repositories';
 import { bootstrapPopup } from '../../src/app/popup';
 
 function mount(): void {

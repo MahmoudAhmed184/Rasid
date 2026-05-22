@@ -4,18 +4,10 @@ import {
     HttpTransportType,
     LogLevel,
 } from '@microsoft/signalr';
-import { browser } from 'wxt/browser';
 
-import {
-    ALARM_NAMES,
-    DEFAULT_SIGNALR_URL,
-    SIGNALR_LEASE_WINDOW_MS,
-    SIGNALR_RECONNECT_DELAY_MINUTES,
-} from './constants';
-import {
-    createRecurringSignalREffects,
-    executeSignalREffects,
-} from './signalr-effects';
+import { ALARM_NAMES, SIGNALR_LEASE_WINDOW_MS, SIGNALR_RECONNECT_DELAY_MINUTES } from './constants';
+import { redactSignalRUrl, resolveSignalRServerUrl } from '../../entities/runtime/signalr';
+import { createRecurringSignalREffects, executeSignalREffects } from './signalr-effects';
 import {
     computeReconnectDelayMinutes,
     reduceSignalRState,
@@ -50,8 +42,8 @@ export interface SignalRManager {
     disconnect(reason?: string): Promise<void>;
 }
 
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+function safeErrorLabel(error: unknown): string {
+    return error instanceof Error && error.name ? error.name : 'runtime-error';
 }
 
 function isDue(dateText: string | null, nowValue: Date): boolean {
@@ -97,10 +89,9 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
         return desiredTransport;
     }
 
-    async function stopConnection(event: Extract<
-        SignalREvent,
-        { type: 'ENTER_IDLE' | 'ENTER_POLLING' | 'ENTER_SUSPENDED' }
-    >): Promise<void> {
+    async function stopConnection(
+        event: Extract<SignalREvent, { type: 'ENTER_IDLE' | 'ENTER_POLLING' | 'ENTER_SUSPENDED' }>
+    ): Promise<void> {
         const currentSignalR = (await options.storage.getRuntimeState()).signalr;
         const activeConnection = connection;
         connection = null;
@@ -160,7 +151,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason,
             attempt,
             nextReconnectAt,
-            serverUrl: runtime.signalr.serverUrl || DEFAULT_SIGNALR_URL,
+            serverUrl: resolveSignalRServerUrl(runtime.signalr.serverUrl),
             status: config.status ?? 'backoff',
         });
     }
@@ -190,7 +181,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason: disconnectReason,
             nextReconnectAt: signalr.nextReconnectAt,
             reconnectAttempt: signalr.reconnectAttempt,
-            serverUrl: signalr.serverUrl || DEFAULT_SIGNALR_URL,
+            serverUrl: resolveSignalRServerUrl(signalr.serverUrl),
         });
 
         return disconnectReason;
@@ -234,13 +225,18 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
     }
 
     async function handleUnexpectedClose(serverUrl: string, error: unknown): Promise<void> {
-        const reason = `signalr-closed:${errorMessage(error)}`;
+        const reason = 'signalr-closed';
         connection = null;
 
         await scheduleReconnect(reason);
         await options.onPollingFallback(reason);
 
-        logger.warn('SignalR connection closed, polling fallback enabled:', reason, serverUrl);
+        logger.warn(
+            'SignalR connection closed, polling fallback enabled:',
+            reason,
+            redactSignalRUrl(serverUrl),
+            safeErrorLabel(error)
+        );
     }
 
     function bindHandlers(boundConnection: HubConnection, serverUrl: string): void {
@@ -282,7 +278,8 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             return connectPromise;
         }
 
-        const serverUrl = settings.signalrServerUrl || DEFAULT_SIGNALR_URL;
+        const serverUrl = resolveSignalRServerUrl(settings.signalrServerUrl);
+        const safeServerUrl = redactSignalRUrl(serverUrl);
         const revision = connectionRevision + 1;
 
         connectPromise = (async () => {
@@ -338,15 +335,19 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
                         connectedAt.getTime() + SIGNALR_LEASE_WINDOW_MS
                     ).toISOString(),
                 });
-                logger.info('SignalR connected:', reason, serverUrl);
+                logger.info('SignalR connected:', reason, safeServerUrl);
             } catch (error) {
                 if (revision === connectionRevision) {
                     connection = null;
-                    await scheduleReconnect(`signalr-connect-failed:${errorMessage(error)}`);
+                    await scheduleReconnect('signalr-connect-failed');
                     await options.onPollingFallback('signalr-connect-failed');
                 }
 
-                logger.warn('SignalR connect failed, polling fallback enabled:', error);
+                logger.warn(
+                    'SignalR connect failed, polling fallback enabled:',
+                    safeServerUrl,
+                    safeErrorLabel(error)
+                );
 
                 try {
                     intentionallyClosing.add(nextConnection);

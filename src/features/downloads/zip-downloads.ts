@@ -1,14 +1,13 @@
-import { browser } from 'wxt/browser';
-
-import type {
-    OffscreenZipDownloadResult,
-    OffscreenZipEntryInput,
-    OffscreenZipObjectUrlResult,
-} from '../../shared/browser/offscreen/manager';
+import type { OffscreenZipEntryInput, OffscreenZipObjectUrlResult } from '../offscreen/manager';
 
 export type ZipEntryInput = OffscreenZipEntryInput;
-export type ZipDownloadResult = OffscreenZipDownloadResult;
 export type ZipObjectUrlResult = OffscreenZipObjectUrlResult;
+
+export interface ZipDownloadResult {
+    success: boolean;
+    downloadId?: number;
+    error?: string;
+}
 
 interface ResolvedZipEntry {
     readonly name: string;
@@ -23,8 +22,13 @@ interface CentralDirectoryRecord {
 const ZIP_MIME_TYPE = 'application/zip';
 const MAX_ZIP32_VALUE = 0xffffffff;
 const MAX_ZIP32_ENTRIES = 0xffff;
+const MAX_ZIP_ENTRIES = 80;
+const MAX_REMOTE_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_ENTRY_BYTES = 50 * 1024 * 1024;
+const REMOTE_FETCH_TIMEOUT_MS = 15_000;
 const UTF8_FILE_NAME_FLAG = 0x0800;
 const STORE_COMPRESSION_METHOD = 0;
+const ZIP_ALLOWED_REMOTE_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
 
 const encoder = new TextEncoder();
 const crc32Table = createCrc32Table();
@@ -206,6 +210,46 @@ function assertZip32Limit(label: string, value: number): void {
     }
 }
 
+function isAllowedRemoteHost(hostname: string): boolean {
+    const normalized = hostname.toLowerCase();
+
+    return ZIP_ALLOWED_REMOTE_HOSTS.some(
+        (allowedHost) => normalized === allowedHost || normalized.endsWith(`.${allowedHost}`)
+    );
+}
+
+function parseAllowedRemoteUrl(value: string): URL {
+    let url: URL;
+
+    try {
+        url = new URL(value);
+    } catch {
+        throw new Error('Attachment URL is not valid.');
+    }
+
+    if (url.protocol !== 'https:') {
+        throw new Error('Attachment URL must use HTTPS.');
+    }
+
+    if (!isAllowedRemoteHost(url.hostname)) {
+        throw new Error('Attachment URL host is not supported for export.');
+    }
+
+    url.username = '';
+    url.password = '';
+    url.hash = '';
+    return url;
+}
+
+function parseContentLength(value: string | null): number | null {
+    if (!value) {
+        return null;
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+}
+
 function toBlobPart(bytes: Uint8Array): ArrayBuffer {
     const copy = new Uint8Array(bytes.byteLength);
     copy.set(bytes);
@@ -260,7 +304,10 @@ function createZipBlob(entries: readonly ResolvedZipEntry[]): Blob {
     return new Blob(parts, { type: ZIP_MIME_TYPE });
 }
 
-async function readFileEntry(file: ZipEntryInput): Promise<string | ArrayBuffer | null> {
+async function readFileEntry(
+    file: ZipEntryInput,
+    remainingBytes: number
+): Promise<string | ArrayBuffer | null> {
     if (file.content !== undefined) {
         return file.content;
     }
@@ -269,69 +316,110 @@ async function readFileEntry(file: ZipEntryInput): Promise<string | ArrayBuffer 
         return null;
     }
 
-    const response = await fetch(file.url, {
-        credentials: 'include',
-        cache: 'no-store',
-    });
+    const url = parseAllowedRemoteUrl(file.url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS);
+
+    let response: Response;
+
+    try {
+        response = await fetch(url.href, {
+            credentials: 'include',
+            cache: 'no-store',
+            referrerPolicy: 'no-referrer',
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
     }
 
-    return response.arrayBuffer();
+    const contentLength = parseContentLength(response.headers.get('content-length'));
+
+    if (contentLength !== null && contentLength > MAX_REMOTE_FILE_BYTES) {
+        throw new Error('Attachment exceeds the per-file export limit.');
+    }
+
+    if (contentLength !== null && contentLength > remainingBytes) {
+        throw new Error('Attachment exceeds the remaining archive size limit.');
+    }
+
+    const data = await response.arrayBuffer();
+
+    if (data.byteLength > MAX_REMOTE_FILE_BYTES) {
+        throw new Error('Attachment exceeds the per-file export limit.');
+    }
+
+    if (data.byteLength > remainingBytes) {
+        throw new Error('Attachment exceeds the remaining archive size limit.');
+    }
+
+    return data;
 }
 
 async function createResolvedEntries(files: readonly ZipEntryInput[]): Promise<ResolvedZipEntry[]> {
     const entries: ResolvedZipEntry[] = [];
     const usedNames = new Set<string>();
+    let totalBytes = 0;
 
-    for (const [index, file] of files.entries()) {
+    function pushEntry(name: string, data: Uint8Array): void {
+        if (data.byteLength > MAX_REMOTE_FILE_BYTES) {
+            throw new Error('Entry exceeds the per-file export limit.');
+        }
+
+        if (totalBytes + data.byteLength > MAX_TOTAL_ENTRY_BYTES) {
+            throw new Error('Archive exceeds the total export size limit.');
+        }
+
+        totalBytes += data.byteLength;
+        entries.push({
+            name,
+            data,
+            lastModified: new Date(),
+        });
+    }
+
+    function pushErrorEntry(entryName: string, message: string): void {
+        const errorName = createUniqueName(`${entryName}.error.txt`, usedNames);
+        const data = encoder.encode(`Skipped attachment: ${message}`);
+        totalBytes += data.byteLength;
+        entries.push({
+            name: errorName,
+            data,
+            lastModified: new Date(),
+        });
+    }
+
+    const selectedFiles = files.slice(0, MAX_ZIP_ENTRIES);
+
+    for (const [index, file] of selectedFiles.entries()) {
         const entryName = normalizeZipEntryName(file.name, `file-${index + 1}`);
 
         try {
-            const data = await readFileEntry(file);
+            const data = await readFileEntry(file, MAX_TOTAL_ENTRY_BYTES - totalBytes);
 
             if (data === null) {
                 continue;
             }
 
-            entries.push({
-                name: createUniqueName(entryName, usedNames),
-                data: toUint8Array(data),
-                lastModified: new Date(),
-            });
+            pushEntry(createUniqueName(entryName, usedNames), toUint8Array(data));
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            const errorName = createUniqueName(`${entryName}.error.txt`, usedNames);
-
-            entries.push({
-                name: errorName,
-                data: encoder.encode(`Failed to download: ${message}`),
-                lastModified: new Date(),
-            });
+            pushErrorEntry(entryName, message);
         }
     }
 
+    if (files.length > MAX_ZIP_ENTRIES) {
+        pushErrorEntry(
+            'skipped-files',
+            `${files.length - MAX_ZIP_ENTRIES} entries were skipped because the export contains too many files.`
+        );
+    }
+
     return entries;
-}
-
-function triggerAnchorDownload(filename: string, objectUrl: string): void {
-    if (typeof document === 'undefined') {
-        throw new Error('DOM downloads are not available in this context.');
-    }
-
-    const anchor = document.createElement('a');
-
-    try {
-        anchor.href = objectUrl;
-        anchor.download = filename;
-        anchor.rel = 'noopener';
-        anchor.style.display = 'none';
-        document.body.appendChild(anchor);
-        anchor.click();
-    } finally {
-        anchor.remove();
-    }
 }
 
 export async function createZipObjectUrl(
@@ -358,69 +446,4 @@ export async function createZipObjectUrl(
 
 export function revokeZipObjectUrl(objectUrl: string): void {
     URL.revokeObjectURL(objectUrl);
-}
-
-export async function downloadZipArchive(
-    filename: string,
-    files: readonly ZipEntryInput[]
-): Promise<ZipDownloadResult> {
-    try {
-        const zipUrl = await createZipObjectUrl(filename, files);
-
-        if (!zipUrl.success || !zipUrl.objectUrl || !zipUrl.filename) {
-            return {
-                success: false,
-                error: zipUrl.error ?? 'Failed to create ZIP download URL.',
-            };
-        }
-
-        if (typeof document !== 'undefined') {
-            triggerAnchorDownload(zipUrl.filename, zipUrl.objectUrl);
-            window.setTimeout(() => {
-                revokeZipObjectUrl(zipUrl.objectUrl!);
-            }, 60_000);
-            return { success: true };
-        }
-
-        if (typeof URL.createObjectURL === 'function') {
-            try {
-                const downloadId = await browser.downloads.download({
-                    url: zipUrl.objectUrl,
-                    filename: zipUrl.filename,
-                    saveAs: true,
-                });
-
-                const cleanup = (delta: Browser.downloads.DownloadDelta) => {
-                    if (
-                        delta.id !== downloadId ||
-                        !delta.state ||
-                        (delta.state.current !== 'complete' &&
-                            delta.state.current !== 'interrupted')
-                    ) {
-                        return;
-                    }
-
-                    browser.downloads.onChanged.removeListener(cleanup);
-                    revokeZipObjectUrl(zipUrl.objectUrl!);
-                };
-
-                browser.downloads.onChanged.addListener(cleanup);
-
-                return {
-                    success: true,
-                    downloadId,
-                };
-            } catch (error) {
-                revokeZipObjectUrl(zipUrl.objectUrl);
-                throw error;
-            }
-        }
-
-        throw new Error('This extension context cannot create download URLs.');
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : String(error),
-        };
-    }
 }

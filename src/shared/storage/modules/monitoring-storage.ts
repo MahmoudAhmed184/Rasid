@@ -2,7 +2,7 @@ import { DEFAULT_STATS, MAX_RECENT_JOBS, MAX_SEEN_JOBS, type StoredState } from 
 import type { StorageClient } from '../../browser/storage-client';
 import { STORAGE_FIELDS } from '../storage-keys';
 import type { JobRecord } from '../../../entities/job/model';
-import type { ExtensionStats } from '../../../features/monitoring/model';
+import type { ExtensionStats } from '../../../entities/monitoring/model';
 import type { RuntimeState } from '../../../entities/runtime/model';
 import type { ExtensionSettings } from '../../../entities/settings/model';
 import { getJobRecordKey } from '../../../entities/job/identity';

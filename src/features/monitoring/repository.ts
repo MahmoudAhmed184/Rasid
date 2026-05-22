@@ -1,5 +1,5 @@
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
-import type { ExtensionStats } from './model';
+import type { ExtensionStats } from '../../entities/monitoring/model';
 import type { RuntimeState } from '../../entities/runtime/model';
 import type { NotificationMode } from '../../entities/settings/model';
 

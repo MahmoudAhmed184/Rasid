@@ -1,5 +1,5 @@
-import type { JobRecord } from '../../../entities/job/model';
-import type { PlatformId } from '../../../platforms/contracts';
+import type { JobRecord } from '../../entities/job/model';
+import type { PlatformId } from '../../entities/platform/model';
 import type { OffscreenManager } from './manager';
 
 export interface MonitoringHtmlTaskHandlers {
@@ -19,11 +19,12 @@ export function registerNotificationAudioTask(
 ): void {
     offscreen.registerLocalHandler('audio.play-notification', async () => {
         await playNotification();
+        return { success: true };
     });
 }
 
 export function requestNotificationAudioTask(offscreen: OffscreenManager): Promise<void> {
-    return offscreen.request('audio.play-notification', {});
+    return offscreen.request('audio.play-notification', {}).then(() => undefined);
 }
 
 export function registerMonitoringHtmlParserTasks(

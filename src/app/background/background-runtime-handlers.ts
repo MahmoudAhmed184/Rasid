@@ -9,15 +9,17 @@ import type {
     BackgroundMessageResponseMap,
 } from './background-messages';
 import type { AudioService } from '../../features/notifications/audio-service';
+import type { DownloadCleanupService } from '../../features/downloads/download-cleanup-service';
 import type { NotificationService } from '../../features/notifications/service';
 import type { SignalRManager } from '../../features/realtime/signalr-manager';
-import type { OffscreenManager } from '../../shared/browser/offscreen/manager';
+import type { OffscreenManager } from '../../features/offscreen/manager';
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 import type { PlatformMonitoringAdapter } from '../../platforms/contracts';
 
 interface BackgroundRuntimeHandlerDependencies {
     readonly storage: ExtensionStorage;
     readonly notifications: NotificationService;
+    readonly downloads: DownloadCleanupService;
     readonly audio: AudioService;
     readonly offscreen: OffscreenManager;
     readonly signalr: SignalRManager;
@@ -26,28 +28,10 @@ interface BackgroundRuntimeHandlerDependencies {
     readonly runPolling: (reason: string) => Promise<JobBatchResult>;
 }
 
-async function revokeOffscreenObjectUrl(
-    offscreen: OffscreenManager,
-    objectUrl: string
-): Promise<void> {
-    try {
-        await offscreen.request('downloads.revoke-object-url', { objectUrl });
-    } catch (error) {
-        console.warn('[background] failed to revoke offscreen object URL', error);
-    }
-}
-
 async function downloadZip(
     deps: BackgroundRuntimeHandlerDependencies,
     message: BackgroundMessageRequestMap['downloadZip']
 ): Promise<BackgroundMessageResponseMap['downloadZip']> {
-    if (!import.meta.env.CHROME) {
-        return deps.offscreen.request('downloads.download-zip', {
-            filename: message.filename,
-            files: message.files,
-        });
-    }
-
     const zipUrl = await deps.offscreen.request('downloads.create-zip-url', {
         filename: message.filename,
         files: message.files,
@@ -60,40 +44,43 @@ async function downloadZip(
         };
     }
 
+    let downloadId: number;
+
     try {
-        const downloadId = await browser.downloads.download({
+        downloadId = await browser.downloads.download({
             url: zipUrl.objectUrl,
             filename: zipUrl.filename,
             saveAs: true,
         });
-
-        const cleanup = (delta: Browser.downloads.DownloadDelta) => {
-            if (
-                delta.id !== downloadId ||
-                !delta.state ||
-                (delta.state.current !== 'complete' && delta.state.current !== 'interrupted')
-            ) {
-                return;
-            }
-
-            browser.downloads.onChanged.removeListener(cleanup);
-            void revokeOffscreenObjectUrl(deps.offscreen, zipUrl.objectUrl!);
-        };
-
-        browser.downloads.onChanged.addListener(cleanup);
-
-        return {
-            success: true,
-            downloadId,
-        };
     } catch (error) {
-        await revokeOffscreenObjectUrl(deps.offscreen, zipUrl.objectUrl);
+        try {
+            await deps.offscreen.request('downloads.revoke-object-url', {
+                objectUrl: zipUrl.objectUrl,
+            });
+        } catch (cleanupError) {
+            console.warn('[background] failed to revoke offscreen object URL', cleanupError);
+        }
 
         return {
             success: false,
             error: error instanceof Error ? error.message : String(error),
         };
     }
+
+    try {
+        await deps.downloads.trackObjectUrlDownload({
+            downloadId,
+            objectUrl: zipUrl.objectUrl,
+            filename: zipUrl.filename,
+        });
+    } catch (error) {
+        console.warn('[background] failed to persist download cleanup record', error);
+    }
+
+    return {
+        success: true,
+        downloadId,
+    };
 }
 
 export function createBackgroundRuntimeHandlers(

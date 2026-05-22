@@ -1,9 +1,9 @@
 import {
     ALARM_NAMES,
-    DEFAULT_SIGNALR_URL,
     SIGNALR_LEASE_WINDOW_MINUTES,
     SIGNALR_RECONNECT_DELAY_MINUTES,
 } from './constants';
+import { resolveSignalRServerUrl } from '../../entities/runtime/signalr';
 import type { SignalRState } from '../../entities/runtime/model';
 import type { ExtensionSettings } from '../../entities/settings/model';
 import { hasEnabledSignalRPlatform } from '../../platforms/registry';
@@ -86,7 +86,7 @@ export interface SignalRTransition {
 }
 
 function resolveServerUrl(current: SignalRState, serverUrl?: string): string {
-    return serverUrl ?? current.serverUrl ?? DEFAULT_SIGNALR_URL;
+    return resolveSignalRServerUrl(serverUrl ?? current.serverUrl);
 }
 
 export function resolveDesiredTransport(settings: Readonly<ExtensionSettings>): DesiredTransport {
@@ -227,9 +227,7 @@ export function reduceSignalRState(
                     serverUrl: event.serverUrl,
                     reconnectAttempt: 0,
                     lastConnectedAt:
-                        current.status === 'connected'
-                            ? current.lastConnectedAt
-                            : event.eventAt,
+                        current.status === 'connected' ? current.lastConnectedAt : event.eventAt,
                     lastDisconnectedAt: current.lastDisconnectedAt,
                     lastDisconnectReason: null,
                     lastEventAt: event.eventAt,
@@ -265,7 +263,8 @@ export function reduceSignalRState(
                         kind: 'schedule-alarm',
                         name: ALARM_NAMES.signalrReconnect,
                         delayInMinutes: Math.max(
-                            (Date.parse(event.nextReconnectAt) - Date.parse(context.nowIso)) / 60000,
+                            (Date.parse(event.nextReconnectAt) - Date.parse(context.nowIso)) /
+                                60000,
                             SIGNALR_RECONNECT_DELAY_MINUTES
                         ),
                     },
