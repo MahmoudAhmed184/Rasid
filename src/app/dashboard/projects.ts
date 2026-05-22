@@ -2,10 +2,7 @@ import { browser } from 'wxt/browser';
 
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
 import type { TrackedProjectRecord } from '../../platforms/contracts';
-import {
-    getPlatformDisplayName,
-    resolvePlatformId,
-} from '../../platforms/platform-ids';
+import { getPlatformDisplayName, resolvePlatformId } from '../../platforms/platform-ids';
 import { parseDurationDays } from '../../shared/parsing/duration';
 import { parseBudgetFloor } from '../../shared/parsing/numbers';
 
@@ -15,10 +12,7 @@ interface TrackedProjectsPanelDependencies {
     readonly proposalRepository: Pick<ProposalRepository, 'getQuickTemplate' | 'queueAutofill'>;
 }
 
-export function createTrackedProjectsPanel(
-    root: Document,
-    deps: TrackedProjectsPanelDependencies
-) {
+export function createTrackedProjectsPanel(root: Document, deps: TrackedProjectsPanelDependencies) {
     const list = root.getElementById('recentProjectsList');
     let isBound = false;
 

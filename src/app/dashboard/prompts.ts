@@ -9,11 +9,26 @@ interface PromptManagerOptions {
 export function createPromptManager(root: Document, options: PromptManagerOptions) {
     const list = root.getElementById('promptsList');
     const modal = root.getElementById('promptModal');
+    const modalPanel = modal?.querySelector<HTMLElement>('.modal-panel') ?? null;
     const modalTitle = root.getElementById('modalTitle');
+    const modalStatus = root.getElementById('promptModalStatus');
     const promptIdField = root.getElementById('promptId');
     const titleField = root.getElementById('promptTitle');
+    const titleError = root.getElementById('promptTitleError');
     const contentField = root.getElementById('promptContent');
+    const contentError = root.getElementById('promptContentError');
+    const dashboardContainer = root.querySelector<HTMLElement>('.dashboard-container');
     let isBound = false;
+    let lastFocusedElement: HTMLElement | null = null;
+
+    const FOCUSABLE_SELECTOR = [
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'textarea:not([disabled])',
+        'select:not([disabled])',
+        'a[href]',
+        '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
 
     function createPromptEmptyState(): HTMLParagraphElement {
         const paragraph = root.createElement('p');
@@ -25,20 +40,26 @@ export function createPromptManager(root: Document, options: PromptManagerOption
     }
 
     function createIconButton(
+        prompt: PromptTemplate,
         index: number,
         buttonClassName: string,
-        iconClassName: string
+        iconClassName: string,
+        actionLabel: string
     ): HTMLButtonElement {
         const button = root.createElement('button');
         const icon = root.createElement('i');
+        const label = `${actionLabel}: ${prompt.title}`;
 
         button.dataset.index = String(index);
         button.className = `btn-icon ${buttonClassName}${
             buttonClassName.includes('delete') ? ' danger' : ''
         }`;
         button.type = 'button';
+        button.setAttribute('aria-label', label);
+        button.title = label;
 
         icon.className = iconClassName;
+        icon.setAttribute('aria-hidden', 'true');
         button.appendChild(icon);
 
         return button;
@@ -58,8 +79,8 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         const actions = root.createElement('div');
         actions.className = 'prompt-card-actions';
         actions.append(
-            createIconButton(index, 'btn-edit-prompt', 'fas fa-edit'),
-            createIconButton(index, 'btn-delete-prompt', 'fas fa-trash')
+            createIconButton(prompt, index, 'btn-edit-prompt', 'fas fa-edit', 'تعديل الأمر'),
+            createIconButton(prompt, index, 'btn-delete-prompt', 'fas fa-trash', 'حذف الأمر')
         );
 
         header.append(title, actions);
@@ -73,12 +94,107 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         return card;
     }
 
+    function setBackgroundInert(isInert: boolean) {
+        if (!dashboardContainer) {
+            return;
+        }
+
+        const inertContainer = dashboardContainer as HTMLElement & { inert?: boolean };
+
+        inertContainer.inert = isInert;
+        dashboardContainer.setAttribute('aria-hidden', String(isInert));
+    }
+
+    function getFocusableModalElements(): HTMLElement[] {
+        if (!(modal instanceof HTMLElement)) {
+            return [];
+        }
+
+        return Array.from(modal.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+            (element) =>
+                !element.hasAttribute('disabled') &&
+                element.getAttribute('aria-hidden') !== 'true' &&
+                element.offsetParent !== null
+        );
+    }
+
+    function clearFieldError(field: HTMLElement | null, errorElement: Element | null) {
+        if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+            field.setCustomValidity('');
+        }
+
+        field?.removeAttribute('aria-invalid');
+
+        if (errorElement instanceof HTMLElement) {
+            errorElement.textContent = '';
+            errorElement.hidden = true;
+        }
+    }
+
+    function setFieldError(
+        field: HTMLInputElement | HTMLTextAreaElement,
+        errorElement: Element | null,
+        message: string
+    ) {
+        field.setCustomValidity(message);
+        field.setAttribute('aria-invalid', 'true');
+
+        if (errorElement instanceof HTMLElement) {
+            errorElement.textContent = message;
+            errorElement.hidden = false;
+        }
+    }
+
+    function clearModalValidation() {
+        clearFieldError(titleField instanceof HTMLElement ? titleField : null, titleError);
+        clearFieldError(contentField instanceof HTMLElement ? contentField : null, contentError);
+
+        if (modalStatus instanceof HTMLElement) {
+            modalStatus.textContent = '';
+            modalStatus.hidden = true;
+        }
+    }
+
+    function showModalStatus(message: string) {
+        if (!(modalStatus instanceof HTMLElement)) {
+            return;
+        }
+
+        modalStatus.textContent = message;
+        modalStatus.hidden = false;
+    }
+
+    function focusInitialModalField() {
+        if (titleField instanceof HTMLInputElement) {
+            titleField.focus();
+            titleField.select();
+            return;
+        }
+
+        modalPanel?.focus();
+    }
+
     function closeModal() {
-        modal?.classList.add('hidden');
+        if (!(modal instanceof HTMLElement)) {
+            return;
+        }
+
+        modal.classList.add('hidden');
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        setBackgroundInert(false);
+        clearModalValidation();
+
+        if (lastFocusedElement?.isConnected) {
+            lastFocusedElement.focus();
+        }
+
+        lastFocusedElement = null;
     }
 
     function openModal(prompt: PromptTemplate | null = null, index = -1) {
         if (
+            !(modal instanceof HTMLElement) ||
             !(modalTitle instanceof HTMLElement) ||
             !(promptIdField instanceof HTMLInputElement) ||
             !(titleField instanceof HTMLInputElement) ||
@@ -86,6 +202,9 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         ) {
             return;
         }
+
+        lastFocusedElement = root.activeElement instanceof HTMLElement ? root.activeElement : null;
+        clearModalValidation();
 
         if (prompt) {
             modalTitle.textContent = 'تعديل الأمر';
@@ -99,7 +218,11 @@ export function createPromptManager(root: Document, options: PromptManagerOption
             promptIdField.value = '-1';
         }
 
-        modal?.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+        focusInitialModalField();
+        setBackgroundInert(true);
     }
 
     async function editPrompt(index: number) {
@@ -141,8 +264,19 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         const content = contentField.value.trim();
         const index = Number.parseInt(promptIdField.value, 10);
 
+        clearModalValidation();
+
+        if (!title) {
+            setFieldError(titleField, titleError, 'يرجى إدخال عنوان الأمر.');
+        }
+
+        if (!content) {
+            setFieldError(contentField, contentError, 'يرجى إدخال نص الأمر.');
+        }
+
         if (!title || !content) {
-            window.alert('يرجى ملء جميع الحقول');
+            showModalStatus('راجع الحقول المطلوبة قبل حفظ الأمر.');
+            (title ? contentField : titleField).reportValidity();
             return;
         }
 
@@ -153,15 +287,59 @@ export function createPromptManager(root: Document, options: PromptManagerOption
             return;
         }
 
-        await options.promptRepository.save({
-            id: existingPrompt?.id,
-            title,
-            content,
-        });
+        try {
+            await options.promptRepository.save({
+                id: existingPrompt?.id,
+                title,
+                content,
+            });
 
-        closeModal();
-        render(await options.promptRepository.list());
-        options.onSaved?.();
+            closeModal();
+            render(await options.promptRepository.list());
+            options.onSaved?.();
+        } catch (error) {
+            console.error('Error saving prompt:', error);
+            showModalStatus('تعذر حفظ الأمر. تحقق من مساحة التخزين وحاول مجدداً.');
+        }
+    }
+
+    function handleModalKeydown(event: KeyboardEvent) {
+        if (!(modal instanceof HTMLElement) || modal.hidden) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeModal();
+            return;
+        }
+
+        if (event.key !== 'Tab') {
+            return;
+        }
+
+        const focusableElements = getFocusableModalElements();
+
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            modalPanel?.focus();
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = root.activeElement instanceof HTMLElement ? root.activeElement : null;
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault();
+            lastElement?.focus();
+            return;
+        }
+
+        if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault();
+            firstElement?.focus();
+        }
     }
 
     function render(prompts: PromptTemplate[]) {
@@ -210,6 +388,25 @@ export function createPromptManager(root: Document, options: PromptManagerOption
                 void deletePrompt(Number.parseInt(deleteButton.dataset.index ?? '-1', 10));
             }
         });
+
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        titleField?.addEventListener('input', () => {
+            clearFieldError(titleField instanceof HTMLElement ? titleField : null, titleError);
+        });
+
+        contentField?.addEventListener('input', () => {
+            clearFieldError(
+                contentField instanceof HTMLElement ? contentField : null,
+                contentError
+            );
+        });
+
+        root.addEventListener('keydown', handleModalKeydown);
     }
 
     return {

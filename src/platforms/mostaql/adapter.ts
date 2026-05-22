@@ -28,6 +28,7 @@ import type {
     PlatformAutofillDraft,
     PlatformContributionMountResult,
     PlatformContentServices,
+    PlatformDisposer,
     PlatformPage,
     PlatformProposalSource,
     PlatformUiContribution,
@@ -61,12 +62,15 @@ const injectMessageExporter: (downloads: PlatformContentServices['downloads']) =
     injectMessageExporterUnsafe;
 const injectProjectExporter: (downloads: PlatformContentServices['downloads']) => void =
     injectProjectExporterUnsafe;
-const injectDashboardStats: (tracking: PlatformContentServices['tracking']) => void =
-    injectDashboardStatsUnsafe;
-const injectMonitoredProjects: (tracking: PlatformContentServices['tracking']) => void =
-    injectMonitoredProjectsUnsafe;
+const injectDashboardStats: (
+    tracking: PlatformContentServices['tracking']
+) => PlatformDisposer | undefined = injectDashboardStatsUnsafe;
+const injectMonitoredProjects: (
+    tracking: PlatformContentServices['tracking']
+) => PlatformDisposer | undefined = injectMonitoredProjectsUnsafe;
 const injectProfileTools: () => void = injectProfileToolsUnsafe;
-const injectTrackButton: (services: PlatformContentServices) => void = injectTrackButtonUnsafe;
+const injectTrackButton: (services: PlatformContentServices) => PlatformDisposer | undefined =
+    injectTrackButtonUnsafe;
 const isContextValid: () => boolean = isContextValidUnsafe;
 const getProjectId: () => string = getProjectIdUnsafe;
 const getBudgetFromPage: () => number = getBudgetFromPageUnsafe;
@@ -174,11 +178,12 @@ const mostaqlUi = [
                 } satisfies PlatformContributionMountResult;
             }
 
-            injectTrackButton(input.services);
+            const disposeTrackButton = injectTrackButton(input.services);
             injectProjectExporter(input.services.downloads);
 
             return {
                 kind: 'mounted',
+                dispose: disposeTrackButton,
             } satisfies PlatformContributionMountResult;
         },
     },
@@ -209,11 +214,19 @@ const mostaqlUi = [
                 } satisfies PlatformContributionMountResult;
             }
 
-            injectDashboardStats(input.services.tracking);
-            injectMonitoredProjects(input.services.tracking);
+            const disposers = [
+                injectDashboardStats(input.services.tracking),
+                injectMonitoredProjects(input.services.tracking),
+            ].filter((dispose): dispose is PlatformDisposer => Boolean(dispose));
 
             return {
                 kind: 'mounted',
+                dispose:
+                    disposers.length > 0
+                        ? () => {
+                              disposers.forEach((dispose) => dispose());
+                          }
+                        : undefined,
             } satisfies PlatformContributionMountResult;
         },
     },

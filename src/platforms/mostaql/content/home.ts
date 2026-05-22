@@ -1,6 +1,11 @@
-import type { PlatformContentServices, TrackedProjectRecord } from '../../contracts';
+import { resolvePlatformUrl } from '../../../entities/platform/url';
+import type {
+    PlatformContentServices,
+    PlatformDisposer,
+    TrackedProjectRecord,
+} from '../../contracts';
+import { loadMostaqlBidStatusStats, type MostaqlBidStatusStats } from '../bid-tracker';
 import { MOSTAQL_SELECTORS } from '../selectors';
-import { queryHtmlFragment } from '../../../shared/dom/html-fragments';
 
 // ==========================================
 // mostaql/home.js — Homepage injectors (bid stats + monitored panel)
@@ -13,98 +18,35 @@ declare global {
     }
 }
 
-interface BidRow {
-    title: string | null;
-    url: string | null;
-    status: string | null;
-    publishedDatetime: string | null;
-    price: string | null;
-    apiBidId?: string | null;
-}
-
-interface StatusBucket {
-    total: number;
-    byStatus: Record<string, number>;
-    invalidDateCount: number;
-}
-
-interface StatusStats {
-    meta: {
-        now: string;
-        totalItems: number;
-        uniqueStatuses: string[];
-    };
-    status: StatusBucket;
-    last30Days: StatusBucket;
-    last1Day: StatusBucket;
-    recent24hBids: Array<{
-        title: string | null;
-        url: string | null;
-        ageMs: number;
-        published: Date;
-    }>;
-}
+const MOSTAQL_HOSTS = ['mostaql.com'] as const;
+const MOSTAQL_BASE_URL = 'https://mostaql.com/';
+const MOSTAQL_PROJECT_PATH_PATTERN = /^\/projects?\/\d+(?:[-/]|$)/;
 
 type TrackingServices = PlatformContentServices['tracking'];
 
-interface MostaqlBidPageItem {
-    readonly id: string | null;
-    readonly rendered: string;
+function resolveMostaqlUrl(value: string | null | undefined): string | null {
+    return resolvePlatformUrl(value, {
+        baseUrl: window.location.href || MOSTAQL_BASE_URL,
+        allowedHosts: MOSTAQL_HOSTS,
+    });
 }
 
-interface MostaqlBidPageResponse {
-    readonly count: number;
-    readonly collection: readonly MostaqlBidPageItem[];
+function resolveMostaqlProjectUrl(value: string | null | undefined): string | null {
+    return resolvePlatformUrl(value, {
+        baseUrl: window.location.href || MOSTAQL_BASE_URL,
+        allowedHosts: MOSTAQL_HOSTS,
+        pathPattern: MOSTAQL_PROJECT_PATH_PATTERN,
+    });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
-function parseMostaqlBidPageResponse(value: unknown): MostaqlBidPageResponse {
-    if (!isRecord(value)) {
-        return {
-            count: 0,
-            collection: [],
-        };
-    }
-
-    const collection = Array.isArray(value.collection)
-        ? value.collection
-              .map((item): MostaqlBidPageItem | null => {
-                  if (typeof item === 'string') {
-                      return {
-                          id: null,
-                          rendered: item,
-                      };
-                  }
-
-                  if (!isRecord(item) || typeof item.rendered !== 'string') {
-                      return null;
-                  }
-
-                  return {
-                      id: Number.isFinite(item.id) ? String(item.id) : null,
-                      rendered: item.rendered,
-                  };
-              })
-              .filter((item): item is MostaqlBidPageItem => item !== null)
-        : [];
-
-    return {
-        count: Number.isFinite(value.count) ? Number(value.count) : collection.length,
-        collection,
-    };
-}
-
-export function injectDashboardStats(tracking: TrackingServices) {
+export function injectDashboardStats(tracking: TrackingServices): PlatformDisposer | undefined {
     const target = document.querySelector<HTMLElement>(MOSTAQL_SELECTORS.home.target);
     if (!target) {
-        return;
+        return undefined;
     }
 
     if (document.getElementById('mostaql-msg-tools')) {
-        return;
+        return undefined;
     }
 
     const box = document.createElement('div');
@@ -179,6 +121,14 @@ export function injectDashboardStats(tracking: TrackingServices) {
     monitoredButton?.addEventListener('click', () => {
         _openMonitoredModal(tracking);
     });
+
+    return () => {
+        _stopSlotCountdowns();
+        window._rasidStatsLoaded = false;
+        box.remove();
+        document.getElementById('rasid-analytics-modal')?.remove();
+        document.getElementById('rasid-monitored-modal')?.remove();
+    };
 }
 
 function _injectAnalyticsModal() {
@@ -448,8 +398,12 @@ function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement 
     title.className = 'listing__title project__title mrg--bt-reset';
 
     const link = document.createElement('a');
-    link.href = job.url;
-    link.target = '_blank';
+    const jobUrl = resolveMostaqlProjectUrl(job.url);
+    if (jobUrl) {
+        link.href = jobUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+    }
     link.textContent = job.title || 'بدون عنوان';
 
     const badge = document.createElement('span');
@@ -501,171 +455,6 @@ async function _loadMonitoredData(tracking: TrackingServices) {
     listEl.replaceChildren(panelListing);
 }
 
-function _extractBidRow(renderedHtml: string): BidRow | null {
-    if (typeof renderedHtml !== 'string') {
-        console.error('_extractBidRow expects a string, received:', typeof renderedHtml);
-        return null;
-    }
-
-    const row = queryHtmlFragment<HTMLElement>(renderedHtml, 'tr.bid-row', {
-        context: 'table-body',
-    });
-
-    if (!row) {
-        return null;
-    }
-
-    const titleLink = row.querySelector<HTMLAnchorElement>('h2 a');
-    const statusEl = row.querySelector<HTMLElement>('.label-prj-pending, .label');
-    const timeEl = row.querySelector<HTMLElement>('time[datetime]');
-    const priceEl = row
-        .querySelector<HTMLElement>('.project__meta li .fa-money')
-        ?.closest('li')
-        ?.querySelector<HTMLElement>('span');
-    const url = (titleLink?.getAttribute('href') || '').split('-')[0] || null;
-
-    return {
-        title: titleLink?.textContent?.trim() || null,
-        url,
-        status: statusEl?.textContent?.trim() || null,
-        publishedDatetime: timeEl?.getAttribute('datetime') || null,
-        price: priceEl?.textContent?.trim() || null,
-    };
-}
-
-function _generateStatusStats(items: BidRow[], opts: { now?: Date } = {}): StatusStats {
-    const now = opts.now instanceof Date ? opts.now : new Date();
-    const days30Ms = 30 * 24 * 60 * 60 * 1000;
-    const day1Ms = 1 * 24 * 60 * 60 * 1000;
-
-    const safeArray: BidRow[] = Array.isArray(items) ? items : [];
-    const normalizeStatus = (s: unknown) =>
-        typeof s === 'string' && s.trim() ? s.trim() : 'UNKNOWN';
-
-    const parsePublished = (v: unknown): Date | null => {
-        if (!v) {
-            return null;
-        }
-        if (v instanceof Date && !Number.isNaN(v.getTime())) {
-            return v;
-        }
-        if (typeof v !== 'string') {
-            return null;
-        }
-        const str = v.trim();
-        if (!str) {
-            return null;
-        }
-        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-        if (m) {
-            const d = new Date(
-                Date.UTC(
-                    Number(m[1]),
-                    Number(m[2]) - 1,
-                    Number(m[3]),
-                    Number(m[4] ?? 0),
-                    Number(m[5] ?? 0),
-                    Number(m[6] ?? 0)
-                )
-            );
-            return Number.isNaN(d.getTime()) ? null : d;
-        }
-        const d = new Date(str);
-        return Number.isNaN(d.getTime()) ? null : d;
-    };
-
-    const makeEmptyBucket = (): StatusBucket => ({ total: 0, byStatus: {}, invalidDateCount: 0 });
-    const overall = makeEmptyBucket();
-    const last30Days = makeEmptyBucket();
-    const last1Day = makeEmptyBucket();
-    const recent24hBids: StatusStats['recent24hBids'] = [];
-
-    const addToBucket = (bucket: StatusBucket, status: string): void => {
-        bucket.total += 1;
-        bucket.byStatus[status] = (bucket.byStatus[status] ?? 0) + 1;
-    };
-
-    for (const item of safeArray) {
-        const status = normalizeStatus(item?.status);
-        addToBucket(overall, status);
-        const published = parsePublished(item?.publishedDatetime);
-        if (!published) {
-            last30Days.invalidDateCount += 1;
-            last1Day.invalidDateCount += 1;
-            continue;
-        }
-        const ageMs = now.getTime() - published.getTime();
-        if (ageMs < 0) {
-            continue;
-        }
-        if (ageMs <= days30Ms) {
-            addToBucket(last30Days, status);
-        }
-        if (ageMs <= day1Ms) {
-            addToBucket(last1Day, status);
-            recent24hBids.push({ title: item.title, url: item.url, ageMs, published });
-        }
-    }
-
-    const uniqueStatuses = Array.from(new Set(Object.keys(overall.byStatus))).sort((a, b) =>
-        a.localeCompare(b, 'ar')
-    );
-
-    return {
-        meta: { now: now.toISOString(), totalItems: safeArray.length, uniqueStatuses },
-        status: overall,
-        last30Days: last30Days,
-        last1Day: last1Day,
-        recent24hBids: recent24hBids,
-    };
-}
-
-async function _fetchBidPage(pageNumber: number): Promise<MostaqlBidPageResponse> {
-    const url = `https://mostaql.com/dashboard/bids?page=${pageNumber}&sort=latest`;
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        credentials: 'include',
-    });
-    if (!response.ok) {
-        throw new Error(`Page ${pageNumber} request failed`);
-    }
-    return parseMostaqlBidPageResponse(await response.json());
-}
-
-function _processBidsFromPage(data: MostaqlBidPageResponse): BidRow[] {
-    const bids: BidRow[] = [];
-    data.collection.forEach((bidObject) => {
-        const item = _extractBidRow(bidObject.rendered);
-        if (item) {
-            item.apiBidId = bidObject.id;
-            bids.push(item);
-        }
-    });
-    return bids;
-}
-
-async function _fetchAllBids(): Promise<StatusStats> {
-    const itemsPerPage = 25;
-    const allBids: BidRow[] = [];
-
-    const firstData = await _fetchBidPage(1);
-    const totalPages = Math.ceil(firstData.count / itemsPerPage);
-
-    allBids.push(..._processBidsFromPage(firstData));
-
-    for (let page = 2; page <= totalPages; page++) {
-        try {
-            const data = await _fetchBidPage(page);
-            allBids.push(..._processBidsFromPage(data));
-        } catch (err) {
-            console.warn(`Page ${page} failed:`, err instanceof Error ? err.message : String(err));
-        }
-    }
-
-    return _generateStatusStats(allBids);
-}
-
 function _createBidStatsBar(config: {
     label: string;
     count: number;
@@ -685,7 +474,10 @@ function _createBidStatsBar(config: {
     const wrapper = document.createElement(isLink ? 'a' : 'span');
 
     if (wrapper instanceof HTMLAnchorElement) {
-        wrapper.href = href;
+        const safeHref = resolveMostaqlUrl(href);
+        if (safeHref) {
+            wrapper.href = safeHref;
+        }
     }
 
     wrapper.className = 'progress__bar docs-creator';
@@ -772,7 +564,7 @@ function _createBidStatsColumn(config: {
 }
 
 function _createBidStatsCountdownCard(
-    bid: StatusStats['recent24hBids'][number]
+    bid: MostaqlBidStatusStats['recent24hBids'][number]
 ): HTMLAnchorElement {
     const totalMs = 24 * 60 * 60 * 1000;
     const msLeft = totalMs - bid.ageMs;
@@ -792,9 +584,11 @@ function _createBidStatsCountdownCard(
     }
 
     const link = document.createElement('a');
-    link.href = bid.url || '#';
-    if (bid.url) {
+    const bidUrl = resolveMostaqlProjectUrl(bid.url);
+    link.href = bidUrl ?? '#';
+    if (bidUrl) {
         link.target = '_blank';
+        link.rel = 'noopener noreferrer';
     }
     link.className = 'progress__bar docs-creator';
 
@@ -841,7 +635,7 @@ function _createBidStatsCountdownCard(
     return link;
 }
 
-function _renderBidStats(stats: StatusStats): void {
+function _renderBidStats(stats: MostaqlBidStatusStats): void {
     const BIDS_URL = 'https://mostaql.com/dashboard/bids';
 
     const STATUS_CONFIG: Record<string, { label: string; cssClass: string; href: string }> = {
@@ -926,7 +720,7 @@ function _renderBidStats(stats: StatusStats): void {
         countdownsSection.style.marginTop = '20px';
         const sortedBids = recent24hBids.sort((a, b) => b.ageMs - a.ageMs);
         const numCols = 3;
-        const buckets: Array<StatusStats['recent24hBids']> = Array.from(
+        const buckets: Array<MostaqlBidStatusStats['recent24hBids']> = Array.from(
             { length: numCols },
             () => []
         );
@@ -979,9 +773,7 @@ function _renderBidStats(stats: StatusStats): void {
 }
 
 function _startSlotCountdowns() {
-    if (window.rasidCountdownsInterval) {
-        clearInterval(window.rasidCountdownsInterval);
-    }
+    _stopSlotCountdowns();
 
     const updateTimers = () => {
         const totalMs = 24 * 60 * 60 * 1000;
@@ -1031,15 +823,33 @@ function _startSlotCountdowns() {
     window.rasidCountdownsInterval = setInterval(updateTimers, 1000);
 }
 
+function _stopSlotCountdowns(): void {
+    if (!window.rasidCountdownsInterval) {
+        return;
+    }
+
+    clearInterval(window.rasidCountdownsInterval);
+    delete window.rasidCountdownsInterval;
+}
+
 async function _loadBidStats(): Promise<void> {
     try {
-        const stats = await _fetchAllBids();
+        const stats = await loadMostaqlBidStatusStats();
         _renderBidStats(stats);
     } catch (err) {
         console.error('Error fetching bids:', err);
     }
 }
 
-export function injectMonitoredProjects(tracking: TrackingServices) {
+export function injectMonitoredProjects(tracking: TrackingServices): PlatformDisposer | undefined {
+    const existingModal = document.getElementById('rasid-monitored-modal');
     _injectMonitoredModal(tracking);
+
+    if (existingModal) {
+        return undefined;
+    }
+
+    return () => {
+        document.getElementById('rasid-monitored-modal')?.remove();
+    };
 }

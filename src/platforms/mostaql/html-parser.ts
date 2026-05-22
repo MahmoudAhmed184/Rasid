@@ -1,15 +1,25 @@
 import type { JobRecord } from '../../entities/job/model';
+import { resolvePlatformUrl } from '../../entities/platform/url';
+
+const MOSTAQL_HOSTS = ['mostaql.com'] as const;
+const MOSTAQL_BASE_URL = 'https://mostaql.com/';
+const MOSTAQL_PROJECT_PATH_PATTERN = /^\/projects?\/\d+(?:[-/]|$)/;
+const MOSTAQL_PROJECT_ID_PATTERN = /\/projects?\/(\d+)/;
 
 function parseDocument(html: string): Document {
     return new DOMParser().parseFromString(html, 'text/html');
 }
 
-function absoluteMostaqlUrl(href: string | null): string {
-    if (!href) {
-        return '';
-    }
+function resolveMostaqlProjectUrl(href: string | null): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl: MOSTAQL_BASE_URL,
+        allowedHosts: MOSTAQL_HOSTS,
+        pathPattern: MOSTAQL_PROJECT_PATH_PATTERN,
+    });
+}
 
-    return href.startsWith('http') ? href : `https://mostaql.com${href}`;
+function extractMostaqlProjectId(url: string): string | null {
+    return new URL(url).pathname.match(MOSTAQL_PROJECT_ID_PATTERN)?.[1] ?? null;
 }
 
 export function parseMostaqlListingHtml(html: string): JobRecord[] {
@@ -24,14 +34,13 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
             return;
         }
 
-        const href = link.getAttribute('href');
-        const match = href?.match(/\/project\/(\d+)/);
+        const url = resolveMostaqlProjectUrl(link.getAttribute('href'));
+        const id = url ? extractMostaqlProjectId(url) : null;
 
-        if (!match || seenIds.has(match[1])) {
+        if (!url || !id || seenIds.has(id)) {
             return;
         }
 
-        const id = match[1];
         const userIcon = item.querySelector('.fa-user');
         const timeEl = item.querySelector('time');
         const metaItems = item.querySelectorAll('.project__meta li');
@@ -42,7 +51,7 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
             id,
             platformId: 'mostaql',
             title: link.textContent.trim(),
-            url: absoluteMostaqlUrl(href),
+            url,
             poster: userIcon?.parentElement?.textContent?.replace(/\s+/g, ' ').trim(),
             time: timeEl?.textContent?.replace(/\s+/g, ' ').trim(),
             postedAt: timeEl?.getAttribute('datetime') ?? '',
@@ -59,14 +68,13 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
             return;
         }
 
-        const href = link.getAttribute('href');
-        const match = href?.match(/\/project\/(\d+)/);
+        const url = resolveMostaqlProjectUrl(link.getAttribute('href'));
+        const id = url ? extractMostaqlProjectId(url) : null;
 
-        if (!match || seenIds.has(match[1])) {
+        if (!url || !id || seenIds.has(id)) {
             return;
         }
 
-        const id = match[1];
         const budgetEl = row.querySelector('td:nth-child(4), [class*="budget"]');
         const timeEl = row.querySelector('td:nth-child(5n), .timeSince, [class*="date"]');
 
@@ -76,7 +84,7 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
             id,
             platformId: 'mostaql',
             title: link.textContent.trim(),
-            url: absoluteMostaqlUrl(href),
+            url,
             budget: budgetEl?.textContent?.trim() ?? 'غير محدد',
             time: timeEl?.textContent?.trim() ?? '',
             postedAt: '',
@@ -90,21 +98,21 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
     }
 
     doc.querySelectorAll('a[href*="/project/"]').forEach((link) => {
-        const href = link.getAttribute('href');
-        const match = href?.match(/\/project\/(\d+)/);
+        const url = resolveMostaqlProjectUrl(link.getAttribute('href'));
+        const id = url ? extractMostaqlProjectId(url) : null;
         const title = link.textContent.trim();
 
-        if (!match || seenIds.has(match[1]) || title.length <= 5) {
+        if (!url || !id || seenIds.has(id) || title.length <= 5) {
             return;
         }
 
-        seenIds.add(match[1]);
+        seenIds.add(id);
 
         jobs.push({
-            id: match[1],
+            id,
             platformId: 'mostaql',
             title,
-            url: absoluteMostaqlUrl(href),
+            url,
             budget: '',
             postedAt: '',
             poster: '',

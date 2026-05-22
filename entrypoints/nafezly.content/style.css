@@ -113,6 +113,20 @@
     box-shadow: 0 0 0 2px rgba(1, 148, 254, 0.22) !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    #rasid-nafezly-panel,
+    .rasid-nafezly-panel__button,
+    .rasid-nafezly-autofilled {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+
+    .rasid-nafezly-panel__button:hover:not(:disabled) {
+        transform: none !important;
+    }
+}
+
 @media (max-width: 640px) {
     #rasid-nafezly-panel {
         inset-inline: 12px;

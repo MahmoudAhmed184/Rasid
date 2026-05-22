@@ -1,5 +1,5 @@
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
-import type { PlatformAdapter, PlatformPage } from '../../platforms/contracts';
+import type { PlatformAdapter, PlatformDisposer, PlatformPage } from '../../platforms/contracts';
 
 const DEFAULT_AUTOFILL_POLL_INTERVAL_MS = 500;
 const DEFAULT_AUTOFILL_MAX_AGE_MS = 5 * 60 * 1000;
@@ -27,15 +27,21 @@ function getCurrentProjectPage(
     return page.kind === 'project' ? page : null;
 }
 
-export function bootstrapPlatformAutofill(options: BootstrapPlatformAutofillOptions): void {
+export function bootstrapPlatformAutofill(
+    options: BootstrapPlatformAutofillOptions
+): PlatformDisposer {
     const doc = options.document ?? document;
     const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_AUTOFILL_POLL_INTERVAL_MS;
     const maxDraftAgeMs = options.maxDraftAgeMs ?? DEFAULT_AUTOFILL_MAX_AGE_MS;
 
     let autofillInFlight = false;
+    let initialized = false;
+    let disposed = false;
+    let intervalId: number | null = null;
+    let observer: MutationObserver | null = null;
 
     async function maybeApplyQueuedAutofill(): Promise<void> {
-        if (autofillInFlight || !options.adapter.isContextValid()) {
+        if (disposed || autofillInFlight || !options.adapter.isContextValid()) {
             return;
         }
 
@@ -80,13 +86,18 @@ export function bootstrapPlatformAutofill(options: BootstrapPlatformAutofillOpti
     }
 
     function init(): void {
+        if (initialized || disposed) {
+            return;
+        }
+
+        initialized = true;
         void maybeApplyQueuedAutofill();
 
-        window.setInterval(() => {
+        intervalId = window.setInterval(() => {
             void maybeApplyQueuedAutofill();
         }, pollIntervalMs);
 
-        const observer = new MutationObserver(() => {
+        observer = new MutationObserver(() => {
             void maybeApplyQueuedAutofill();
         });
 
@@ -94,12 +105,33 @@ export function bootstrapPlatformAutofill(options: BootstrapPlatformAutofillOpti
             childList: true,
             subtree: true,
         });
+
+        doc.defaultView?.addEventListener('unload', dispose, { once: true });
+    }
+
+    function dispose(): void {
+        if (disposed) {
+            return;
+        }
+
+        disposed = true;
+        doc.removeEventListener('DOMContentLoaded', init);
+        doc.defaultView?.removeEventListener('unload', dispose);
+
+        if (intervalId !== null) {
+            window.clearInterval(intervalId);
+            intervalId = null;
+        }
+
+        observer?.disconnect();
+        observer = null;
     }
 
     if (doc.readyState === 'loading') {
         doc.addEventListener('DOMContentLoaded', init, { once: true });
-        return;
+        return dispose;
     }
 
     init();
+    return dispose;
 }

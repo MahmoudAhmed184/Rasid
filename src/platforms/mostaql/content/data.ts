@@ -1,4 +1,5 @@
 import type { ProjectAttachment } from '../../../entities/job/model';
+import { resolvePlatformUrl } from '../../../entities/platform/url';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
 import { getProjectId } from './runtime';
 
@@ -47,7 +48,7 @@ export interface MostaqlProjectDetailsData extends MostaqlProjectPageData {
 }
 
 export interface MostaqlMyProposalData {
-    freelancer: string;
+    bidderName: string;
     price: string;
     duration: string;
     content: string;
@@ -55,6 +56,30 @@ export interface MostaqlMyProposalData {
 }
 
 type MostaqlRemoteProjectData = Partial<MostaqlProjectDetailsData>;
+const MOSTAQL_HOSTS = ['mostaql.com'] as const;
+const MOSTAQL_BASE_URL = 'https://mostaql.com/';
+const MOSTAQL_PROJECT_PATH_PATTERN = /^\/projects?\/\d+(?:[-/]|$)/;
+
+function resolveMostaqlUrl(
+    href: string | null | undefined,
+    baseUrl = MOSTAQL_BASE_URL
+): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl,
+        allowedHosts: MOSTAQL_HOSTS,
+    });
+}
+
+function resolveMostaqlProjectUrl(
+    href: string | null | undefined,
+    baseUrl = MOSTAQL_BASE_URL
+): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl,
+        allowedHosts: MOSTAQL_HOSTS,
+        pathPattern: MOSTAQL_PROJECT_PATH_PATTERN,
+    });
+}
 
 export function extractProjectData(): MostaqlProjectPageData {
     const statusLabel = document.querySelector(MOSTAQL_SELECTORS.project.statusLabel);
@@ -176,7 +201,10 @@ export function extractProjectData(): MostaqlProjectPageData {
         status: status || 'غير معروف',
         communications: communications || '0',
         title: title,
-        url: window.location.href,
+        url:
+            resolveMostaqlProjectUrl(window.location.href, window.location.href) ??
+            resolveMostaqlUrl(window.location.href, window.location.href) ??
+            window.location.href,
         lastChecked: new Date().toISOString(),
         duration: duration || 'غير محدد',
         budget: budget || 'غير محدد',
@@ -191,12 +219,20 @@ export function extractProjectData(): MostaqlProjectPageData {
         clientType: clientType || 'صاحب عمل',
         attachments: Array.from(
             document.querySelectorAll<HTMLAnchorElement>(MOSTAQL_SELECTORS.project.attachments)
-        ).map(
-            (a): ProjectAttachment => ({
-                url: a.href,
-                name: a.getAttribute('title') || a.innerText.trim(),
+        )
+            .map((a): ProjectAttachment | null => {
+                const url = resolveMostaqlUrl(a.getAttribute('href'), window.location.href);
+
+                if (!url) {
+                    return null;
+                }
+
+                return {
+                    url,
+                    name: a.getAttribute('title') || a.innerText.trim(),
+                };
             })
-        ),
+            .filter((attachment): attachment is ProjectAttachment => attachment !== null),
     };
 }
 
@@ -254,7 +290,13 @@ export function getBudgetFromPage() {
 
 export async function fetchDeepProjectData(url: string): Promise<MostaqlRemoteProjectData | null> {
     try {
-        const response = await fetch(url);
+        const projectUrl = resolveMostaqlProjectUrl(url);
+
+        if (!projectUrl) {
+            return null;
+        }
+
+        const response = await fetch(projectUrl);
         if (!response.ok) {
             return null;
         }
@@ -394,12 +436,20 @@ export async function fetchDeepProjectData(url: string): Promise<MostaqlRemotePr
 
         res.attachments = Array.from(
             doc.querySelectorAll<HTMLAnchorElement>(MOSTAQL_SELECTORS.project.attachments)
-        ).map(
-            (a): ProjectAttachment => ({
-                url: a.href,
-                name: a.getAttribute('title') || a.innerText.trim(),
+        )
+            .map((a): ProjectAttachment | null => {
+                const attachmentUrl = resolveMostaqlUrl(a.getAttribute('href'), projectUrl);
+
+                if (!attachmentUrl) {
+                    return null;
+                }
+
+                return {
+                    url: attachmentUrl,
+                    name: a.getAttribute('title') || a.innerText.trim(),
+                };
             })
-        );
+            .filter((attachment): attachment is ProjectAttachment => attachment !== null);
 
         const bids: MostaqlBidDetails[] = [];
         res.bids = bids;
@@ -444,7 +494,7 @@ export async function fetchDeepProjectData(url: string): Promise<MostaqlRemotePr
             const bidTime = bidTimeEl ? bidTimeEl.getAttribute('datetime') : null;
             bids.push({
                 name: bidderNameEl ? bidderNameEl.innerText.trim() : 'مجهول',
-                link: bidderLinkEl ? bidderLinkEl.href : '#',
+                link: resolveMostaqlUrl(bidderLinkEl?.getAttribute('href'), projectUrl) ?? '#',
                 title: bidderTitleEl ? bidderTitleEl.innerText.trim() : '',
                 timeRaw: bidTime,
                 timeText: bidTimeEl ? bidTimeEl.innerText.trim() : '',
@@ -477,13 +527,19 @@ export async function extractProjectDetailsFull(): Promise<{
         let projectLinkEl: HTMLAnchorElement | null = null;
         for (const sel of projectLinkSelectors) {
             projectLinkEl = document.querySelector<HTMLAnchorElement>(sel);
-            if (projectLinkEl && projectLinkEl.href && projectLinkEl.href.includes('/project/')) {
+            if (
+                resolveMostaqlProjectUrl(projectLinkEl?.getAttribute('href'), window.location.href)
+            ) {
                 break;
             }
         }
 
-        if (projectLinkEl && projectLinkEl.href) {
-            const externalData = await fetchDeepProjectData(projectLinkEl.href);
+        const projectUrl = projectLinkEl
+            ? resolveMostaqlProjectUrl(projectLinkEl.getAttribute('href'), window.location.href)
+            : null;
+
+        if (projectUrl) {
+            const externalData = await fetchDeepProjectData(projectUrl);
             if (externalData) {
                 description = externalData.description ?? '';
                 data = { ...data, ...externalData };
@@ -532,7 +588,11 @@ export async function extractProjectDetailsFull(): Promise<{
                     const bidTime = bidTimeEl ? bidTimeEl.getAttribute('datetime') : null;
                     bids.push({
                         name: bidderNameEl ? bidderNameEl.innerText.trim() : 'مجهول',
-                        link: bidderLinkEl ? bidderLinkEl.href : '#',
+                        link:
+                            resolveMostaqlUrl(
+                                bidderLinkEl?.getAttribute('href'),
+                                window.location.href
+                            ) ?? '#',
                         title: bidderTitleEl ? bidderTitleEl.innerText.trim() : '',
                         timeRaw: bidTime,
                         timeText: bidTimeEl ? bidTimeEl.innerText.trim() : '',
@@ -583,18 +643,16 @@ export function extractMyProposalFull(
             )?.innerText.trim() || 'غير معروف';
 
         if (externalProjectData && externalProjectData.bids) {
-            const myBid = externalProjectData.bids.find(
-                (bid) => bid.name.includes(myName)
-            );
+            const myBid = externalProjectData.bids.find((bid) => bid.name.includes(myName));
             if (myBid) {
                 const data: MostaqlMyProposalData = {
-                    freelancer: myBid.name,
+                    bidderName: myBid.name,
                     price: externalProjectData.budget || '-',
                     duration: externalProjectData.duration || '-',
                     content: myBid.content || 'نص العرض غير متوفر',
                     attachments: [],
                 };
-                let output = `عرضي الخاص (تم العثور عليه من صفحة المشروع):\nالمتقدم: ${data.freelancer}\nنص العرض:\n${data.content}\n`;
+                let output = `عرضي الخاص (تم العثور عليه من صفحة المشروع):\nالمتقدم: ${data.bidderName}\nنص العرض:\n${data.content}\n`;
                 return { text: output, data: data };
             }
         }
@@ -661,7 +719,7 @@ export function extractMyProposalFull(
         content = content.replace('... عرض المزيد', '').replace('عرض أقل', '').trim();
 
         const data: MostaqlMyProposalData = {
-            freelancer: name,
+            bidderName: name,
             price: price,
             duration: duration,
             content: content || 'نص العرض غير متوفر',
@@ -669,12 +727,23 @@ export function extractMyProposalFull(
                 targetProposal.querySelectorAll<HTMLAnchorElement>(
                     MOSTAQL_SELECTORS.project.proposalAttachments
                 )
-            ).map(
-                (a): ProjectAttachment => ({
-                    url: a.href,
-                    name: a.getAttribute('title') || a.innerText.trim(),
+            )
+                .map((a): ProjectAttachment | null => {
+                    const attachmentUrl = resolveMostaqlUrl(
+                        a.getAttribute('href'),
+                        window.location.href
+                    );
+
+                    if (!attachmentUrl) {
+                        return null;
+                    }
+
+                    return {
+                        url: attachmentUrl,
+                        name: a.getAttribute('title') || a.innerText.trim(),
+                    };
                 })
-            ),
+                .filter((attachment): attachment is ProjectAttachment => attachment !== null),
         };
 
         let output = `عرضي الخاص:\nالمتقدم: ${name}\nالمبلغ: ${price}\nمدة التنفيذ: ${duration}\n\nنص العرض:\n${data.content}\n`;

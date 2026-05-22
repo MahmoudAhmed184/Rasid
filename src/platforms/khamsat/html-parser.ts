@@ -1,4 +1,10 @@
 import type { JobRecord } from '../../entities/job/model';
+import { resolvePlatformUrl } from '../../entities/platform/url';
+
+const KHAMSAT_HOSTS = ['khamsat.com'] as const;
+const KHAMSAT_BASE_URL = 'https://khamsat.com/';
+const KHAMSAT_REQUEST_PATH_PATTERN = /^\/community\/requests\/\d+(?:[-/]|$)/;
+const KHAMSAT_REQUEST_ID_PATTERN = /\/community\/requests\/(\d+)/;
 
 function parseDocument(html: string): Document {
     return new DOMParser().parseFromString(html, 'text/html');
@@ -8,12 +14,23 @@ function normalizeText(value: string | null | undefined): string {
     return value?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
-function absoluteKhamsatUrl(href: string | null): string {
-    if (!href) {
-        return '';
-    }
+function resolveKhamsatRequestUrl(href: string | null): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl: KHAMSAT_BASE_URL,
+        allowedHosts: KHAMSAT_HOSTS,
+        pathPattern: KHAMSAT_REQUEST_PATH_PATTERN,
+    });
+}
 
-    return href.startsWith('http') ? href : `https://khamsat.com${href}`;
+function resolveKhamsatUrl(href: string | null): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl: KHAMSAT_BASE_URL,
+        allowedHosts: KHAMSAT_HOSTS,
+    });
+}
+
+function extractKhamsatRequestId(url: string): string | null {
+    return new URL(url).pathname.match(KHAMSAT_REQUEST_ID_PATTERN)?.[1] ?? null;
 }
 
 export function parseKhamsatListingHtml(html: string): JobRecord[] {
@@ -30,10 +47,10 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
             return;
         }
 
-        const href = link.getAttribute('href');
-        const match = href?.match(/\/community\/requests\/(\d+)/);
+        const url = resolveKhamsatRequestUrl(link.getAttribute('href'));
+        const id = url ? extractKhamsatRequestId(url) : null;
 
-        if (!match || seenIds.has(match[1])) {
+        if (!url || !id || seenIds.has(id)) {
             return;
         }
 
@@ -42,13 +59,13 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
         const publishTime =
             detailsCell?.querySelector<HTMLSpanElement>('.details-list span[title]') ?? null;
 
-        seenIds.add(match[1]);
+        seenIds.add(id);
 
         jobs.push({
-            id: match[1],
+            id,
             platformId: 'khamsat',
             title: normalizeText(link.textContent),
-            url: absoluteKhamsatUrl(href),
+            url,
             poster: normalizeText(ownerLink?.textContent),
             time: normalizeText(publishTime?.textContent),
             postedAt: normalizeText(publishTime?.getAttribute('title')),
@@ -74,15 +91,14 @@ export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null
         'main .content',
     ];
     const description =
-        descriptionSelectors
-            .flatMap((selector) => {
-                const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
-                    .map((element) => normalizeText(element.textContent))
-                    .filter(Boolean);
+        descriptionSelectors.flatMap((selector) => {
+            const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
+                .map((element) => normalizeText(element.textContent))
+                .filter(Boolean);
 
-                const detailedCandidate = texts.find((text) => text.length >= 80);
-                return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
-            })[0] ?? '';
+            const detailedCandidate = texts.find((text) => text.length >= 80);
+            return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
+        })[0] ?? '';
     const clientName = normalizeText(
         doc.querySelector<HTMLElement>(
             '.user-info .username, .post-author .username, .comment-user a, .user-name, .username, a[href*="/user/"], a[href*="/users/"]'
@@ -102,12 +118,12 @@ export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null
         ),
     ]
         .map((link) => {
-            const url = absoluteKhamsatUrl(link.getAttribute('href'));
-            const name = normalizeText(link.textContent) || normalizeText(url.split('/').at(-1));
+            const url = resolveKhamsatUrl(link.getAttribute('href'));
+            const name = normalizeText(link.textContent) || normalizeText(url?.split('/').at(-1));
 
             return {
                 name,
-                url,
+                url: url ?? '',
             };
         })
         .filter((attachment) => attachment.url.length > 0);

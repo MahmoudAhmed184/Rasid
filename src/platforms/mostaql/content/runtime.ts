@@ -20,26 +20,6 @@ export function isContextValid() {
     }
 }
 
-export function getPageType() {
-    const path = location.pathname;
-    if (PROJECT_PATH_PATTERN.test(path)) {
-        return 'project';
-    }
-    if (/\/message\//.test(path)) {
-        return 'message';
-    }
-    if (/\/messages/.test(path)) {
-        return 'messages';
-    }
-    if (/\/profile/.test(path)) {
-        return 'profile';
-    }
-    if (path === '/' || path === '') {
-        return 'home';
-    }
-    return 'other';
-}
-
 export function getProjectId() {
     const match = window.location.pathname.match(PROJECT_PATH_PATTERN);
     return match ? match[1] : '';

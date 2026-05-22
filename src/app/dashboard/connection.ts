@@ -5,7 +5,12 @@ interface ConnectionStatusPanelDependencies {
     readonly monitoringRepository: Pick<MonitoringRepository, 'getOverview'>;
 }
 
-function setStatusIcon(root: Document, container: HTMLElement, tone: string, iconClass: string): void {
+function setStatusIcon(
+    root: Document,
+    container: HTMLElement,
+    tone: string,
+    iconClass: string
+): void {
     const icon = root.createElement('i');
     icon.className = `fas ${iconClass}`;
     container.className = `stat-icon ${tone}`;

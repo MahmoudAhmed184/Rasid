@@ -465,11 +465,24 @@ textarea.form-control {
     outline: none;
 }
 
+.form-control[aria-invalid='true'] {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 4px rgba(190, 18, 60, 0.12);
+}
+
 .help-text {
     margin-top: 8px;
     color: var(--text-muted);
     font-size: 12px;
     font-weight: 600;
+    line-height: 1.7;
+}
+
+.field-error {
+    margin-top: 8px;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 720;
     line-height: 1.7;
 }
 
@@ -672,11 +685,36 @@ textarea.form-control {
 }
 
 .save-status {
-    color: var(--success);
+    max-width: min(640px, 100%);
+    color: var(--text-muted);
     font-size: 14px;
     font-weight: 760;
+    line-height: 1.6;
     opacity: 0;
     transition: opacity var(--transition);
+}
+
+.save-status.is-visible {
+    opacity: 1;
+}
+
+.save-status[data-tone='success'] {
+    color: var(--success);
+}
+
+.save-status[data-tone='error'] {
+    color: var(--danger);
+}
+
+.save-status[data-tone='info'] {
+    color: var(--text-muted);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-icon:disabled {
+    cursor: progress;
+    opacity: 0.68;
 }
 
 ::-webkit-scrollbar {
@@ -923,7 +961,9 @@ textarea.form-control {
 
 .modal-panel {
     width: min(520px, 100%);
+    max-height: calc(100vh - 40px);
     margin-bottom: 0;
+    overflow-y: auto;
     box-shadow: 0 26px 60px rgba(8, 20, 18, 0.26);
 }
 
@@ -1007,7 +1047,13 @@ textarea.form-control {
     }
 
     .sidebar-footer {
-        display: none;
+        display: block;
+        margin-top: 0;
+        padding-top: 0;
+    }
+
+    .toggle-row.monitoring-toggle {
+        min-height: 46px;
     }
 
     .main-content {

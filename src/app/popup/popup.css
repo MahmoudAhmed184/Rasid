@@ -287,6 +287,12 @@ button {
     color: var(--success);
 }
 
+.connection-report.info {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-sub);
+}
+
 .connection-report.error {
     border: 1px solid #f5b3c2;
     background: var(--danger-soft);

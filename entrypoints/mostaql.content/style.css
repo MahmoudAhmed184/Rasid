@@ -317,3 +317,26 @@
     text-align: right;
     padding: 4px 0;
 }
+
+@media (prefers-reduced-motion: reduce) {
+    #mostaql-prompt-modal,
+    .mostaql-modal-content,
+    .mostaql-form-input,
+    .mostaql-form-textarea,
+    .mostaql-autofilled,
+    .mostaql-autofill-toast,
+    #track-project-btn {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+
+    .mostaql-modal-content {
+        animation-name: none !important;
+    }
+
+    .mostaql-autofill-toast,
+    .mostaql-autofill-toast.show {
+        transform: none !important;
+    }
+}

@@ -113,6 +113,20 @@
     box-shadow: 0 0 0 2px rgba(45, 138, 87, 0.28) !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    #rasid-khamsat-panel,
+    .rasid-khamsat-panel__button,
+    .rasid-autofilled {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+
+    .rasid-khamsat-panel__button:hover:not(:disabled) {
+        transform: none !important;
+    }
+}
+
 @media (max-width: 640px) {
     #rasid-khamsat-panel {
         inset-inline: 12px;

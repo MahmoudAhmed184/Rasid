@@ -47,7 +47,9 @@ function getTitle(doc: Document): string {
 }
 
 function getDescription(doc: Document): string {
-    return normalizeText(findSection(doc, 'تفاصيل المشروع')?.querySelector('h2.naskh, h2')?.textContent);
+    return normalizeText(
+        findSection(doc, 'تفاصيل المشروع')?.querySelector('h2.naskh, h2')?.textContent
+    );
 }
 
 export function extractNafezlyProposalSource(input: {
@@ -59,7 +61,11 @@ export function extractNafezlyProposalSource(input: {
     const description = getDescription(input.document);
     const projectCard = findSection(input.document, 'بطاقة المشروع');
     const projectDetails = projectCard ? parseDetailRows(projectCard) : {};
-    const tags = [...input.document.querySelectorAll<HTMLAnchorElement>('a.tag-class[href*="/projects/skill"]')]
+    const tags = [
+        ...input.document.querySelectorAll<HTMLAnchorElement>(
+            'a.tag-class[href*="/projects/skill"]'
+        ),
+    ]
         .map((link) => normalizeText(link.textContent))
         .filter(Boolean);
     const clientName = normalizeText(projectCard?.querySelector('a[href*="/u/"]')?.textContent);

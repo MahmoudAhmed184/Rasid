@@ -69,6 +69,29 @@ function updateToggleUi(button: HTMLButtonElement, isEnabled: boolean) {
     setButtonContent(button, 'fa-bell-slash', 'الإشعارات: متوقفة');
 }
 
+function showPopupStatus(tone: 'success' | 'error' | 'info', message: string) {
+    const report = getElement<HTMLElement>('connectionReport');
+
+    if (!report) {
+        return;
+    }
+
+    report.className = `connection-report ${tone}`;
+    report.classList.remove('hidden');
+    report.textContent = message;
+}
+
+function hidePopupStatus() {
+    const report = getElement<HTMLElement>('connectionReport');
+
+    if (!report) {
+        return;
+    }
+
+    report.className = 'connection-report hidden';
+    report.textContent = '';
+}
+
 async function loadStats(deps: PopupDependencies) {
     const overview = await deps.monitoringRepository.getOverview();
     const stats = overview.stats;
@@ -109,14 +132,24 @@ function createPopupController(deps: PopupDependencies) {
 
     async function handleCheckNow(button: HTMLButtonElement) {
         button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
         button.classList.add('is-loading');
         setButtonContent(button, 'fa-sync-alt', 'جاري الفحص...');
+        hidePopupStatus();
 
         try {
             await requestCheckNow();
             await loadStats(deps);
+            showPopupStatus('success', 'تم الفحص وتحديث الإحصائيات.');
+        } catch (error) {
+            console.error('Error checking now:', error);
+            showPopupStatus(
+                'error',
+                'تعذر تنفيذ الفحص الآن. أعد المحاولة أو افتح لوحة التحكم للتحقق من حالة الاتصال.'
+            );
         } finally {
             button.disabled = false;
+            button.setAttribute('aria-busy', 'false');
             button.classList.remove('is-loading');
             setButtonContent(button, 'fa-sync-alt', 'فحص الآن');
         }
@@ -124,6 +157,7 @@ function createPopupController(deps: PopupDependencies) {
 
     async function handleDiagnostics(button: HTMLButtonElement, report: HTMLElement) {
         button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
         setButtonContent(button, 'fa-plug', 'جاري التشخيص...');
         report.className = 'connection-report hidden';
 
@@ -146,16 +180,32 @@ function createPopupController(deps: PopupDependencies) {
             report.textContent = `✗ فشل الاتصال: ${message}. تأكد من تفعيل منصة واحدة على الأقل وفتحها عند الحاجة.`;
         } finally {
             button.disabled = false;
+            button.setAttribute('aria-busy', 'false');
             setButtonContent(button, 'fa-plug', 'فحص الاتصال بالمصادر');
         }
     }
 
     async function toggleNotifications(button: HTMLButtonElement) {
-        const currentState = await deps.monitoringRepository.getNotificationsEnabled();
-        const newState = !currentState;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
 
-        await deps.monitoringRepository.setNotificationsEnabled(newState);
-        updateToggleUi(button, newState);
+        try {
+            const currentState = await deps.monitoringRepository.getNotificationsEnabled();
+            const newState = !currentState;
+
+            await deps.monitoringRepository.setNotificationsEnabled(newState);
+            updateToggleUi(button, newState);
+            showPopupStatus('success', newState ? 'تم تفعيل الإشعارات.' : 'تم إيقاف الإشعارات.');
+        } catch (error) {
+            console.error('Error toggling notifications:', error);
+            showPopupStatus('error', 'تعذر تغيير حالة الإشعارات. حاول مرة أخرى.');
+            await syncNotificationToggle(deps).catch((syncError: unknown) => {
+                console.error('Error resyncing notification toggle:', syncError);
+            });
+        } finally {
+            button.disabled = false;
+            button.setAttribute('aria-busy', 'false');
+        }
     }
 
     function bindEvents() {

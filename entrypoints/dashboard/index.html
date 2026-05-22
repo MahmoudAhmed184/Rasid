@@ -12,35 +12,88 @@
         <div class="dashboard-container">
             <aside class="sidebar">
                 <div class="logo-section">
-                    <img src="../icons/icon128.png" alt="Logo" class="logo-img" />
+                    <img src="../icons/icon128.png" alt="" class="logo-img" aria-hidden="true" />
                     <div class="logo-text">
                         <h1>Rasid</h1>
                         <span>راصد فرص العمل الحر</span>
                     </div>
                 </div>
 
-                <nav class="sidebar-nav">
-                    <button class="nav-item active" data-tab="overview" type="button">
+                <nav class="sidebar-nav" role="tablist" aria-label="أقسام لوحة التحكم">
+                    <button
+                        id="overview-tab-button"
+                        class="nav-item active"
+                        data-tab="overview"
+                        type="button"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="overview-tab"
+                    >
                         <i class="fas fa-home"></i>
                         <span>النظرة العامة</span>
                     </button>
-                    <button class="nav-item" data-tab="bids-tracker" type="button">
+                    <button
+                        id="bids-tracker-tab-button"
+                        class="nav-item"
+                        data-tab="bids-tracker"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="bids-tracker-tab"
+                        tabindex="-1"
+                    >
                         <i class="fas fa-chart-line"></i>
                         <span>متابعة العروض</span>
                     </button>
-                    <button class="nav-item" data-tab="filters" type="button">
+                    <button
+                        id="filters-tab-button"
+                        class="nav-item"
+                        data-tab="filters"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="filters-tab"
+                        tabindex="-1"
+                    >
                         <i class="fas fa-filter"></i>
                         <span>الفلاتر الذكية</span>
                     </button>
-                    <button class="nav-item" data-tab="prompts" type="button">
+                    <button
+                        id="prompts-tab-button"
+                        class="nav-item"
+                        data-tab="prompts"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="prompts-tab"
+                        tabindex="-1"
+                    >
                         <i class="fas fa-terminal"></i>
                         <span>أوامر AI</span>
                     </button>
-                    <button class="nav-item" data-tab="proposals" type="button">
+                    <button
+                        id="proposals-tab-button"
+                        class="nav-item"
+                        data-tab="proposals"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="proposals-tab"
+                        tabindex="-1"
+                    >
                         <i class="fas fa-file-contract"></i>
                         <span>نماذج العروض</span>
                     </button>
-                    <button class="nav-item" data-tab="settings" type="button">
+                    <button
+                        id="settings-tab-button"
+                        class="nav-item"
+                        data-tab="settings"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="settings-tab"
+                        tabindex="-1"
+                    >
                         <i class="fas fa-cog"></i>
                         <span>الإعدادات المتقدمة</span>
                     </button>
@@ -48,17 +101,28 @@
 
                 <div class="sidebar-footer">
                     <div class="toggle-row monitoring-toggle">
-                        <span>حالة المراقبة</span>
-                        <label class="switch">
-                            <input type="checkbox" id="systemToggle" checked />
-                            <span class="slider"></span>
+                        <span id="systemToggleLabel">حالة المراقبة</span>
+                        <label class="switch" for="systemToggle">
+                            <input
+                                type="checkbox"
+                                id="systemToggle"
+                                role="switch"
+                                aria-labelledby="systemToggleLabel"
+                                checked
+                            />
+                            <span class="slider" aria-hidden="true"></span>
                         </label>
                     </div>
                 </div>
             </aside>
 
             <main class="main-content">
-                <div class="tab-container" id="overview-tab">
+                <div
+                    class="tab-container"
+                    id="overview-tab"
+                    role="tabpanel"
+                    aria-labelledby="overview-tab-button"
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>مرحباً بك، شريك النجاح</h2>
@@ -123,7 +187,13 @@
                     </div>
                 </div>
 
-                <div class="tab-container hidden" id="bids-tracker-tab">
+                <div
+                    class="tab-container hidden"
+                    id="bids-tracker-tab"
+                    role="tabpanel"
+                    aria-labelledby="bids-tracker-tab-button"
+                    hidden
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>
@@ -205,7 +275,13 @@
                     </div>
                 </div>
 
-                <div class="tab-container hidden" id="filters-tab">
+                <div
+                    class="tab-container hidden"
+                    id="filters-tab"
+                    role="tabpanel"
+                    aria-labelledby="filters-tab-button"
+                    hidden
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>الفلاتر الذكية</h2>
@@ -220,27 +296,29 @@
                                 <h3>الكلمات المفتاحية</h3>
                             </div>
                             <div class="form-group">
-                                <label>كلمات يجب توفرها (تضمين)</label>
+                                <label for="keywordsInclude">كلمات يجب توفرها (تضمين)</label>
                                 <input
                                     type="text"
                                     id="keywordsInclude"
                                     class="form-control"
                                     placeholder="React, Node, تصميم..."
+                                    aria-describedby="keywordsIncludeHelp"
                                 />
-                                <p class="help-text">
+                                <p class="help-text" id="keywordsIncludeHelp">
                                     افصل بين الكلمات بفاصلة. سيتم إخطارك فقط إذا احتوى المشروع على
                                     أحدها.
                                 </p>
                             </div>
                             <div class="form-group">
-                                <label>كلمات مستبعدة</label>
+                                <label for="keywordsExclude">كلمات مستبعدة</label>
                                 <input
                                     type="text"
                                     id="keywordsExclude"
                                     class="form-control"
                                     placeholder="Wordpress, PHP..."
+                                    aria-describedby="keywordsExcludeHelp"
                                 />
-                                <p class="help-text">
+                                <p class="help-text" id="keywordsExcludeHelp">
                                     سيتم تجاهل أي مشروع يحتوي على هذه الكلمات تماماً.
                                 </p>
                             </div>
@@ -252,107 +330,154 @@
                                 <h3>معايير المشروع</h3>
                             </div>
                             <div class="form-group">
-                                <label>أدنى ميزانية ($)</label>
+                                <label for="minBudget">أدنى ميزانية ($)</label>
                                 <input
                                     type="number"
                                     id="minBudget"
                                     class="form-control"
                                     placeholder="مثلاً: 50"
+                                    min="0"
+                                    step="1"
+                                    inputmode="numeric"
                                 />
                             </div>
                             <div class="form-group">
-                                <label>أدنى نسبة توظيف للعميل (%)</label>
+                                <label for="minHiringRate">أدنى نسبة توظيف للعميل (%)</label>
                                 <input
                                     type="number"
                                     id="minHiringRate"
                                     class="form-control"
                                     placeholder="مثلاً: 70"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    inputmode="numeric"
                                 />
                             </div>
                             <div class="form-group">
-                                <label>أقصى مدة تنفيذ (يوم)</label>
+                                <label for="maxDuration">أقصى مدة تنفيذ (يوم)</label>
                                 <input
                                     type="number"
                                     id="maxDuration"
                                     class="form-control"
                                     placeholder="مثلاً: 14"
+                                    min="0"
+                                    step="1"
+                                    inputmode="numeric"
                                 />
                             </div>
                         </div>
 
-                        <div class="settings-section">
+                        <div
+                            class="settings-section"
+                            role="group"
+                            aria-labelledby="platformsHeading"
+                        >
                             <div class="section-header">
                                 <i class="fas fa-globe"></i>
-                                <h3>المنصات المراقبة</h3>
+                                <h3 id="platformsHeading">المنصات المراقبة</h3>
                             </div>
                             <div class="toggle-row">
-                                <span>مستقل</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="platform-mostaql" />
-                                    <span class="slider"></span>
+                                <span id="platform-mostaql-label">مستقل</span>
+                                <label class="switch" for="platform-mostaql">
+                                    <input
+                                        type="checkbox"
+                                        id="platform-mostaql"
+                                        role="switch"
+                                        aria-labelledby="platform-mostaql-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
                             <div class="toggle-row">
-                                <span>خمسات</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="platform-khamsat" />
-                                    <span class="slider"></span>
+                                <span id="platform-khamsat-label">خمسات</span>
+                                <label class="switch" for="platform-khamsat">
+                                    <input
+                                        type="checkbox"
+                                        id="platform-khamsat"
+                                        role="switch"
+                                        aria-labelledby="platform-khamsat-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
                             <div class="toggle-row">
-                                <span>نفذلي</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="platform-nafezly" />
-                                    <span class="slider"></span>
+                                <span id="platform-nafezly-label">نفذلي</span>
+                                <label class="switch" for="platform-nafezly">
+                                    <input
+                                        type="checkbox"
+                                        id="platform-nafezly"
+                                        role="switch"
+                                        aria-labelledby="platform-nafezly-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
-                            <div class="toggle-row">
-                                <span>كفيل</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="platform-kafiil" />
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <p class="help-text">
+                            <p class="help-text" id="platformsHelp">
                                 فعّل فقط المنصات التي تريد أن تدخل في الفحص الدوري والتنبيهات.
                             </p>
                         </div>
 
-                        <div class="settings-section">
+                        <div
+                            class="settings-section"
+                            role="group"
+                            aria-labelledby="categoriesHeading"
+                        >
                             <div class="section-header">
                                 <i class="fas fa-tags"></i>
-                                <h3>تصنيفات البحث</h3>
+                                <h3 id="categoriesHeading">تصنيفات البحث</h3>
                             </div>
                             <div class="toggle-row">
-                                <span>أعمال وبرمجة (Development)</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="cat-development" />
-                                    <span class="slider"></span>
+                                <span id="cat-development-label">أعمال وبرمجة (Development)</span>
+                                <label class="switch" for="cat-development">
+                                    <input
+                                        type="checkbox"
+                                        id="cat-development"
+                                        role="switch"
+                                        aria-labelledby="cat-development-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
                             <div class="toggle-row">
-                                <span>ذكاء اصطناعي (AI)</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="cat-ai" />
-                                    <span class="slider"></span>
+                                <span id="cat-ai-label">ذكاء اصطناعي (AI)</span>
+                                <label class="switch" for="cat-ai">
+                                    <input
+                                        type="checkbox"
+                                        id="cat-ai"
+                                        role="switch"
+                                        aria-labelledby="cat-ai-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
                             <div class="toggle-row">
-                                <span>كافة المشاريع</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="cat-all" />
-                                    <span class="slider"></span>
+                                <span id="cat-all-label">كافة المشاريع</span>
+                                <label class="switch" for="cat-all">
+                                    <input
+                                        type="checkbox"
+                                        id="cat-all"
+                                        role="switch"
+                                        aria-labelledby="cat-all-label"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
-                            <p class="help-text">
+                            <p class="help-text" id="categoriesHelp">
                                 تحدد هذه الفلاتر أقسام المنصات التي تدعم خرائط الفئات صراحة. في
-                                الوضع الحالي لا تؤثر على خمسات أو نفذلي أو كفيل.
+                                الوضع الحالي لا تؤثر على خمسات أو نفذلي.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="tab-container hidden" id="prompts-tab">
+                <div
+                    class="tab-container hidden"
+                    id="prompts-tab"
+                    role="tabpanel"
+                    aria-labelledby="prompts-tab-button"
+                    hidden
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>أوامر الذكاء الاصطناعي</h2>
@@ -366,7 +491,13 @@
                     <div id="promptsList" class="settings-grid"></div>
                 </div>
 
-                <div class="tab-container hidden" id="proposals-tab">
+                <div
+                    class="tab-container hidden"
+                    id="proposals-tab"
+                    role="tabpanel"
+                    aria-labelledby="proposals-tab-button"
+                    hidden
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>نماذج العروض</h2>
@@ -376,14 +507,15 @@
 
                     <div class="settings-section">
                         <div class="form-group">
-                            <label>نص العرض الافتراضي</label>
+                            <label for="proposalTemplate">نص العرض الافتراضي</label>
                             <textarea
                                 id="proposalTemplate"
                                 rows="15"
                                 class="form-control"
                                 placeholder="اكتب عرضك هنا..."
+                                aria-describedby="proposalTemplateHelp"
                             ></textarea>
-                            <p class="help-text">
+                            <p class="help-text" id="proposalTemplateHelp">
                                 سيُستخدم هذا النص تلقائياً في حقول التقديم أو الرد داخل المنصات
                                 المدعومة عند توفر التعبئة التلقائية.
                             </p>
@@ -391,7 +523,13 @@
                     </div>
                 </div>
 
-                <div class="tab-container hidden" id="settings-tab">
+                <div
+                    class="tab-container hidden"
+                    id="settings-tab"
+                    role="tabpanel"
+                    aria-labelledby="settings-tab-button"
+                    hidden
+                >
                     <div class="content-header">
                         <div class="header-title">
                             <h2>الإعدادات المتقدمة</h2>
@@ -406,12 +544,16 @@
                                 <h3>الذكاء الاصطناعي</h3>
                             </div>
                             <div class="form-group">
-                                <label>طريقة التنفيذ</label>
-                                <select id="aiExecutionMode" class="form-control">
+                                <label for="aiExecutionMode">طريقة التنفيذ</label>
+                                <select
+                                    id="aiExecutionMode"
+                                    class="form-control"
+                                    aria-describedby="aiExecutionModeHelp"
+                                >
                                     <option value="bridge">Bridge عبر موقع الشات</option>
                                     <option value="direct">Direct عبر API</option>
                                 </select>
-                                <p class="help-text">
+                                <p class="help-text" id="aiExecutionModeHelp">
                                     <strong>Bridge:</strong> يرسل القالب إلى صفحة الشات التي تختارها
                                     أنت.<br />
                                     <strong>Direct:</strong> يولد النص داخل الإضافة مباشرة باستخدام
@@ -420,7 +562,7 @@
                             </div>
                             <div id="aiDirectSettings" class="hidden">
                                 <div class="form-group">
-                                    <label>المزود</label>
+                                    <label for="aiProvider">المزود</label>
                                     <select id="aiProvider" class="form-control">
                                         <option value="openai">OpenAI</option>
                                         <option value="gemini">Gemini</option>
@@ -428,7 +570,7 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>اسم النموذج</label>
+                                    <label for="aiModel">اسم النموذج</label>
                                     <input
                                         type="text"
                                         id="aiModel"
@@ -438,7 +580,7 @@
                                     />
                                 </div>
                                 <div class="form-group">
-                                    <label>مفتاح API</label>
+                                    <label for="aiApiKey">مفتاح API</label>
                                     <input
                                         type="password"
                                         id="aiApiKey"
@@ -446,13 +588,15 @@
                                         placeholder="أدخل مفتاح الـ API"
                                         dir="ltr"
                                         autocomplete="off"
+                                        aria-describedby="aiApiKeyHelp"
                                     />
-                                    <p class="help-text">
-                                        يُخزن المفتاح محلياً داخل المتصفح ويُستخدم من الخلفية فقط.
+                                    <p class="help-text" id="aiApiKeyHelp">
+                                        يُحفظ المفتاح مؤقتاً في مساحة جلسة الإضافة ولا يدخل في النسخ
+                                        الاحتياطية. قد تحتاج لإدخاله مجدداً بعد إعادة تشغيل المتصفح.
                                     </p>
                                 </div>
                                 <div class="form-group">
-                                    <label>تعليمات النظام المشتركة</label>
+                                    <label for="aiSystemPrompt">تعليمات النظام المشتركة</label>
                                     <textarea
                                         id="aiSystemPrompt"
                                         rows="6"
@@ -463,29 +607,36 @@
                             </div>
                             <div id="aiBridgeSettings">
                                 <div class="form-group">
-                                    <label>رابط الشات المفضل</label>
+                                    <label for="aiChatUrl">رابط الشات المفضل</label>
                                     <input
-                                        type="text"
+                                        type="url"
                                         id="aiChatUrl"
                                         class="form-control"
                                         placeholder="https://chatgpt.com/"
                                         dir="ltr"
+                                        inputmode="url"
+                                        aria-describedby="aiChatUrlHelp"
                                     />
-                                    <p class="help-text">
-                                        يمكنك استخدام رابط مخصص أو رابط مشروع ChatGPT بعينه.
+                                    <p class="help-text" id="aiChatUrlHelp">
+                                        يُقبل فقط روابط ChatGPT على chatgpt.com أو chat.openai.com.
                                     </p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>تكرار الفحص (بالدقائق)</label>
+                                <label for="checkInterval">تكرار الفحص (بالدقائق)</label>
                                 <input
                                     type="number"
                                     id="checkInterval"
                                     class="form-control"
                                     placeholder="مثلاً: 1"
                                     min="1"
+                                    max="30"
+                                    step="1"
+                                    inputmode="numeric"
+                                    required
+                                    aria-describedby="checkIntervalHelp"
                                 />
-                                <p class="help-text">
+                                <p class="help-text" id="checkIntervalHelp">
                                     عدد الدقائق بين كل عملية فحص للمشاريع الجديدة.
                                 </p>
                             </div>
@@ -497,13 +648,17 @@
                                 <h3>وضع الإشعارات</h3>
                             </div>
                             <div class="form-group">
-                                <label>طريقة استقبال المشاريع الجديدة</label>
-                                <select id="notificationMode" class="form-control">
+                                <label for="notificationMode">طريقة استقبال المشاريع الجديدة</label>
+                                <select
+                                    id="notificationMode"
+                                    class="form-control"
+                                    aria-describedby="notificationModeHelp"
+                                >
                                     <option value="auto">تلقائي (SignalR مع احتياطي)</option>
                                     <option value="signalr">اتصال مباشر فقط (SignalR)</option>
                                     <option value="polling">استعلام دوري فقط (Polling)</option>
                                 </select>
-                                <p class="help-text">
+                                <p class="help-text" id="notificationModeHelp">
                                     <strong>تلقائي:</strong> يبدأ بالاتصال المباشر، ويتحول للاستعلام
                                     تلقائياً عند انقطاع السيرفر.<br />
                                     <strong>اتصال مباشر:</strong> إشعارات فورية عبر السيرفر (بدون
@@ -512,17 +667,20 @@
                                 </p>
                             </div>
                             <div class="form-group">
-                                <label>رابط سيرفر SignalR المخصص</label>
+                                <label for="signalrServerUrl">رابط سيرفر SignalR</label>
                                 <input
-                                    type="text"
+                                    type="url"
                                     id="signalrServerUrl"
                                     class="form-control"
-                                    placeholder="https://your-server.example/jobNotificationHub"
+                                    placeholder="https://freelancia.runasp.net/jobNotificationHub"
                                     dir="ltr"
+                                    disabled
+                                    inputmode="url"
+                                    aria-describedby="signalrServerUrlHelp"
                                 />
-                                <p class="help-text">
-                                    اتركه فارغاً لاستخدام السيرفر الافتراضي. يُطبَّق عند الحفظ
-                                    ويُعاد الاتصال تلقائياً.
+                                <p class="help-text" id="signalrServerUrlHelp">
+                                    يستخدم إصدار المتجر الخادم الافتراضي فقط. يتطلب تغيير الأصل بناء
+                                    مخصصاً مع صلاحية مضيف مطابقة.
                                 </p>
                             </div>
                         </div>
@@ -533,19 +691,24 @@
                                 <h3>ساعات الهدوء</h3>
                             </div>
                             <div class="toggle-row">
-                                <span>تفعيل ساعات الهدوء</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="quietHoursEnabled" />
-                                    <span class="slider"></span>
+                                <span id="quietHoursEnabledLabel">تفعيل ساعات الهدوء</span>
+                                <label class="switch" for="quietHoursEnabled">
+                                    <input
+                                        type="checkbox"
+                                        id="quietHoursEnabled"
+                                        role="switch"
+                                        aria-labelledby="quietHoursEnabledLabel"
+                                    />
+                                    <span class="slider" aria-hidden="true"></span>
                                 </label>
                             </div>
                             <div class="form-group field-row">
                                 <div>
-                                    <label>من</label>
+                                    <label for="quietHoursStart">من</label>
                                     <input type="time" id="quietHoursStart" class="form-control" />
                                 </div>
                                 <div>
-                                    <label>إلى</label>
+                                    <label for="quietHoursEnd">إلى</label>
                                     <input type="time" id="quietHoursEnd" class="form-control" />
                                 </div>
                             </div>
@@ -590,17 +753,25 @@
                                     id="importBackupInput"
                                     accept=".json"
                                     class="hidden-input"
+                                    aria-describedby="backupHelp"
                                 />
                             </div>
-                            <p class="help-text">
-                                احفظ نسخة من إعداداتك ومقترحاتك لاستعادتها لاحقاً.
+                            <p class="help-text" id="backupHelp">
+                                احفظ نسخة من إعداداتك ومقترحاتك لاستعادتها لاحقاً. الاستيراد يستبدل
+                                البيانات الحالية بعد عرض ملخص وتأكيدك.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <div class="sticky-footer">
-                    <span id="saveStatus" class="save-status">تم حفظ التغييرات بنجاح</span>
+                    <span
+                        id="saveStatus"
+                        class="save-status"
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    ></span>
                     <button id="saveAllBtn" class="btn-primary" type="button">
                         <i class="fas fa-save"></i> حفظ جميع الإعدادات
                     </button>
@@ -608,29 +779,52 @@
             </main>
         </div>
 
-        <div id="promptModal" class="modal-overlay hidden">
-            <div class="settings-section modal-panel">
+        <div id="promptModal" class="modal-overlay hidden" hidden aria-hidden="true">
+            <div
+                class="settings-section modal-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modalTitle"
+                aria-describedby="promptModalDescription"
+                tabindex="-1"
+            >
                 <div class="section-header">
                     <h3 id="modalTitle">إضافة أمر جديد</h3>
                 </div>
+                <p id="promptModalDescription" class="help-text">
+                    احفظ عنواناً واضحاً ونصاً قابلاً للمراجعة قبل استخدامه في توليد العروض.
+                </p>
+                <p
+                    id="promptModalStatus"
+                    class="field-error"
+                    role="alert"
+                    aria-live="assertive"
+                    hidden
+                ></p>
                 <input type="hidden" id="promptId" />
                 <div class="form-group">
-                    <label>عنوان الأمر</label>
+                    <label for="promptTitle">عنوان الأمر</label>
                     <input
                         type="text"
                         id="promptTitle"
                         class="form-control"
                         placeholder="مثال: عرض برمجة Flutter"
+                        required
+                        aria-describedby="promptTitleError"
                     />
+                    <p id="promptTitleError" class="field-error" hidden></p>
                 </div>
                 <div class="form-group">
-                    <label>نص الأمر</label>
+                    <label for="promptContent">نص الأمر</label>
                     <textarea
                         id="promptContent"
                         rows="8"
                         class="form-control"
                         placeholder="اكتب الأمر هنا..."
+                        required
+                        aria-describedby="promptContentError"
                     ></textarea>
+                    <p id="promptContentError" class="field-error" hidden></p>
                 </div>
                 <div class="modal-actions">
                     <button id="closeModalBtn" class="btn-secondary" type="button">إلغاء</button>

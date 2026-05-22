@@ -1,11 +1,8 @@
 import { browser } from 'wxt/browser';
 
+import { resolvePlatformUrl } from '../../../entities/platform/url';
 import type { PlatformContentServices } from '../../contracts';
-import type {
-    MostaqlBidDetails,
-    MostaqlMyProposalData,
-    MostaqlProjectDetailsData,
-} from './data';
+import type { MostaqlBidDetails, MostaqlMyProposalData, MostaqlProjectDetailsData } from './data';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
 import { extractMyProposalFull, extractProjectDetailsFull } from './data';
 
@@ -14,6 +11,8 @@ import { extractMyProposalFull, extractProjectDetailsFull } from './data';
 // ==========================================
 
 const browserApi = browser;
+const MOSTAQL_HOSTS = ['mostaql.com'] as const;
+const MOSTAQL_BASE_URL = 'https://mostaql.com/';
 
 type DownloadServices = PlatformContentServices['downloads'];
 
@@ -85,7 +84,11 @@ function setExportButtonContent(
     useActionText = false
 ): void {
     if (useActionText) {
-        button.replaceChildren(createIcon(iconClassName), document.createTextNode(' '), createActionText(label));
+        button.replaceChildren(
+            createIcon(iconClassName),
+            document.createTextNode(' '),
+            createActionText(label)
+        );
         return;
     }
 
@@ -111,6 +114,48 @@ function sanitizeFile(name: string | null | undefined, fallback: string): string
         return fallback;
     }
     return name.replace(/[^\u0600-\u06FFa-zA-Z0-9.\-_ ]/g, '_').trim() || fallback;
+}
+
+function escapeHtml(value: unknown): string {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeHtmlValue(value: unknown, fallback = '-'): string {
+    const text = String(value ?? '').trim();
+    return escapeHtml(text || fallback);
+}
+
+function resolveMostaqlExportUrl(value: string | null | undefined): string | null {
+    return resolvePlatformUrl(value, {
+        baseUrl: window.location.href || MOSTAQL_BASE_URL,
+        allowedHosts: MOSTAQL_HOSTS,
+    });
+}
+
+function isSafeLocalAssetPath(value: string | null | undefined): value is string {
+    if (!value || value.startsWith('/') || value.includes('\\') || value.includes(':')) {
+        return false;
+    }
+
+    return value
+        .split('/')
+        .every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
+function resolveReportAssetUrl(
+    localPath: string | null | undefined,
+    remoteUrl: string
+): string | null {
+    if (isSafeLocalAssetPath(localPath)) {
+        return localPath;
+    }
+
+    return resolveMostaqlExportUrl(remoteUrl);
 }
 
 export function injectMessageExporter(downloads: DownloadServices) {
@@ -252,7 +297,9 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
             let currentTime = timeEl
                 ? timeEl.getAttribute('title') || timeEl.innerText.trim()
                 : null;
-            let currentAvatar = avatarEl ? avatarEl.src : null;
+            let currentAvatar = avatarEl
+                ? resolveMostaqlExportUrl(avatarEl.getAttribute('src') || avatarEl.src)
+                : null;
 
             let isUs, senderName, displayAvatar;
 
@@ -290,7 +337,12 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
             let attachments: Attachment[] = [];
 
             const processLink = (linkNode: HTMLAnchorElement) => {
-                const url = linkNode.href;
+                const url = resolveMostaqlExportUrl(linkNode.getAttribute('href'));
+
+                if (!url) {
+                    return;
+                }
+
                 let filename = linkNode.innerText.trim();
                 if (!filename || filename === '') {
                     filename = getFilenameFromUrl(url);
@@ -311,7 +363,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
             );
 
             msg.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
-                const url = audio.src;
+                const url = resolveMostaqlExportUrl(audio.getAttribute('src') || audio.src);
                 if (url) {
                     const filename = getFilenameFromUrl(url);
                     if (!attachments.find((a) => a.url === url)) {
@@ -324,7 +376,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
             });
 
             msg.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
-                let bestUrl = video.src;
+                let bestUrl = resolveMostaqlExportUrl(video.getAttribute('src') || video.src);
                 if (!bestUrl) {
                     const sources = Array.from(video.querySelectorAll<HTMLSourceElement>('source'));
                     const mp4Source = sources.find(
@@ -333,7 +385,9 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
                     );
                     const anySource = mp4Source || sources[0];
                     if (anySource && anySource.src) {
-                        bestUrl = anySource.src;
+                        bestUrl = resolveMostaqlExportUrl(
+                            anySource.getAttribute('src') || anySource.src
+                        );
                     }
                 }
                 if (bestUrl) {
@@ -422,16 +476,22 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
             return null;
         }
 
-        const assetKey = `${folder}::${asset.url}`;
+        const assetUrl = resolveMostaqlExportUrl(asset.url);
+
+        if (!assetUrl) {
+            return null;
+        }
+
+        const assetKey = `${folder}::${assetUrl}`;
         if (registeredAssets.has(assetKey)) {
             return registeredAssets.get(assetKey) ?? null;
         }
 
-        const preferredName = asset.name || getFilenameFromUrl(asset.url);
+        const preferredName = asset.name || getFilenameFromUrl(assetUrl);
         const zipPath = getUniqueZipPath(folder, preferredName, fallbackName);
 
         registeredAssets.set(assetKey, zipPath);
-        filesToZip.push({ name: zipPath, url: asset.url });
+        filesToZip.push({ name: zipPath, url: assetUrl });
 
         return zipPath;
     }
@@ -457,19 +517,31 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
     });
 
     function renderAttachmentHtml(attachment: Attachment): string {
-        const attachmentUrl = attachment.localPath || attachment.url;
+        const attachmentUrl = resolveReportAssetUrl(attachment.localPath, attachment.url);
         const attachmentName = attachment.name || 'مرفق';
-        const linkAttrs = attachment.localPath ? '' : ' target="_blank" rel="noopener noreferrer"';
+        const safeAttachmentName = escapeHtml(attachmentName);
+        const safeAttachmentUrl = attachmentUrl ? escapeHtml(attachmentUrl) : '';
+        const linkAttrs =
+            attachmentUrl && !isSafeLocalAssetPath(attachmentUrl)
+                ? ' target="_blank" rel="noopener noreferrer"'
+                : '';
         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.name);
         const isAudio = /\.(mp3|wav|ogg|m4a|aac)$/i.test(attachment.name);
         const isVideo = /\.(mp4|webm|ogg)$/i.test(attachment.name);
 
+        if (!attachmentUrl) {
+            return `
+                                        <div class="attachment-preview">
+                                            <span class="attach-link"><i class="fa fa-paperclip"></i> ${safeAttachmentName}</span>
+                                        </div>`;
+        }
+
         return `
                                         <div class="attachment-preview">
-                                            ${isImage ? `<img src="${attachmentUrl}" alt="${attachmentName}" onerror="this.style.display='none'">` : ''}
-                                            ${isAudio ? `<audio controls src="${attachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #f1f5f9;"></audio>` : ''}
-                                            ${isVideo ? `<video controls src="${attachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #000; max-height: 400px;"></video>` : ''}
-                                            <a href="${attachmentUrl}"${linkAttrs} class="attach-link"><i class="fa fa-paperclip"></i> ${attachmentName}</a>
+                                            ${isImage ? `<img src="${safeAttachmentUrl}" alt="${safeAttachmentName}" loading="lazy">` : ''}
+                                            ${isAudio ? `<audio controls src="${safeAttachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #f1f5f9;"></audio>` : ''}
+                                            ${isVideo ? `<video controls src="${safeAttachmentUrl}" style="width: 100%; margin-top: 10px; border-radius: 8px; background: #000; max-height: 400px;"></video>` : ''}
+                                            <a href="${safeAttachmentUrl}"${linkAttrs} class="attach-link"><i class="fa fa-paperclip"></i> ${safeAttachmentName}</a>
                                         </div>`;
     }
 
@@ -477,7 +549,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
     <html dir="rtl" lang="ar">
     <head>
         <meta charset="UTF-8">
-        <title>تقرير مشروع مستقل - ${discussionId}</title>
+        <title>تقرير مشروع مستقل - ${escapeHtml(discussionId)}</title>
         <style>
             :root {
                 --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
@@ -544,25 +616,25 @@ ${EXPORT_ICON_SHIM_CSS}
         <div class="container">
             <header>
                 <h1>تقرير عمل مشروع مستقل</h1>
-                <div class="date-stamp">${new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                <div class="date-stamp">${escapeHtml(new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))}</div>
             </header>
 
             <section>
                 <h2>وصف وتفاصيل المشروع</h2>
                 <div class="info-card">
                     <div class="info-grid">
-                        <div class="info-item full-width"><span class="info-label">اسم المشروع</span><span class="info-value">${pData.title || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">حالة المشروع</span><span class="info-value">${pData.status || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">الميزانية</span><span class="info-value">${pData.budget || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">مدة التنفيذ</span><span class="info-value">${pData.duration || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">صاحب العمل</span><span class="info-value">${pData.clientName || '-'}</span></div>
-                        ${pData.category && pData.category !== 'غير معروف' && pData.category !== 'Unknown' ? `<div class="info-item"><span class="info-label">القسم</span><span class="info-value">${pData.category}</span></div>` : ''}
+                        <div class="info-item full-width"><span class="info-label">اسم المشروع</span><span class="info-value">${escapeHtmlValue(pData.title)}</span></div>
+                        <div class="info-item"><span class="info-label">حالة المشروع</span><span class="info-value">${escapeHtmlValue(pData.status)}</span></div>
+                        <div class="info-item"><span class="info-label">الميزانية</span><span class="info-value">${escapeHtmlValue(pData.budget)}</span></div>
+                        <div class="info-item"><span class="info-label">مدة التنفيذ</span><span class="info-value">${escapeHtmlValue(pData.duration)}</span></div>
+                        <div class="info-item"><span class="info-label">صاحب العمل</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
+                        ${pData.category && pData.category !== 'غير معروف' && pData.category !== 'Unknown' ? `<div class="info-item"><span class="info-label">القسم</span><span class="info-value">${escapeHtml(pData.category)}</span></div>` : ''}
                     </div>
                 </div>
                 <h3>نص الوصف:</h3>
-                <div class="content-box">${pData.description || 'لا يوجد وصف'}</div>
+                <div class="content-box">${escapeHtmlValue(pData.description, 'لا يوجد وصف')}</div>
                 <div class="tags-cloud">
-                    ${(pData.tagsList ?? []).map((tag) => `<span class="tag-pill">${tag}</span>`).join('')}
+                    ${(pData.tagsList ?? []).map((tag) => `<span class="tag-pill">${escapeHtml(tag)}</span>`).join('')}
                 </div>
             </section>
 
@@ -570,13 +642,13 @@ ${EXPORT_ICON_SHIM_CSS}
                 <h2>معلومات صاحب العمل</h2>
                 <div class="info-card">
                     <div class="info-grid col-3">
-                        <div class="info-item"><span class="info-label">اسم صاحب المشروع</span><span class="info-value">${pData.clientName || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">تاريخ التسجيل</span><span class="info-value">${pData.clientJoined || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">معدل التوظيف</span><span class="info-value">${pData.hiringRate || '-'}</span></div>
-                        ${pData.clientTitle ? `<div class="info-item"><span class="info-label">المسمى الوظيفي</span><span class="info-value">${pData.clientTitle}</span></div>` : ''}
-                        <div class="info-item"><span class="info-label">المشاريع المفتوحة</span><span class="info-value">${pData.openProjects || '0'}</span></div>
-                        <div class="info-item"><span class="info-label">مشاريع قيد التنفيذ</span><span class="info-value">${pData.underwayProjects || '0'}</span></div>
-                        <div class="info-item"><span class="info-label">التواصلات الجارية</span><span class="info-value">${pData.ongoingCommunications || '0'}</span></div>
+                        <div class="info-item"><span class="info-label">اسم صاحب المشروع</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
+                        <div class="info-item"><span class="info-label">تاريخ التسجيل</span><span class="info-value">${escapeHtmlValue(pData.clientJoined)}</span></div>
+                        <div class="info-item"><span class="info-label">معدل التوظيف</span><span class="info-value">${escapeHtmlValue(pData.hiringRate)}</span></div>
+                        ${pData.clientTitle ? `<div class="info-item"><span class="info-label">المسمى الوظيفي</span><span class="info-value">${escapeHtml(pData.clientTitle)}</span></div>` : ''}
+                        <div class="info-item"><span class="info-label">المشاريع المفتوحة</span><span class="info-value">${escapeHtmlValue(pData.openProjects, '0')}</span></div>
+                        <div class="info-item"><span class="info-label">مشاريع قيد التنفيذ</span><span class="info-value">${escapeHtmlValue(pData.underwayProjects, '0')}</span></div>
+                        <div class="info-item"><span class="info-label">التواصلات الجارية</span><span class="info-value">${escapeHtmlValue(pData.ongoingCommunications, '0')}</span></div>
                     </div>
                 </div>
             </section>
@@ -590,13 +662,13 @@ ${EXPORT_ICON_SHIM_CSS}
                 <h2>العرض والاتفاق المالي</h2>
                 <div class="info-card">
                     <div class="info-grid col-3">
-                        <div class="info-item"><span class="info-label">المقدم</span><span class="info-value">${propData.freelancer || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">المبلغ المتفق عليه</span><span class="info-value">${propData.price || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">المدة الزمنية</span><span class="info-value">${propData.duration || '-'}</span></div>
+                        <div class="info-item"><span class="info-label">المقدم</span><span class="info-value">${escapeHtmlValue(propData.bidderName)}</span></div>
+                        <div class="info-item"><span class="info-label">المبلغ المتفق عليه</span><span class="info-value">${escapeHtmlValue(propData.price)}</span></div>
+                        <div class="info-item"><span class="info-label">المدة الزمنية</span><span class="info-value">${escapeHtmlValue(propData.duration)}</span></div>
                     </div>
                 </div>
                 <h3>نص العرض المقدم:</h3>
-                <div class="content-box">${propData.content || 'لا يوجد نص'}</div>
+                <div class="content-box">${escapeHtmlValue(propData.content, 'لا يوجد نص')}</div>
             </section>
             `
                     : ''
@@ -614,13 +686,13 @@ ${EXPORT_ICON_SHIM_CSS}
                             (m) => `
                         <div class="msg-row ${m.isUs ? 'us' : 'other'}">
                             <div class="avatar-col">
-                                ${m.avatar ? `<img src="${m.avatar}">` : '<i class="fa fa-user-circle fa-3x" style="color:#cbd5e1;"></i>'}
+                                ${m.avatar ? `<img src="${escapeHtml(m.avatar)}" alt="" loading="lazy">` : '<i class="fa fa-user-circle fa-3x" style="color:#cbd5e1;"></i>'}
                             </div>
                             <div class="bubble">
-                                <span class="sender-name">${m.senderName}</span>
-                                <div class="text-content">${m.text.replace(/\n/g, '<br>')}</div>
+                                <span class="sender-name">${escapeHtml(m.senderName)}</span>
+                                <div class="text-content">${escapeHtml(m.text)}</div>
                                 ${m.attachments.map((a) => renderAttachmentHtml(a)).join('')}
-                                <span class="time">${m.time}</span>
+                                <span class="time">${escapeHtml(m.time)}</span>
                             </div>
                         </div>
                     `
@@ -632,9 +704,9 @@ ${EXPORT_ICON_SHIM_CSS}
                     : ''
             }
 
-            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:40px; left:40px; padding: 20px 40px; background: var(--primary); color:#fff; border:none; border-radius: 50px; cursor:pointer; font-family: var(--font-ui); font-weight:700; font-size:18px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4); display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                <i class="fa fa-file-pdf-o"></i> حفظ وحفظ كـ PDF
-            </button>
+            <div class="no-print" style="position:fixed; bottom:40px; left:40px; padding: 14px 22px; background: var(--primary); color:#fff; border-radius: 12px; font-family: var(--font-ui); font-weight:700; font-size:14px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4);">
+                استخدم أمر الطباعة في المتصفح لحفظ التقرير كملف PDF
+            </div>
         </div>
     </body>
     </html>`;

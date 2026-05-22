@@ -1,4 +1,5 @@
 import type { ProjectAttachment } from '../../../entities/job/model';
+import { resolvePlatformUrl } from '../../../entities/platform/url';
 import type { PlatformPage, PlatformProposalSource } from '../../contracts';
 import { KHAMSAT_SELECTORS, queryAll, queryFirst } from '../selectors';
 
@@ -13,17 +14,17 @@ const BREADCRUMB_IGNORED_LABELS = new Set([
     'طلبات الخدمات',
     'طلبات الخدمات غير الموجودة',
 ]);
+const KHAMSAT_HOSTS = ['khamsat.com'] as const;
 
 function normalizeText(value: string | null | undefined): string {
     return value?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
-function resolveAbsoluteUrl(href: string, baseUrl: URL): string {
-    try {
-        return new URL(href, baseUrl).href;
-    } catch {
-        return '';
-    }
+function resolveKhamsatUrl(href: string | null, baseUrl: URL): string | null {
+    return resolvePlatformUrl(href, {
+        baseUrl: baseUrl.href,
+        allowedHosts: KHAMSAT_HOSTS,
+    });
 }
 
 function getTitle(doc: Document): string {
@@ -95,14 +96,14 @@ function getAttachments(doc: Document, url: URL): ProjectAttachment[] | undefine
     const attachments = queryAll<HTMLAnchorElement>(doc, KHAMSAT_SELECTORS.project.attachmentLinks)
         .map((link) => {
             const href = link.getAttribute('href');
-            const absoluteUrl = href ? resolveAbsoluteUrl(href, url) : '';
+            const absoluteUrl = resolveKhamsatUrl(href, url);
             const name =
                 normalizeText(link.textContent) ||
-                normalizeText(absoluteUrl.split('/').at(-1)?.split('?')[0]);
+                normalizeText(absoluteUrl?.split('/').at(-1)?.split('?')[0]);
 
             return {
                 name,
-                url: absoluteUrl,
+                url: absoluteUrl ?? '',
             } satisfies ProjectAttachment;
         })
         .filter(
