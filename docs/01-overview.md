@@ -25,7 +25,7 @@ The extension does not submit marketplace proposals automatically.
 | Supported extension platforms | Mostaql, Khamsat, Nafezly                                                                  |
 | Bridge hosts                  | `chatgpt.com`, `chat.openai.com`                                                           |
 | Direct AI providers           | OpenAI, Gemini, Claude                                                                     |
-| Default realtime backend      | `https://freelancia.runasp.net/jobNotificationHub`                                         |
+| Default realtime backend      | `https://rasid.runasp.net/jobNotificationHub`                                         |
 | Optional backend tree         | `server/`, out of the WebExtension release scope unless explicitly included by maintainers |
 
 ## Supported Platforms

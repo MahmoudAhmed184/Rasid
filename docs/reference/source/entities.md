@@ -208,7 +208,7 @@ Purpose: default backend URL and safe redaction.
 
 Constants:
 
-- `DEFAULT_SIGNALR_URL = "https://freelancia.runasp.net/jobNotificationHub"`
+- `DEFAULT_SIGNALR_URL = "https://rasid.runasp.net/jobNotificationHub"`
 
 Functions:
 

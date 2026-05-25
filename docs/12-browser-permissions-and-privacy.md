@@ -21,7 +21,7 @@ Permissions are generated from `wxt.config.ts` and must remain synchronized with
 | `https://nafezly.com/*`                       | Monitoring, parser, content UI, autofill.                         |
 | `https://chatgpt.com/*`                       | Bridge content script.                                            |
 | `https://chat.openai.com/*`                   | Bridge content script for legacy ChatGPT host.                    |
-| `https://freelancia.runasp.net/*`             | Default SignalR backend.                                          |
+| `https://rasid.runasp.net/*`             | Default SignalR backend.                                          |
 | `https://api.openai.com/*`                    | OpenAI direct proposal generation.                                |
 | `https://generativelanguage.googleapis.com/*` | Gemini direct proposal generation.                                |
 | `https://api.anthropic.com/*`                 | Claude direct proposal generation.                                |

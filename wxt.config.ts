@@ -13,7 +13,7 @@ const hostPermissions = [
     'https://nafezly.com/*',
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
-    'https://freelancia.runasp.net/*',
+    'https://rasid.runasp.net/*',
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
