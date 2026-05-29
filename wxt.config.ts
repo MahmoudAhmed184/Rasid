@@ -17,6 +17,7 @@ const hostPermissions = [
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
+    'http://localhost/*',
 ] as const;
 
 const sharedPermissions = ['alarms', 'downloads', 'notifications', 'storage'] as const;
