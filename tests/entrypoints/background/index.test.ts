@@ -91,10 +91,17 @@ describe('background entrypoint', () => {
         expect(entrypointMocks.createBackgroundApp).toHaveBeenCalledOnce();
         expect(entrypointMocks.app.notifications.registerHandlers).toHaveBeenCalledOnce();
         expect(entrypointMocks.app.downloads.registerHandlers).toHaveBeenCalledOnce();
-        expect(entrypointMocks.registerBackgroundRuntimeMessageBus).toHaveBeenCalledWith({
-            ensureReady: entrypointMocks.app.ensureReady,
-            handlers: entrypointMocks.app.runtimeMessageHandlers,
-        });
+        const [messageBusOptions] = entrypointMocks.registerBackgroundRuntimeMessageBus.mock
+            .calls[0] as [
+            {
+                ensureReady(reason: string): Promise<void>;
+                handlers: typeof entrypointMocks.app.runtimeMessageHandlers;
+            },
+        ];
+
+        expect(messageBusOptions.handlers).toBe(entrypointMocks.app.runtimeMessageHandlers);
+        await messageBusOptions.ensureReady('message:testNotification');
+        expect(entrypointMocks.app.ensureReady).toHaveBeenCalledWith('message:testNotification');
 
         await fakeBrowser.runtime.onInstalled.trigger({
             reason: 'install',

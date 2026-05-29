@@ -33,13 +33,16 @@
         "lint:firefox": "web-ext lint --source-dir dist/firefox-mv3"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@playwright/test": "^1.60.0",
         "@vitest/coverage-v8": "^4.1.7",
-        "eslint": "~10.4.0",
+        "eslint": "^10.4.0",
+        "globals": "^17.6.0",
         "prettier": "^3.8.3",
         "typescript": "^6.0.3",
+        "typescript-eslint": "^8.60.0",
         "vitest": "^4.1.7",
-        "web-ext": "^10.2.0",
+        "web-ext": "^10.3.0",
         "wxt": "^0.20.26"
     },
     "dependencies": {
@@ -48,6 +51,10 @@
     "overrides": {
         "node-notifier": {
             "uuid": "^11.1.1"
+        },
+        "encoding-sniffer": "1.0.2",
+        "web-ext-run": {
+            "tmp": "0.2.7"
         }
     }
 }

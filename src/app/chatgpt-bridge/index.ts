@@ -87,10 +87,10 @@ async function injectPrompt(
                     const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
                         window.HTMLTextAreaElement.prototype,
                         'value'
-                    )?.set;
+                    )?.set?.bind(inputField);
 
                     if (nativeTextAreaValueSetter) {
-                        nativeTextAreaValueSetter.call(inputField, record.prompt);
+                        nativeTextAreaValueSetter(record.prompt);
                     } else {
                         inputField.value = record.prompt;
                     }

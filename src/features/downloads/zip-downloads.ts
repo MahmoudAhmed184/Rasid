@@ -98,6 +98,7 @@ function createUniqueName(name: string, usedNames: Set<string>): string {
 
 function sanitizeDownloadFilename(filename: string): string {
     const safeName = filename
+        // eslint-disable-next-line no-control-regex -- Control characters are invalid in filenames.
         .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
         .replace(/\s+/g, ' ')
         .trim();

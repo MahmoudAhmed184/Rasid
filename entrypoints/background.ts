@@ -41,7 +41,7 @@ export default defineBackground({
         });
 
         registerBackgroundRuntimeMessageBus({
-            ensureReady: backgroundApp.ensureReady,
+            ensureReady: (reason) => backgroundApp.ensureReady(reason),
             handlers: backgroundApp.runtimeMessageHandlers,
         });
 

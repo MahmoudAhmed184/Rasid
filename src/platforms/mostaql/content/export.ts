@@ -116,8 +116,20 @@ function sanitizeFile(name: string | null | undefined, fallback: string): string
     return name.replace(/[^\u0600-\u06FFa-zA-Z0-9.\-_ ]/g, '_').trim() || fallback;
 }
 
+function toDisplayText(value: unknown): string {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+        return String(value);
+    }
+
+    return '';
+}
+
 function escapeHtml(value: unknown): string {
-    return String(value ?? '')
+    return toDisplayText(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -126,7 +138,7 @@ function escapeHtml(value: unknown): string {
 }
 
 function escapeHtmlValue(value: unknown, fallback = '-'): string {
-    const text = String(value ?? '').trim();
+    const text = toDisplayText(value).trim();
     return escapeHtml(text || fallback);
 }
 
@@ -179,34 +191,36 @@ export function injectMessageExporter(downloads: DownloadServices) {
     let clickCount = 0;
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
-    btn.addEventListener('click', async () => {
-        clickCount++;
-        if (clickTimer) {
-            clearTimeout(clickTimer);
-        }
-
-        if (clickCount >= 2) {
-            clickCount = 0;
-            const originalStyle = { opacity: btn.style.opacity, bg: btn.style.backgroundColor };
-
-            btn.disabled = true;
-            btn.style.opacity = '1';
-            btn.style.backgroundColor = '#2386c8';
-            setExportButtonLoadingState(btn);
-
-            try {
-                await executeExportAll(downloads);
-            } finally {
-                btn.disabled = false;
-                btn.style.opacity = originalStyle.opacity;
-                btn.style.backgroundColor = originalStyle.bg;
-                setExportButtonContent(btn, 'fa fa-download', 'تصدير');
+    btn.addEventListener('click', () => {
+        void (async () => {
+            clickCount++;
+            if (clickTimer) {
+                clearTimeout(clickTimer);
             }
-        } else {
-            clickTimer = setTimeout(() => {
+
+            if (clickCount >= 2) {
                 clickCount = 0;
-            }, 600);
-        }
+                const originalStyle = { opacity: btn.style.opacity, bg: btn.style.backgroundColor };
+
+                btn.disabled = true;
+                btn.style.opacity = '1';
+                btn.style.backgroundColor = '#2386c8';
+                setExportButtonLoadingState(btn);
+
+                try {
+                    await executeExportAll(downloads);
+                } finally {
+                    btn.disabled = false;
+                    btn.style.opacity = originalStyle.opacity;
+                    btn.style.backgroundColor = originalStyle.bg;
+                    setExportButtonContent(btn, 'fa fa-download', 'تصدير');
+                }
+            } else {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 600);
+            }
+        })();
     });
 
     targetPanel.after(btn);
@@ -232,34 +246,36 @@ export function injectProjectExporter(downloads: DownloadServices) {
     let clickCount = 0;
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
-    btn.addEventListener('click', async () => {
-        clickCount++;
-        if (clickTimer) {
-            clearTimeout(clickTimer);
-        }
-
-        if (clickCount >= 2) {
-            clickCount = 0;
-            const originalStyle = { opacity: btn.style.opacity, bg: btn.style.backgroundColor };
-
-            btn.disabled = true;
-            btn.style.opacity = '1';
-            btn.style.backgroundColor = '#2386c8';
-            setExportButtonLoadingState(btn);
-
-            try {
-                await executeExportAll(downloads);
-            } finally {
-                btn.disabled = false;
-                btn.style.opacity = originalStyle.opacity;
-                btn.style.backgroundColor = originalStyle.bg;
-                setExportButtonContent(btn, 'fa fa-download', 'تصدير', true);
+    btn.addEventListener('click', () => {
+        void (async () => {
+            clickCount++;
+            if (clickTimer) {
+                clearTimeout(clickTimer);
             }
-        } else {
-            clickTimer = setTimeout(() => {
+
+            if (clickCount >= 2) {
                 clickCount = 0;
-            }, 600);
-        }
+                const originalStyle = { opacity: btn.style.opacity, bg: btn.style.backgroundColor };
+
+                btn.disabled = true;
+                btn.style.opacity = '1';
+                btn.style.backgroundColor = '#2386c8';
+                setExportButtonLoadingState(btn);
+
+                try {
+                    await executeExportAll(downloads);
+                } finally {
+                    btn.disabled = false;
+                    btn.style.opacity = originalStyle.opacity;
+                    btn.style.backgroundColor = originalStyle.bg;
+                    setExportButtonContent(btn, 'fa fa-download', 'تصدير', true);
+                }
+            } else {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 600);
+            }
+        })();
     });
 
     buttonContainer.appendChild(btn);
@@ -271,7 +287,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
     let chatData: ChatMessage[] = [];
     let textOutput = 'تصدير محادثة مستقل (بالتاريخ)\n\n';
     let textOutputNoTime = 'تصدير محادثة مستقل (بدون تاريخ)\n\n';
-    let mediaUrls: Attachment[] = [];
+    const mediaUrls: Attachment[] = [];
 
     if (messages.length > 0) {
         const firstMsgNameEl = messages[0].querySelector<HTMLElement>(
@@ -293,11 +309,11 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
                 MOSTAQL_SELECTORS.messages.avatarCandidates
             );
 
-            let currentName = nameEl ? nameEl.innerText.trim() : null;
-            let currentTime = timeEl
+            const currentName = nameEl ? nameEl.innerText.trim() : null;
+            const currentTime = timeEl
                 ? timeEl.getAttribute('title') || timeEl.innerText.trim()
                 : null;
-            let currentAvatar = avatarEl
+            const currentAvatar = avatarEl
                 ? resolveMostaqlExportUrl(avatarEl.getAttribute('src') || avatarEl.src)
                 : null;
 
@@ -316,7 +332,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
 
             // Better extraction for chat messages: pick the container and ensure all text/lines are captured
             const containerEl = msg.querySelector<HTMLElement>(MOSTAQL_SELECTORS.messages.content);
-            let text = '';
+            let text: string;
             if (containerEl) {
                 // To avoid getting extra text like avatars or times, we look for the direct text parts
                 // In Mostaql chat, messages are often multiple P tags or text with BR
@@ -334,7 +350,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
                 }
             }
 
-            let attachments: Attachment[] = [];
+            const attachments: Attachment[] = [];
 
             const processLink = (linkNode: HTMLAnchorElement) => {
                 const url = resolveMostaqlExportUrl(linkNode.getAttribute('href'));
@@ -773,7 +789,7 @@ ${EXPORT_ICON_SHIM_CSS}
         } catch (error) {
             const message = error instanceof Error ? error.message : 'خطأ غير معروف.';
             alert(`تعذر إنشاء ملف التصدير: ${message}`);
-            throw new Error(message);
+            throw new Error(message, { cause: error });
         }
         return;
     } else {

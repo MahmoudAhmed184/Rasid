@@ -42,7 +42,7 @@ function buildNotificationBody(jobs: JobRecord[]): {
     const primary = jobs[0];
     const platformIds = [...new Set(jobs.map((job) => resolveJobPlatformId(job)))];
     const platformLabel =
-        platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]!) : 'المنصات المفعلة';
+        platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]) : 'المنصات المفعلة';
     const title =
         jobs.length === 1
             ? `فرصة جديدة على ${platformLabel}`
@@ -78,13 +78,15 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
 
         handlersRegistered = true;
 
-        browser.notifications.onClicked.addListener(async (notificationId) => {
-            const payload = await storage.consumeNotificationPayload(notificationId);
-            const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
+        browser.notifications.onClicked.addListener((notificationId) => {
+            void (async () => {
+                const payload = await storage.consumeNotificationPayload(notificationId);
+                const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
 
-            if (url) {
-                await browser.tabs.create({ url });
-            }
+                if (url) {
+                    await browser.tabs.create({ url });
+                }
+            })();
         });
 
         browser.notifications.onClosed.addListener((notificationId) => {

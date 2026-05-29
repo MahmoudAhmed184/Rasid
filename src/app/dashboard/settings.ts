@@ -124,7 +124,15 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
     }
 
     function parseNumberValue(value: unknown) {
-        return Number.parseInt(String(value ?? ''), 10) || 0;
+        if (typeof value === 'number') {
+            return Math.trunc(value) || 0;
+        }
+
+        if (typeof value === 'string') {
+            return Number.parseInt(value, 10) || 0;
+        }
+
+        return 0;
     }
 
     function showSaveStatus(
@@ -319,7 +327,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         setFieldValue('systemToggle', settings.systemEnabled !== false);
         setFieldValue('notificationMode', settings.notificationMode || 'auto');
         setFieldValue('signalrServerUrl', settings.signalrServerUrl || '');
-        updateAiFieldsVisibility((settings.aiExecutionMode || 'bridge') as AiExecutionMode);
+        updateAiFieldsVisibility(settings.aiExecutionMode || 'bridge');
     }
 
     function collectSettings(baseSettings: Partial<ExtensionSettings> = {}): ExtensionSettings {
@@ -539,7 +547,9 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         const reader = new FileReader();
         reader.onload = async (loadEvent) => {
             try {
-                const data = JSON.parse(String(loadEvent.target?.result ?? '{}'));
+                const text =
+                    typeof loadEvent.target?.result === 'string' ? loadEvent.target.result : '{}';
+                const data: unknown = JSON.parse(text);
                 const summary = createBackupImportSummary(data);
 
                 if (!window.confirm(summary)) {

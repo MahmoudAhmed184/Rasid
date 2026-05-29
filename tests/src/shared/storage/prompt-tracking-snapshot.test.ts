@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createExtensionStorage } from '../../../../src/shared/storage/extension-storage';
 import {

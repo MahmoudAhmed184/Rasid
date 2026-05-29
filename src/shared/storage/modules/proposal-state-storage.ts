@@ -12,7 +12,7 @@ const PLATFORM_AUTOFILL_KEYS = {
     nafezly: 'nafezly_pending_autofill',
 } as const satisfies Partial<Record<PlatformId, string>>;
 
-type PlatformAutofillStoragePlatformId = keyof typeof PLATFORM_AUTOFILL_KEYS & PlatformId;
+type PlatformAutofillStoragePlatformId = keyof typeof PLATFORM_AUTOFILL_KEYS;
 
 export const PROPOSAL_STATE_KEYS = [...Object.values(PLATFORM_AUTOFILL_KEYS)] as const;
 
@@ -25,7 +25,7 @@ export interface PendingBridgePrompt {
 }
 
 function resolveAutofillKey(platformId: PlatformId): string {
-    const storageKey = PLATFORM_AUTOFILL_KEYS[platformId as PlatformAutofillStoragePlatformId];
+    const storageKey = PLATFORM_AUTOFILL_KEYS[platformId];
 
     if (!storageKey) {
         throw new Error(`Proposal autofill is not supported for platform: ${platformId}`);

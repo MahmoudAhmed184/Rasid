@@ -345,7 +345,7 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
         const selectedPrompt = prompts.find((p) => p.id === promptId);
 
         if (selectedPrompt) {
-            processPrompt(selectedPrompt.id);
+            void processPrompt(selectedPrompt.id);
             return;
         }
 
@@ -359,7 +359,7 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
             return;
         }
 
-        processPrompt('default_proposal');
+        void processPrompt('default_proposal');
     });
 
     async function processPrompt(templateId: string): Promise<void> {
