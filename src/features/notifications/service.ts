@@ -34,36 +34,51 @@ function normalizeNotificationUrl(value: string): string | null {
     }
 }
 
+function getNotificationIcon(platformId: string | undefined): string {
+    switch (platformId) {
+        case 'mostaql':
+            return browser.runtime.getURL('/Platforms/Mostql.png');
+        case 'khamsat':
+            return browser.runtime.getURL('/Platforms/Khamsat.png');
+        case 'nafezly':
+            return browser.runtime.getURL('/Platforms/Nafezly.png');
+        default:
+            return browser.runtime.getURL('/icons/icon128.png');
+    }
+}
+
 function buildNotificationBody(jobs: JobRecord[]): {
     title: string;
     message: string;
+    contextMessage: string;
     primary: JobRecord;
 } {
     const primary = jobs[0];
     const platformIds = [...new Set(jobs.map((job) => resolveJobPlatformId(job)))];
     const platformLabel =
-        platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]!) : 'المنصات المفعلة';
-    const title =
-        jobs.length === 1
-            ? `فرصة جديدة على ${platformLabel}`
-            : `${jobs.length} فرص جديدة من ${platformLabel}`;
+        platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]!) : 'منصات العمل الحر';
+    
+    let title: string;
+    let message: string;
+    let contextMessage = `Frelancia - ${platformLabel}`;
 
     if (jobs.length === 1) {
-        const budget = primary.budget ? `[ ${primary.budget} ]` : '';
-        const description = primary.description
-            ? `\n\n${primary.description.slice(0, 150)}${primary.description.length > 150 ? '...' : ''}`
+        title = `مشروع جديد: ${primary.title}`;
+        const budgetStr = primary.budget ? `الميزانية: ${primary.budget}` : '';
+        const descriptionStr = primary.description
+            ? `${primary.description.slice(0, 100).trim()}...`
             : '';
-
-        return {
-            title,
-            message: `${primary.title} ${budget}${description}`.trim(),
-            primary,
-        };
+        
+        message = budgetStr ? `${budgetStr}\n${descriptionStr}` : descriptionStr;
+    } else {
+        title = `${jobs.length} مشاريع جديدة متاحة`;
+        message = `أحدثها: ${primary.title}\nانقر هنا لعرض التفاصيل.`;
     }
 
     return {
         title,
-        message: `${primary.title}\nو ${jobs.length - 1} مشاريع أخرى`,
+        message,
+        contextMessage,
         primary,
     };
 }
@@ -87,6 +102,16 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
             }
         });
 
+        // Add button listener
+        browser.notifications.onButtonClicked?.addListener(async (notificationId) => {
+            const payload = await storage.consumeNotificationPayload(notificationId);
+            const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
+
+            if (url) {
+                await browser.tabs.create({ url });
+            }
+        });
+
         browser.notifications.onClosed.addListener((notificationId) => {
             void storage.removeNotificationPayload(notificationId).catch((error) => {
                 console.warn('[notifications] failed to remove closed payload', error);
@@ -99,8 +124,8 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
     }
 
     async function showJobsNotification(jobs: JobRecord[]): Promise<string> {
-        const { title, message, primary } = buildNotificationBody(jobs);
-        const notificationId = `rasid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const { title, message, contextMessage, primary } = buildNotificationBody(jobs);
+        const notificationId = `frelancia-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const payloadUrl = normalizeNotificationUrl(primary.url);
 
         if (payloadUrl) {
@@ -114,9 +139,11 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
         try {
             await browser.notifications.create(notificationId, {
                 type: 'basic',
-                iconUrl: browser.runtime.getURL('/icons/icon128.png'),
+                iconUrl: getNotificationIcon(primary.platformId),
                 title,
                 message,
+                contextMessage,
+                buttons: [{ title: '🔗 عرض تفاصيل المشروع' }]
             });
         } catch (error) {
             if (payloadUrl) {
