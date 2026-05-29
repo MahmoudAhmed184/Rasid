@@ -1,30 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+
 :root {
-    --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
-    --primary: #0f766e;
-    --primary-hover: #115e59;
-    --primary-strong: #134e4a;
-    --primary-soft: #dff3ef;
-    --primary-softer: #effaf7;
-    --accent: #b45309;
-    --accent-soft: #fff1d6;
+    --font-ui: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+    --primary: #2386c8;
+    --primary-hover: #1c6da0;
+    --primary-strong: #155278;
+    --primary-soft: #e5f1f9;
+    --primary-softer: #f0f7fb;
+    --primary-gradient: linear-gradient(135deg, #2ea3f2 0%, #17659c 100%);
+    --accent: #f59e0b;
+    --accent-soft: #fef3c7;
     --success: #15803d;
     --success-soft: #e5f7eb;
     --danger: #be123c;
     --danger-soft: #ffe4eb;
     --warning: #b45309;
     --warning-soft: #fff1d6;
-    --bg: #f6f8f7;
-    --header: #123332;
+    --bg: #f4f9fd;
+    --header: #2386c8;
     --card: #ffffff;
-    --surface: #fbfdfc;
+    --surface: #ffffff;
     --surface-muted: #f1f5f4;
-    --text-main: #15231f;
-    --text-body: #374b46;
-    --text-sub: #657771;
-    --text-inverse: #f8fbfa;
-    --border: #d8e1df;
-    --border-strong: #b8c8c4;
-    --focus-ring: rgba(15, 118, 110, 0.28);
+    --text-main: #0f172a;
+    --text-body: #334155;
+    --text-sub: #64748b;
+    --text-inverse: #ffffff;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --focus-ring: rgba(35, 134, 200, 0.28);
     --radius: 8px;
     --shadow: 0 14px 34px rgba(21, 35, 31, 0.1);
     --transition: 160ms ease;
@@ -61,7 +64,7 @@ button {
     min-height: 520px;
     flex-direction: column;
     background:
-        linear-gradient(180deg, rgba(223, 243, 239, 0.72) 0, rgba(246, 248, 247, 0) 250px),
+        linear-gradient(180deg, rgba(224, 242, 254, 0.72) 0, rgba(244, 249, 253, 0) 250px),
         var(--bg);
 }
 
@@ -70,8 +73,7 @@ button {
     align-items: center;
     gap: 14px;
     padding: 20px 20px 22px;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)), var(--header);
+    background: var(--primary-gradient);
     color: var(--text-inverse);
 }
 
@@ -106,7 +108,7 @@ button {
 
 .brand-copy p {
     margin-top: 5px;
-    color: #b8d2ce;
+    color: rgba(255, 255, 255, 0.85);
     font-size: 13px;
     font-weight: 700;
 }
