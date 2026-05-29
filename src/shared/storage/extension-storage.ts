@@ -9,6 +9,7 @@ import {
     type StorageClient,
 } from '../browser/storage-client';
 import { SNAPSHOT_KEYS } from './storage-keys';
+import { createAdminMessageStorage, type AdminMessage } from './modules/admin-message-storage';
 import { createDownloadCleanupStorage } from './modules/download-cleanup-storage';
 import { createAiSecretStorage } from './modules/ai-secret-storage';
 import { createMonitoringStorage, type IngestedJobsResult } from './modules/monitoring-storage';
@@ -26,6 +27,7 @@ import type { ExtensionSettings } from '../../entities/settings/model';
 
 export type { IngestedJobsResult } from './modules/monitoring-storage';
 export type { RuntimeStatePatch } from './modules/runtime-storage';
+export type { AdminMessage } from './modules/admin-message-storage';
 
 export interface ExtensionStorage {
     ensureDefaults(): Promise<StoredState>;
@@ -59,6 +61,10 @@ export interface ExtensionStorage {
     consumePendingDownloadCleanup(downloadId: number): Promise<PendingDownloadCleanup | null>;
     listPendingDownloadCleanups(): Promise<PendingDownloadCleanup[]>;
     pruneExpiredDownloadCleanups(): Promise<PendingDownloadCleanup[]>;
+    getAdminMessages(): Promise<AdminMessage[]>;
+    storeAdminMessage(msg: AdminMessage): Promise<AdminMessage[]>;
+    markAdminMessagesRead(): Promise<void>;
+    clearAdminMessages(): Promise<void>;
 }
 
 function jsonEqual(left: unknown, right: unknown): boolean {
@@ -77,6 +83,7 @@ export function createExtensionStorage(
     const monitoringStorage = createMonitoringStorage(client);
     const notificationPayloadStorage = createNotificationPayloadStorage(client);
     const downloadCleanupStorage = createDownloadCleanupStorage(client);
+    const adminMessageStorage = createAdminMessageStorage(client);
 
     async function readSnapshotFields(): Promise<Record<string, unknown>> {
         return client.get(SNAPSHOT_KEYS);
@@ -165,5 +172,9 @@ export function createExtensionStorage(
             downloadCleanupStorage.consumePendingDownloadCleanup(downloadId),
         listPendingDownloadCleanups: () => downloadCleanupStorage.listPendingDownloadCleanups(),
         pruneExpiredDownloadCleanups: () => downloadCleanupStorage.pruneExpiredDownloadCleanups(),
+        getAdminMessages: () => adminMessageStorage.getAdminMessages(),
+        storeAdminMessage: (msg) => adminMessageStorage.storeAdminMessage(msg),
+        markAdminMessagesRead: () => adminMessageStorage.markAdminMessagesRead(),
+        clearAdminMessages: () => adminMessageStorage.clearAdminMessages(),
     };
 }

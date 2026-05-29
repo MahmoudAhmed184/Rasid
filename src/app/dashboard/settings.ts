@@ -370,7 +370,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             notificationMode: String(
                 getFieldValue('notificationMode') ?? 'auto'
             ) as ExtensionSettings['notificationMode'],
-            signalrServerUrl: '',
+            signalrServerUrl: String(getFieldValue('signalrServerUrl') ?? ''),
             sound: baseSettings.sound !== false,
             minClientAge: Number(baseSettings.minClientAge ?? 0),
         };

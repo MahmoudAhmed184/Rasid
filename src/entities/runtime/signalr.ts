@@ -1,8 +1,8 @@
 export const DEFAULT_SIGNALR_URL = 'https://rasid.runasp.net/jobNotificationHub';
 
 export function resolveSignalRServerUrl(value: unknown): string {
-    return typeof value === 'string' && value.trim() === DEFAULT_SIGNALR_URL
-        ? DEFAULT_SIGNALR_URL
+    return typeof value === 'string' && value.trim().length > 0
+        ? value.trim()
         : DEFAULT_SIGNALR_URL;
 }
 

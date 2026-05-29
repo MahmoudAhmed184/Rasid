@@ -20,7 +20,7 @@ describe('runtime storage normalization', () => {
             })
         ).toMatchObject({
             status: 'polling',
-            serverUrl: DEFAULT_RUNTIME_STATE.signalr.serverUrl,
+            serverUrl: 'https://evil.example/hub',
             reconnectAttempt: 0,
         });
     });
@@ -50,7 +50,7 @@ describe('runtime storage normalization', () => {
             status: 'connected',
             instanceId: 'worker-1',
             connectionId: 'connection-1',
-            serverUrl: DEFAULT_RUNTIME_STATE.signalr.serverUrl,
+            serverUrl: 'https://rasid.runasp.net/jobNotificationHub',
             reconnectAttempt: 0,
             lastConnectedAt: '2026-05-22T10:00:00.000Z',
             lastDisconnectedAt: null,
