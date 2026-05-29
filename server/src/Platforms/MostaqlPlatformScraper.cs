@@ -104,36 +104,75 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         string? budget = null;
         string? registrationDate = null;
 
-        foreach (var row in SelectNodes(
-                     document.DocumentNode,
-                     "//tr[contains(@class, 'meta-row')] | //table[contains(@class, 'table-meta')]//tr"))
+        var metaNodes = SelectNodes(
+            document.DocumentNode,
+            "//tr[contains(@class, 'meta-row')] | " +
+            "//table[contains(@class, 'table-meta')]//tr | " +
+            "//*[contains(@class, 'meta-row')] | " +
+            "//*[contains(@class, 'meta-item')] | " +
+            "//li[contains(@class, 'meta-item')] | " +
+            "//div[contains(@class, 'meta-item')] | " +
+            "//table[contains(@class, 'table')]//tr"
+        );
+
+        foreach (var row in metaNodes)
         {
             var text = CleanText(row.InnerText);
-            var value = NullIfEmpty(row.SelectSingleNode(
-                ".//td[contains(@class, 'meta-value')] | .//td[last()]")?.InnerText);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            var valueNode = row.SelectSingleNode(
+                ".//*[contains(@class, 'meta-value') or contains(@class, 'meta-item-value')] | " +
+                ".//td[contains(@class, 'meta-value')] | " +
+                ".//td[last()]"
+            );
+
+            string? value = null;
+            if (valueNode != null)
+            {
+                value = NullIfEmpty(valueNode.InnerText);
+            }
+            else
+            {
+                var children = row.SelectNodes("./*");
+                if (children != null && children.Count >= 2)
+                {
+                    value = NullIfEmpty(children[1].InnerText);
+                }
+                else
+                {
+                    var parts = text.Split(new[] { ':', '：' }, 2);
+                    if (parts.Length == 2)
+                    {
+                        value = NullIfEmpty(parts[1]);
+                    }
+                }
+            }
 
             if (value is null)
             {
                 continue;
             }
 
-            if (text.Contains("التواصلات الجارية", StringComparison.Ordinal))
+            if (text.Contains("التواصلات الجارية", StringComparison.Ordinal) || text.Contains("Communications", StringComparison.OrdinalIgnoreCase))
             {
                 communications = value;
             }
-            else if (text.Contains("معدل التوظيف", StringComparison.Ordinal))
+            else if (text.Contains("معدل التوظيف", StringComparison.Ordinal) || text.Contains("Hiring", StringComparison.OrdinalIgnoreCase))
             {
                 hiringRate = value;
             }
-            else if (text.Contains("مدة التنفيذ", StringComparison.Ordinal))
+            else if (text.Contains("مدة التنفيذ", StringComparison.Ordinal) || text.Contains("Duration", StringComparison.OrdinalIgnoreCase))
             {
                 duration = value;
             }
-            else if (text.Contains("الميزانية", StringComparison.Ordinal))
+            else if (text.Contains("الميزانية", StringComparison.Ordinal) || text.Contains("Budget", StringComparison.OrdinalIgnoreCase))
             {
                 budget = value;
             }
-            else if (text.Contains("تاريخ التسجيل", StringComparison.Ordinal))
+            else if (text.Contains("تاريخ التسجيل", StringComparison.Ordinal) || text.Contains("Joined", StringComparison.OrdinalIgnoreCase))
             {
                 registrationDate = value;
             }
