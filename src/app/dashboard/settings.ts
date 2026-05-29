@@ -445,7 +445,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             const date = new Date().toISOString().split('T')[0];
 
             link.href = url;
-            link.download = `rasid_backup_${date}.json`;
+            link.download = `frelancia_backup_${date}.json`;
             link.click();
 
             URL.revokeObjectURL(url);
