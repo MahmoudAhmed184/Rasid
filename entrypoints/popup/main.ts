@@ -6,6 +6,10 @@ function mount(): void {
 
     bootstrapPopup(document, {
         monitoringRepository: repositories.monitoringRepository,
+        adminMessages: {
+            getAdminMessages: () => repositories.extensionStorage.getAdminMessages(),
+            markAdminMessagesRead: () => repositories.extensionStorage.markAdminMessagesRead(),
+        },
     });
 }
 

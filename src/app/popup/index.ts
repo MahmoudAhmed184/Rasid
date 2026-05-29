@@ -4,14 +4,21 @@ import '../../shared/dom/icon-shim.css';
 import './popup.css';
 import { requestCheckNow, requestDebugFetch } from '../background/background-messages';
 import type { MonitoringRepository } from '../../features/monitoring/repository';
+import type { AdminMessage } from '../../shared/storage/modules/admin-message-storage';
 
 const POPUP_REFRESH_INTERVAL_MS = 30_000;
+
+interface AdminMessageDeps {
+    getAdminMessages(): Promise<AdminMessage[]>;
+    markAdminMessagesRead(): Promise<void>;
+}
 
 interface PopupDependencies {
     readonly monitoringRepository: Pick<
         MonitoringRepository,
         'getOverview' | 'getNotificationsEnabled' | 'setNotificationsEnabled'
     >;
+    readonly adminMessages: AdminMessageDeps;
 }
 
 function getElement<T extends HTMLElement>(id: string): T | null {
@@ -92,6 +99,43 @@ function hidePopupStatus() {
     report.textContent = '';
 }
 
+function renderAdminMessageBanner(messages: AdminMessage[]): void {
+    const banner = getElement<HTMLElement>('adminMessagesBanner');
+    const textEl = getElement<HTMLElement>('adminMessageText');
+    const linkEl = getElement<HTMLAnchorElement>('adminMessageLink');
+    const badgeEl = getElement<HTMLElement>('adminMessagesBadge');
+
+    if (!banner || !textEl) {
+        return;
+    }
+
+    const unread = messages.filter((m) => !m.read);
+
+    if (unread.length === 0) {
+        banner.classList.add('hidden');
+        return;
+    }
+
+    const latest = unread[0]!;
+    textEl.textContent = latest.message;
+
+    if (linkEl) {
+        if (latest.url) {
+            linkEl.href = latest.url;
+            linkEl.classList.remove('hidden');
+        } else {
+            linkEl.classList.add('hidden');
+        }
+    }
+
+    if (badgeEl) {
+        badgeEl.textContent = unread.length > 1 ? String(unread.length) : '';
+        badgeEl.classList.toggle('hidden', unread.length <= 1);
+    }
+
+    banner.classList.remove('hidden');
+}
+
 async function loadStats(deps: PopupDependencies) {
     const overview = await deps.monitoringRepository.getOverview();
     const stats = overview.stats;
@@ -125,6 +169,25 @@ async function syncNotificationToggle(deps: PopupDependencies) {
 
 function createPopupController(deps: PopupDependencies) {
     let refreshTimer: number | null = null;
+    let storageChangeListener: ((changes: Record<string, unknown>) => void) | null = null;
+
+    async function loadAdminMessages(): Promise<void> {
+        try {
+            const messages = await deps.adminMessages.getAdminMessages();
+            renderAdminMessageBanner(messages);
+        } catch (error) {
+            console.warn('[popup] failed to load admin messages:', error);
+        }
+    }
+
+    async function dismissAdminMessages(): Promise<void> {
+        try {
+            await deps.adminMessages.markAdminMessagesRead();
+            getElement<HTMLElement>('adminMessagesBanner')?.classList.add('hidden');
+        } catch (error) {
+            console.warn('[popup] failed to dismiss admin messages:', error);
+        }
+    }
 
     async function openDashboard() {
         await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
@@ -231,21 +294,36 @@ function createPopupController(deps: PopupDependencies) {
                 void toggleNotifications(event.currentTarget as HTMLButtonElement);
             }
         );
+
+        getElement<HTMLButtonElement>('dismissAdminMessageBtn')?.addEventListener('click', () => {
+            void dismissAdminMessages();
+        });
     }
 
     async function init() {
         bindEvents();
-        await Promise.all([loadStats(deps), syncNotificationToggle(deps)]);
+        await Promise.all([loadStats(deps), syncNotificationToggle(deps), loadAdminMessages()]);
 
         refreshTimer = window.setInterval(() => {
             void loadStats(deps);
         }, POPUP_REFRESH_INTERVAL_MS);
+
+        // Re-render banner in real-time if a message arrives while popup is open
+        storageChangeListener = () => {
+            void loadAdminMessages();
+        };
+        browser.storage.local.onChanged.addListener(storageChangeListener);
     }
 
     function destroy() {
         if (refreshTimer !== null) {
             window.clearInterval(refreshTimer);
             refreshTimer = null;
+        }
+
+        if (storageChangeListener) {
+            browser.storage.local.onChanged.removeListener(storageChangeListener);
+            storageChangeListener = null;
         }
     }
 

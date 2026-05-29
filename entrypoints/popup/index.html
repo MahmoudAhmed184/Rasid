@@ -21,6 +21,19 @@
             </header>
 
             <main class="popup-content">
+                <div id="adminMessagesBanner" class="admin-messages-banner hidden" role="alert" aria-live="assertive">
+                    <div class="admin-msg-header">
+                        <span class="admin-msg-icon">📢</span>
+                        <span class="admin-msg-title">تنبيهات من المطورين</span>
+                        <span id="adminMessagesBadge" class="admin-msg-badge hidden"></span>
+                        <button id="dismissAdminMessageBtn" class="admin-msg-dismiss" type="button" aria-label="إغلاق الرسالة">✕</button>
+                    </div>
+                    <p id="adminMessageText" class="admin-msg-text"></p>
+                    <a id="adminMessageLink" class="admin-msg-link hidden" href="#" target="_blank" rel="noreferrer noopener">
+                        <i class="fas fa-external-link-alt"></i> عرض التفاصيل
+                    </a>
+                </div>
+
                 <section class="stats-panel" aria-label="إحصائيات الرصد">
                     <div class="stat-box">
                         <span class="stat-label">مشاريع اليوم</span>

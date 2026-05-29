@@ -307,6 +307,110 @@ button {
     display: none !important;
 }
 
+/* ── Admin Messages Banner ─────────────────────────────────── */
+.admin-messages-banner {
+    position: relative;
+    padding: 12px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+    animation: admin-banner-in 0.25s ease-out;
+}
+
+@keyframes admin-banner-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.admin-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+}
+
+.admin-msg-icon {
+    font-size: 16px;
+    flex: 0 0 auto;
+}
+
+.admin-msg-title {
+    flex: 1;
+    color: #92400e;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.admin-msg-badge {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.admin-msg-dismiss {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(146, 64, 14, 0.1);
+    color: #92400e;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color var(--transition);
+}
+
+.admin-msg-dismiss:hover {
+    background: rgba(146, 64, 14, 0.2);
+}
+
+.admin-msg-text {
+    color: #78350f;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.admin-msg-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+.admin-msg-link:hover {
+    color: #92400e;
+    text-decoration: underline;
+}
+
+
 .popup-footer {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

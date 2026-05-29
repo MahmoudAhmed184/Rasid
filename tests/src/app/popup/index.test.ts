@@ -33,6 +33,13 @@ function createOverview(overrides: Partial<MonitoringOverview> = {}): Monitoring
     };
 }
 
+function stubAdminMessages() {
+    return {
+        getAdminMessages: vi.fn(async () => []),
+        markAdminMessagesRead: vi.fn(async () => undefined),
+    };
+}
+
 describe('popup controller', () => {
     it('loads stats, opens dashboard, checks now, toggles notifications, and runs diagnostics', async () => {
         vi.useFakeTimers();
@@ -61,7 +68,7 @@ describe('popup controller', () => {
         const { requestCheckNow, requestDebugFetch } =
             await import('../../../../src/app/background/background-messages');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() => expect(root.getElementById('todayCount')?.textContent).toBe('4'));
         expect(root.getElementById('totalSeen')?.textContent).toBe('12');
@@ -127,6 +134,7 @@ describe('popup controller', () => {
                 getNotificationsEnabled: async () => true,
                 setNotificationsEnabled: async (enabled: boolean) => enabled,
             },
+            adminMessages: stubAdminMessages(),
         });
 
         root.getElementById('checkConnectionBtn')?.click();
@@ -176,7 +184,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toBe('آخر فحص: الآن')
@@ -235,7 +243,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toBe('لم يتم الفحص بعد')
@@ -295,7 +303,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toContain('آخر فحص:')
