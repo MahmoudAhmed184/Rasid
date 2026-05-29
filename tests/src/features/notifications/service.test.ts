@@ -51,7 +51,7 @@ describe('notification service', () => {
             },
         ]);
 
-        expect(id).toMatch(/^rasid-/);
+        expect(id).toMatch(/^frelancia-/);
         expect(payloads.get(id)).toMatchObject({
             url: 'https://mostaql.com/project/123',
             jobId: '123',
@@ -60,8 +60,8 @@ describe('notification service', () => {
             id,
             expect.objectContaining({
                 type: 'basic',
-                title: 'فرصة جديدة على مستقل',
-                message: expect.stringContaining('فرصة اختبار'),
+                title: 'مشروع جديد: فرصة اختبار',
+                message: expect.stringContaining('وصف طويل'),
             })
         );
     });

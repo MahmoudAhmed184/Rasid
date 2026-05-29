@@ -93,6 +93,23 @@ export function createBackgroundApp(): BackgroundApp {
         onPollingFallback: async (reason) => {
             await runPolling(reason);
         },
+        onAdminMessageReceived: async (payload) => {
+            const msg = {
+                id: payload.id,
+                message: payload.message,
+                url: payload.url ?? null,
+                receivedAt: payload.createdAt,
+                read: false,
+            };
+
+            await storage.storeAdminMessage(msg);
+
+            try {
+                await notifications.showAdminMessageNotification(msg);
+            } catch (error) {
+                console.warn('[background] admin message notification failed:', error);
+            }
+        },
     });
 
     const runtimeMessageHandlers = createBackgroundRuntimeHandlers({

@@ -492,7 +492,7 @@ describe('SignalR manager', () => {
         expect(logger.warn).toHaveBeenCalledWith(
             'SignalR connection closed, polling fallback enabled:',
             'signalr-closed',
-            DEFAULT_SIGNALR_URL,
+            'https://signalr.example/hub',
             'Error'
         );
     });

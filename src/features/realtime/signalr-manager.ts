@@ -27,10 +27,33 @@ interface SignalRJobEnvelope {
     jobs?: unknown[];
 }
 
+interface AdminMessagePayload {
+    id: string;
+    message: string;
+    createdAt: string;
+    url?: string | null;
+}
+
+function isAdminMessagePayload(value: unknown): value is AdminMessagePayload {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const v = value as Record<string, unknown>;
+
+    return (
+        typeof v.id === 'string' &&
+        typeof v.message === 'string' &&
+        v.message.length > 0 &&
+        typeof v.createdAt === 'string'
+    );
+}
+
 interface SignalRManagerOptions {
     storage: ExtensionStorage;
     onJobsReceived: (jobs: JobRecord[]) => Promise<void>;
     onPollingFallback: (reason: string) => Promise<void>;
+    onAdminMessageReceived?: (payload: AdminMessagePayload) => Promise<void>;
     logger?: Pick<Console, 'info' | 'warn' | 'error'>;
     now?: () => Date;
 }
@@ -242,6 +265,21 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
     function bindHandlers(boundConnection: HubConnection, serverUrl: string): void {
         boundConnection.on('NewJobsDetected', (payload: unknown) => {
             void handleInboundJobs(boundConnection, serverUrl, payload);
+        });
+
+        boundConnection.on('AdminMessageReceived', (payload: unknown) => {
+            if (!isAdminMessagePayload(payload)) {
+                logger.warn('[signalr] received invalid AdminMessageReceived payload', payload);
+                return;
+            }
+
+            void (async () => {
+                try {
+                    await options.onAdminMessageReceived?.(payload);
+                } catch (error) {
+                    logger.error('[signalr] AdminMessageReceived handler failed:', error);
+                }
+            })();
         });
 
         boundConnection.onclose((error) => {

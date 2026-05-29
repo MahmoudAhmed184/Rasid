@@ -3,6 +3,7 @@ import { browser } from 'wxt/browser';
 import type { JobRecord } from '../../entities/job/model';
 import { getPlatformDisplayName } from '../../platforms/platform-ids';
 import { resolveJobPlatformId } from '../../entities/job/identity';
+import type { AdminMessage } from '../../shared/storage/modules/admin-message-storage';
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 
 const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
@@ -10,6 +11,7 @@ const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com']
 export interface NotificationService {
     registerHandlers(): void;
     showJobsNotification(jobs: JobRecord[]): Promise<string>;
+    showAdminMessageNotification(msg: AdminMessage): Promise<string>;
     showTestNotification(): Promise<string>;
 }
 
@@ -157,6 +159,35 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
         return notificationId;
     }
 
+    async function showAdminMessageNotification(msg: AdminMessage): Promise<string> {
+        const notificationId = `frelancia-admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const payloadUrl = msg.url ? normalizeNotificationUrl(msg.url) : null;
+
+        if (payloadUrl) {
+            await storage.storeNotificationPayload(notificationId, {
+                url: payloadUrl,
+                createdAt: new Date().toISOString(),
+            });
+        }
+
+        try {
+            await browser.notifications.create(notificationId, {
+                type: 'basic',
+                iconUrl: browser.runtime.getURL('/icons/icon128.png'),
+                title: '📢 تنبيهات من المطورين',
+                message: msg.message,
+                contextMessage: 'Frelancia',
+            });
+        } catch (error) {
+            if (payloadUrl) {
+                await storage.removeNotificationPayload(notificationId);
+            }
+            throw error;
+        }
+
+        return notificationId;
+    }
+
     async function showTestNotification(): Promise<string> {
         return showJobsNotification([
             {
@@ -173,6 +204,7 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
     return {
         registerHandlers,
         showJobsNotification,
+        showAdminMessageNotification,
         showTestNotification,
     };
 }
