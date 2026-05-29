@@ -1,5 +1,5 @@
 {
-    "name": "rasid",
+    "name": "frelancia",
     "version": "1.0.0",
     "private": true,
     "type": "module",
@@ -43,7 +43,8 @@
         "wxt": "^0.20.26"
     },
     "dependencies": {
-        "@microsoft/signalr": "^10.0.0"
+        "@microsoft/signalr": "^10.0.0",
+        "@rolldown/binding-win32-x64-msvc": "^1.0.2"
     },
     "overrides": {
         "node-notifier": {

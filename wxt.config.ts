@@ -56,12 +56,12 @@ export default defineConfig({
         const isChrome = browser === 'chrome';
 
         return {
-            name: 'Rasid | راصد',
-            short_name: 'Rasid',
+            name: 'Frelancia | فريلانسيا',
+            short_name: 'Frelancia',
             version: '1.0.0',
             description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
             action: {
-                default_title: 'Rasid | راصد',
+                default_title: 'Frelancia | فريلانسيا',
                 default_popup: 'popup/index.html',
                 default_icon: icons,
             },
@@ -77,7 +77,7 @@ export default defineConfig({
                 ? undefined
                 : {
                       gecko: {
-                          id: 'rasid@mostaql-notifier',
+                          id: 'frelancia@mostaql-notifier',
                           strict_min_version: '140.0',
                           data_collection_permissions: {
                               required: ['websiteContent'],
