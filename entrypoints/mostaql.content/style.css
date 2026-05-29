@@ -228,7 +228,7 @@
     border-color: #bd2130;
 }
 
-/* FIX: Repair Native Mostaql Button Groups (e.g. "Edit Deal") 
+/* FIX: Repair Native Mostaql Button Groups (e.g. "Edit Deal")
    that get broken by the flex parent container */
 .header_action-wide-container .btn-group {
     display: inline-flex !important;
@@ -244,7 +244,7 @@
     border-radius: 0;
 }
 
-/* Restore border radius for the first and last buttons in the native group 
+/* Restore border radius for the first and last buttons in the native group
    assuming RTL context since Mostaql is Arabic */
 .header_action-wide-container .btn-group > .btn:first-child {
     border-top-right-radius: 4px;

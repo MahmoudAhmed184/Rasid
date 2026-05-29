@@ -57,7 +57,7 @@ function buildNotificationBody(jobs: JobRecord[]): {
     const platformIds = [...new Set(jobs.map((job) => resolveJobPlatformId(job)))];
     const platformLabel =
         platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]!) : 'منصات العمل الحر';
-    
+
     let title: string;
     let message: string;
     let contextMessage = `Frelancia - ${platformLabel}`;
@@ -68,7 +68,7 @@ function buildNotificationBody(jobs: JobRecord[]): {
         const descriptionStr = primary.description
             ? `${primary.description.slice(0, 100).trim()}...`
             : '';
-        
+
         message = budgetStr ? `${budgetStr}\n${descriptionStr}` : descriptionStr;
     } else {
         title = `${jobs.length} مشاريع جديدة متاحة`;
