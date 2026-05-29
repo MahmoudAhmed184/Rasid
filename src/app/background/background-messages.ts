@@ -478,7 +478,7 @@ export function dispatchBackgroundMessage(
 export async function sendBackgroundMessage<Action extends BackgroundMessageAction>(
     message: BackgroundMessageRequestMap[Action]
 ): Promise<BackgroundMessageResponseMap[Action]> {
-    const response = await browser.runtime.sendMessage(message);
+    const response: unknown = await browser.runtime.sendMessage(message);
 
     if (!isBackgroundTransportResponseForAction(response, message.action)) {
         throw new Error(`Invalid background response for ${message.action}.`);

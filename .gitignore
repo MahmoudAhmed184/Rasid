@@ -1,5 +1,6 @@
 # Build output — never commit these
 .wxt/
+.output/
 dist/
 node_modules/
 .test-dist/

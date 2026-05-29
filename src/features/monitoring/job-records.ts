@@ -1,15 +1,27 @@
 import type { JobRecord } from '../../entities/job/model';
 import { inferSupportedPlatformIdFromUrl, isPlatformId } from '../../platforms/platform-ids';
 
+function normalizeScalarText(value: unknown): string {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+    }
+
+    return '';
+}
+
 export function normalizeJobRecord(value: unknown): JobRecord | null {
     if (!value || typeof value !== 'object') {
         return null;
     }
 
     const record = value as Record<string, unknown>;
-    const id = String(record.id ?? '');
-    const title = String(record.title ?? '');
-    const url = String(record.url ?? '');
+    const id = normalizeScalarText(record.id);
+    const title = normalizeScalarText(record.title);
+    const url = normalizeScalarText(record.url);
 
     if (!id || !title || !url) {
         return null;
@@ -45,7 +57,7 @@ export function normalizeJobRecord(value: unknown): JobRecord | null {
         clientName: typeof record.clientName === 'string' ? record.clientName : undefined,
         clientType: typeof record.clientType === 'string' ? record.clientType : undefined,
         tags: Array.isArray(record.tags)
-            ? record.tags.map((tag) => String(tag)).filter(Boolean)
+            ? record.tags.map((tag) => normalizeScalarText(tag)).filter(Boolean)
             : undefined,
     };
 }

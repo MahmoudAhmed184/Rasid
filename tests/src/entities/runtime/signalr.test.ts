@@ -15,7 +15,7 @@ describe('SignalR runtime URL helpers', () => {
 
     it('redacts query strings and credentials from displayable URLs', () => {
         expect(redactSignalRUrl(`${DEFAULT_SIGNALR_URL}?access_token=secret`)).toBe(
-            'https://freelancia.runasp.net/jobNotificationHub'
+            'https://rasid.runasp.net/jobNotificationHub'
         );
     });
 });

@@ -394,7 +394,7 @@ export function createOffscreenManager(options: CreateOffscreenManagerOptions): 
             throw new Error(`No local offscreen handler registered for ${task}.`);
         }
 
-        return handler(payload) as Promise<OffscreenTaskResultMap[Task]>;
+        return handler(payload);
     }
 
     async function bootstrap(): Promise<void> {
@@ -425,7 +425,7 @@ export function createOffscreenManager(options: CreateOffscreenManagerOptions): 
             payload,
         } as OffscreenTaskEnvelope<Task>;
 
-        const response = await browser.runtime.sendMessage(envelope);
+        const response: unknown = await browser.runtime.sendMessage(envelope);
 
         if (!isOffscreenTransportResponseForTask(response, task, requestId)) {
             throw new Error(`Invalid offscreen response for ${task}.`);

@@ -42,7 +42,9 @@
 body {
     width: 376px;
     min-height: 520px;
-    overflow: hidden;
+    max-height: 600px;
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--bg);
     color: var(--text-body);
     font-family: var(--font-ui);
@@ -117,8 +119,8 @@ button {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 16px;
-    padding: 18px;
+    gap: 14px;
+    padding: 16px 18px;
 }
 
 .stats-panel {
@@ -129,8 +131,8 @@ button {
 
 .stat-box {
     min-width: 0;
-    min-height: 96px;
-    padding: 16px;
+    min-height: 90px;
+    padding: 14px 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--card);
@@ -156,11 +158,11 @@ button {
 
 .status-indicator {
     display: flex;
-    min-height: 40px;
+    min-height: 38px;
     align-items: center;
     justify-content: center;
     gap: 9px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
@@ -185,13 +187,13 @@ button {
 .main-actions {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
 }
 
 .btn {
     display: flex;
     width: 100%;
-    min-height: 46px;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
     gap: 10px;
@@ -260,7 +262,7 @@ button {
 }
 
 .btn.diagnostic {
-    min-height: 40px;
+    min-height: 38px;
     border: 1px solid transparent;
     background: transparent;
     color: var(--text-sub);
@@ -275,11 +277,11 @@ button {
 }
 
 .connection-report {
-    padding: 11px 12px;
+    padding: 10px 12px;
     border-radius: var(--radius);
     font-size: 12px;
     font-weight: 700;
-    line-height: 1.65;
+    line-height: 1.55;
     text-align: center;
 }
 
@@ -309,14 +311,14 @@ button {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    padding: 12px 18px 16px;
+    padding: 10px 18px 12px;
     border-top: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.64);
 }
 
 .popup-footer a {
     display: inline-flex;
-    min-height: 34px;
+    min-height: 32px;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--border);

@@ -218,7 +218,7 @@ The current Nafezly content workflow does not add custom platform-origin network
 
 The extension connects to:
 
-- `https://freelancia.runasp.net/jobNotificationHub`
+- `https://rasid.runasp.net/jobNotificationHub`
 
 The store build uses only this packaged default backend origin. Custom backend origins require a custom build with matching host permissions.
 

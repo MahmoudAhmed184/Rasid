@@ -464,7 +464,7 @@ describe('dashboard settings form', () => {
             proposalTemplate: 'Hello',
             pendingChatGptPrompt: { prompt: 'temporary prompt' },
         };
-        const setTimeoutMock = vi.fn((handler: TimerHandler, timeout?: number) => {
+        const setTimeoutMock = vi.fn((handler: TimerHandler, _timeout?: number) => {
             if (typeof handler === 'function') {
                 handler();
             }

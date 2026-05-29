@@ -93,13 +93,15 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
 
         handlersRegistered = true;
 
-        browser.notifications.onClicked.addListener(async (notificationId) => {
-            const payload = await storage.consumeNotificationPayload(notificationId);
-            const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
+        browser.notifications.onClicked.addListener((notificationId) => {
+            void (async () => {
+                const payload = await storage.consumeNotificationPayload(notificationId);
+                const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
 
-            if (url) {
-                await browser.tabs.create({ url });
-            }
+                if (url) {
+                    await browser.tabs.create({ url });
+                }
+            })();
         });
 
         // Add button listener

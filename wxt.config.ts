@@ -13,7 +13,7 @@ const hostPermissions = [
     'https://nafezly.com/*',
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
-    'https://freelancia.runasp.net/*',
+    'https://rasid.runasp.net/*',
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
@@ -49,9 +49,27 @@ export default defineConfig({
     publicDir: 'public',
     outDir: 'dist',
     outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
+    manifestVersion: 3,
     vite: () => ({
         plugins: [stripSignalRInvalidPureAnnotations()],
     }),
+    hooks: {
+        'entrypoints:found': (wxt, entrypoints) => {
+            if (wxt.config.browser === 'chrome') {
+                return;
+            }
+
+            const offscreenIndex = entrypoints.findIndex(
+                (entrypoint) => entrypoint.name === 'offscreen'
+            );
+            if (offscreenIndex >= 0) {
+                entrypoints.splice(offscreenIndex, 1);
+            }
+        },
+        'prepare:publicPaths': (_, paths) => {
+            paths.push('/offscreen.html');
+        },
+    },
     manifest: ({ browser }) => {
         const isChrome = browser === 'chrome';
 

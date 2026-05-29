@@ -158,10 +158,6 @@ export function extractProjectData(): MostaqlProjectPageData {
     const categoryEl = document.querySelector(MOSTAQL_SELECTORS.project.category);
     const category = categoryEl ? categoryEl.textContent.trim() : 'غير معروف';
 
-    openProjects = '0';
-    underwayProjects = '0';
-    clientJoined = 'غير معروف';
-    hiringRate = 'غير معروف';
     let clientType = 'صاحب عمل';
 
     const clientCard = document.querySelector(MOSTAQL_SELECTORS.project.clientCard);
@@ -652,7 +648,7 @@ export function extractMyProposalFull(
                     content: myBid.content || 'نص العرض غير متوفر',
                     attachments: [],
                 };
-                let output = `عرضي الخاص (تم العثور عليه من صفحة المشروع):\nالمتقدم: ${data.bidderName}\nنص العرض:\n${data.content}\n`;
+                const output = `عرضي الخاص (تم العثور عليه من صفحة المشروع):\nالمتقدم: ${data.bidderName}\nنص العرض:\n${data.content}\n`;
                 return { text: output, data: data };
             }
         }
@@ -746,7 +742,7 @@ export function extractMyProposalFull(
                 .filter((attachment): attachment is ProjectAttachment => attachment !== null),
         };
 
-        let output = `عرضي الخاص:\nالمتقدم: ${name}\nالمبلغ: ${price}\nمدة التنفيذ: ${duration}\n\nنص العرض:\n${data.content}\n`;
+        const output = `عرضي الخاص:\nالمتقدم: ${name}\nالمبلغ: ${price}\nمدة التنفيذ: ${duration}\n\nنص العرض:\n${data.content}\n`;
         return { text: output, data: data };
     } catch (e) {
         console.error('Error extracting my proposal:', e);

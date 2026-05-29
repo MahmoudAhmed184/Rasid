@@ -59,10 +59,8 @@ const PLATFORM_MODULES = {
     },
 } as const satisfies Partial<Record<PlatformId, PlatformModule>>;
 
-type RegisteredPlatformModuleId = keyof typeof PLATFORM_MODULES;
-
 function resolvePlatformModule(platformId: PlatformId): PlatformModule {
-    const module = PLATFORM_MODULES[platformId as RegisteredPlatformModuleId];
+    const module = PLATFORM_MODULES[platformId];
 
     if (!module) {
         throw new Error(`Unknown platform module: ${platformId}`);

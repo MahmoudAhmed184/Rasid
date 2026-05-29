@@ -41,7 +41,7 @@ describe('runtime storage normalization', () => {
                 status: 'connected',
                 instanceId: 'worker-1',
                 connectionId: 'connection-1',
-                serverUrl: 'https://freelancia.runasp.net/jobNotificationHub',
+                serverUrl: 'https://rasid.runasp.net/jobNotificationHub',
                 reconnectAttempt: 3,
                 lastConnectedAt: '2026-05-22T10:00:00.000Z',
                 lastEventAt: '2026-05-22T10:01:00.000Z',

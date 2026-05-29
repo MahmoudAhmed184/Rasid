@@ -1,0 +1,22 @@
+# Build output
+bin/
+obj/
+artifacts/
+publish/
+
+# Local IDE and OS files
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.user
+*.suo
+*.wsuo
+*.vsidx
+
+# Local/private runtime and deployment config
+src/appsettings.json
+src/appsettings.*.json
+!src/appsettings.example.json
+src/Properties/

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createBackgroundRuntimeHandlers } from '../../../../src/app/background/background-runtime-handlers';
 import type { JobBatchResult } from '../../../../src/features/monitoring/job-batch-publisher';
-import type { ExtensionStorage } from '../../../../src/shared/storage/extension-storage';
 import { fakeBrowser } from '../../../support/fake-browser';
 
 function createDeps(overrides: Record<string, unknown> = {}) {

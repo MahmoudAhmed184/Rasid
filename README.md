@@ -256,7 +256,7 @@ User-facing configuration is stored through browser storage and managed from the
 | Platforms         | Only `mostaql`, `khamsat`, and `nafezly` are supported monitoring toggles.                                                                                   |
 | Notification mode | `auto`, `signalr`, or `polling`; current transport resolution treats enabled supported SignalR platforms as SignalR-capable unless polling mode is selected. |
 | Polling interval  | Clamped from 1 to 30 minutes.                                                                                                                                |
-| SignalR backend   | Store build resolves to `https://freelancia.runasp.net/jobNotificationHub`. Custom backend origins are not accepted by current settings normalization.       |
+| SignalR backend   | Store build resolves to `https://rasid.runasp.net/jobNotificationHub`. Custom backend origins are not accepted by current settings normalization.       |
 | Filters           | Minimum budget, minimum hiring rate, include/exclude keywords, maximum duration, minimum client age, and quiet hours.                                        |
 | AI                | Bridge/direct mode, provider, model, session-scoped API key, system prompt, and ChatGPT URL.                                                                 |
 | Prompts           | Reusable prompt templates plus one quick proposal template.                                                                                                  |
@@ -289,7 +289,7 @@ The current code does not click the ChatGPT send button.
 
 ## SignalR And Polling
 
-The default backend URL is `https://freelancia.runasp.net/jobNotificationHub`.
+The default backend URL is `https://rasid.runasp.net/jobNotificationHub`.
 
 SignalR behavior:
 
@@ -371,7 +371,7 @@ Host permissions:
 | `https://nafezly.com/*`                       | Nafezly monitoring, parser, content panel, and autofill.                               |
 | `https://chatgpt.com/*`                       | ChatGPT bridge content script.                                                         |
 | `https://chat.openai.com/*`                   | Legacy ChatGPT bridge content script host.                                             |
-| `https://freelancia.runasp.net/*`             | Default SignalR backend.                                                               |
+| `https://rasid.runasp.net/*`             | Default SignalR backend.                                                               |
 | `https://api.openai.com/*`                    | Direct OpenAI proposal generation.                                                     |
 | `https://generativelanguage.googleapis.com/*` | Direct Gemini proposal generation.                                                     |
 | `https://api.anthropic.com/*`                 | Direct Claude proposal generation.                                                     |

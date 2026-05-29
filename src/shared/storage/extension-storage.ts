@@ -87,7 +87,7 @@ export function createExtensionStorage(
             return;
         }
 
-        await client.set(patch as Record<string, unknown>);
+        await client.set(patch);
     }
 
     async function getSnapshot(): Promise<StoredState> {
@@ -136,29 +136,34 @@ export function createExtensionStorage(
     return {
         ensureDefaults,
         getSnapshot,
-        getSettings: settingsStorage.getSettings,
-        updateSettings: settingsStorage.updateSettings,
-        getNotificationsEnabled: settingsStorage.getNotificationsEnabled,
-        setNotificationsEnabled: settingsStorage.setNotificationsEnabled,
-        getPrompts: promptStorage.getPrompts,
-        setPrompts: promptStorage.setPrompts,
-        getProposalTemplate: settingsStorage.getProposalTemplate,
-        setProposalTemplate: settingsStorage.setProposalTemplate,
-        getTrackedProjects: trackingStorage.getTrackedProjects,
-        setTrackedProjects: trackingStorage.setTrackedProjects,
-        getRuntimeState: runtimeStorage.getRuntimeState,
-        patchRuntimeState: runtimeStorage.patchRuntimeState,
-        setSignalRState: runtimeStorage.setSignalRState,
+        getSettings: () => settingsStorage.getSettings(),
+        updateSettings: (patch) => settingsStorage.updateSettings(patch),
+        getNotificationsEnabled: () => settingsStorage.getNotificationsEnabled(),
+        setNotificationsEnabled: (enabled) => settingsStorage.setNotificationsEnabled(enabled),
+        getPrompts: () => promptStorage.getPrompts(),
+        setPrompts: (prompts) => promptStorage.setPrompts(prompts),
+        getProposalTemplate: () => settingsStorage.getProposalTemplate(),
+        setProposalTemplate: (template) => settingsStorage.setProposalTemplate(template),
+        getTrackedProjects: () => trackingStorage.getTrackedProjects(),
+        setTrackedProjects: (projects) => trackingStorage.setTrackedProjects(projects),
+        getRuntimeState: () => runtimeStorage.getRuntimeState(),
+        patchRuntimeState: (patch) => runtimeStorage.patchRuntimeState(patch),
+        setSignalRState: (state) => runtimeStorage.setSignalRState(state),
         ingestJobs,
         mergeRecentJobs,
         touchLastCheck,
-        storeNotificationPayload: notificationPayloadStorage.storeNotificationPayload,
-        removeNotificationPayload: notificationPayloadStorage.removeNotificationPayload,
-        consumeNotificationPayload: notificationPayloadStorage.consumeNotificationPayload,
-        pruneNotificationPayloads: notificationPayloadStorage.pruneNotificationPayloads,
-        storePendingDownloadCleanup: downloadCleanupStorage.storePendingDownloadCleanup,
-        consumePendingDownloadCleanup: downloadCleanupStorage.consumePendingDownloadCleanup,
-        listPendingDownloadCleanups: downloadCleanupStorage.listPendingDownloadCleanups,
-        pruneExpiredDownloadCleanups: downloadCleanupStorage.pruneExpiredDownloadCleanups,
+        storeNotificationPayload: (notificationId, payload) =>
+            notificationPayloadStorage.storeNotificationPayload(notificationId, payload),
+        removeNotificationPayload: (notificationId) =>
+            notificationPayloadStorage.removeNotificationPayload(notificationId),
+        consumeNotificationPayload: (notificationId) =>
+            notificationPayloadStorage.consumeNotificationPayload(notificationId),
+        pruneNotificationPayloads: () => notificationPayloadStorage.pruneNotificationPayloads(),
+        storePendingDownloadCleanup: (payload) =>
+            downloadCleanupStorage.storePendingDownloadCleanup(payload),
+        consumePendingDownloadCleanup: (downloadId) =>
+            downloadCleanupStorage.consumePendingDownloadCleanup(downloadId),
+        listPendingDownloadCleanups: () => downloadCleanupStorage.listPendingDownloadCleanups(),
+        pruneExpiredDownloadCleanups: () => downloadCleanupStorage.pruneExpiredDownloadCleanups(),
     };
 }

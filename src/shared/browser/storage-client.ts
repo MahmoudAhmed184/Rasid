@@ -12,10 +12,10 @@ export interface StorageClient {
 function createStorageClient(storageArea: BrowserStorageArea): StorageClient {
     return {
         async get(keys) {
-            return (await storageArea.get([...new Set([keys].flat())])) as Record<string, unknown>;
+            return await storageArea.get([...new Set([keys].flat())]);
         },
         async getAll() {
-            return (await storageArea.get(null)) as Record<string, unknown>;
+            return await storageArea.get(null);
         },
         async set(items) {
             await storageArea.set(items);

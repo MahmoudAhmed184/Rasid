@@ -224,7 +224,7 @@ function _openAnalyticsModal() {
 
     if (!window._rasidStatsLoaded) {
         window._rasidStatsLoaded = true;
-        _loadBidStats();
+        void _loadBidStats();
     }
 }
 
