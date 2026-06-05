@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import packageJson from './package.json';
 import type { Plugin } from 'vite';
 
 const icons = {
@@ -35,7 +36,7 @@ export function createRasidManifest(browser: string) {
     return {
         name: 'Frelancia | فريلانسيا',
         short_name: 'Frelancia',
-        version: '1.0.0',
+        version: packageJson.version,
         description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
         action: {
             default_title: 'Frelancia | فريلانسيا',

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import packageJson from '../../package.json';
 
 const CHATGPT_HOSTS = ['https://chatgpt.com/*', 'https://chat.openai.com/*'] as const;
 const PROVIDER_HOSTS = [
@@ -44,5 +45,12 @@ describe('manifest permission policy', () => {
         expect(manifest.optional_host_permissions).toEqual(
             expect.arrayContaining([...CHATGPT_HOSTS, ...PROVIDER_HOSTS])
         );
+    });
+
+    it('uses package.json as the generated manifest version source for Chrome and Firefox', async () => {
+        const { createRasidManifest } = await loadManifestFactory();
+
+        expect(createRasidManifest('chrome').version).toBe(packageJson.version);
+        expect(createRasidManifest('firefox').version).toBe(packageJson.version);
     });
 });
