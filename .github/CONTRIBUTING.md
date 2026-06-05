@@ -23,7 +23,7 @@ Any change that expands platform support, host permissions, AI destinations, sto
 
 ## Development Setup
 
-Use Node.js `>=20.19.0`.
+Use Node.js `>=20.19.0`. Backend work under `server/` also requires .NET SDK `10.0.300`, selected by the repository root `global.json`.
 
 ```bash
 npm ci
@@ -102,7 +102,15 @@ npm run lint
 npm run format:check
 npm run build
 npm run lint:firefox
-dotnet test server/src/Rasid.Server.sln
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
+```
+
+For backend release changes, also run:
+
+```bash
+dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
 ```
 
 Run tests when behavior or storage contracts change:

@@ -55,7 +55,10 @@ Commands run:
 - [ ] `npm test`
 - [ ] `npm run build`
 - [ ] `npm run lint:firefox`
-- [ ] `dotnet test server/src/Rasid.Server.sln`
+- [ ] `dotnet restore server/src/Rasid.Server.sln --locked-mode`
+- [ ] `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`
+- [ ] `dotnet test server/src/Rasid.Server.sln -c Release --no-build`
+- [ ] Backend publish smoke when server release behavior changed: `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish`
 
 Manual testing:
 
