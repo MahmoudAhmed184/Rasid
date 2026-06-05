@@ -13,24 +13,100 @@ interface ChatgptBridgeDependencies {
     >;
 }
 
-const injectedPromptIds = new Set<string>();
+interface ChatgptBridgeRuntimeState {
+    readonly injectedPromptIds: Set<string>;
+    storageListenerRegistered: boolean;
+}
+
+declare global {
+    interface Window {
+        __rasidChatgptBridgeState__?: ChatgptBridgeRuntimeState;
+    }
+}
+
+const CHAT_INPUT_WAIT_TIMEOUT_MS = 10_000;
+const INITIAL_INJECTION_DELAY_MS = 1_000;
+const STORAGE_CHANGE_INJECTION_DELAY_MS = 500;
+
+function getBridgeRuntimeState(): ChatgptBridgeRuntimeState {
+    if (window.__rasidChatgptBridgeState__) {
+        return window.__rasidChatgptBridgeState__;
+    }
+
+    const state: ChatgptBridgeRuntimeState = {
+        injectedPromptIds: new Set<string>(),
+        storageListenerRegistered: false,
+    };
+
+    window.__rasidChatgptBridgeState__ = state;
+    return state;
+}
 
 function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
-    // Selectors for ChatGPT's input box (subject to change)
-    const selectors = [
-        '#prompt-textarea',
-        '[contenteditable="true"]',
-        'textarea[data-id="root"]',
-        'textarea',
-    ];
+    const promptTextarea = document.querySelector('#prompt-textarea');
 
-    for (const selector of selectors) {
-        const el = document.querySelector(selector);
-        if (el instanceof HTMLTextAreaElement || el instanceof HTMLElement) {
-            return el;
+    if (promptTextarea instanceof HTMLTextAreaElement || promptTextarea instanceof HTMLElement) {
+        return promptTextarea;
+    }
+
+    for (const form of document.querySelectorAll('form')) {
+        const sendButton = form.querySelector(
+            'button[type="submit"], button[data-testid*="send"], button[aria-label*="Send"], button[aria-label*="إرسال"]'
+        );
+
+        if (!sendButton) {
+            continue;
+        }
+
+        const formInput = form.querySelector('textarea, [contenteditable="true"][role="textbox"]');
+
+        if (formInput instanceof HTMLTextAreaElement || formInput instanceof HTMLElement) {
+            return formInput;
         }
     }
+
     return null;
+}
+
+function waitForChatInput(timeoutMs: number): Promise<HTMLTextAreaElement | HTMLElement | null> {
+    const existingInput = findChatInput();
+
+    if (existingInput) {
+        return Promise.resolve(existingInput);
+    }
+
+    return new Promise((resolve) => {
+        let settled = false;
+        let observer: MutationObserver | null = null;
+        const finish = (input: HTMLTextAreaElement | HTMLElement | null) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            window.clearTimeout(timeoutId);
+            observer?.disconnect();
+            resolve(input);
+        };
+        const timeoutId = window.setTimeout(() => {
+            finish(null);
+        }, timeoutMs);
+
+        if (typeof MutationObserver === 'function') {
+            observer = new MutationObserver(() => {
+                const input = findChatInput();
+
+                if (input) {
+                    finish(input);
+                }
+            });
+
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+        }
+    });
 }
 
 function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
@@ -50,11 +126,12 @@ function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
 
 async function injectPrompt(
     deps: ChatgptBridgeDependencies,
+    state: ChatgptBridgeRuntimeState,
     pendingPrompt?: PendingBridgePrompt
 ): Promise<void> {
     const record = pendingPrompt ?? (await deps.proposalRepository.getPendingBridgePrompt());
 
-    if (!record || injectedPromptIds.has(record.id)) {
+    if (!record || state.injectedPromptIds.has(record.id)) {
         return;
     }
 
@@ -64,68 +141,57 @@ async function injectPrompt(
         return;
     }
 
-    // Try to find the input box. It might take a moment to load.
-    // We'll retry a few times.
-    let attempts = 0;
-    const maxAttempts = 20; // 10 seconds (500ms interval)
+    const inputField = await waitForChatInput(CHAT_INPUT_WAIT_TIMEOUT_MS);
 
-    const interval = setInterval(() => {
-        attempts++;
-        const inputField = findChatInput();
+    if (!inputField) {
+        void deps.proposalRepository.clearPendingBridgePrompt(record.id);
+        console.error('Mostaql Job Notifier: Could not find ChatGPT input field before timeout.');
+        return;
+    }
 
-        if (inputField) {
-            clearInterval(interval);
+    inputField.focus();
 
-            // Focusing
-            inputField.focus();
+    if (inputField.isContentEditable) {
+        writePromptToEditable(inputField, record.prompt);
+    } else if (inputField instanceof HTMLTextAreaElement) {
+        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            'value'
+        )?.set?.bind(inputField);
 
-            // Small delay to ensure focus
-            setTimeout(() => {
-                if (inputField.isContentEditable) {
-                    writePromptToEditable(inputField, record.prompt);
-                } else if (inputField instanceof HTMLTextAreaElement) {
-                    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-                        window.HTMLTextAreaElement.prototype,
-                        'value'
-                    )?.set?.bind(inputField);
-
-                    if (nativeTextAreaValueSetter) {
-                        nativeTextAreaValueSetter(record.prompt);
-                    } else {
-                        inputField.value = record.prompt;
-                    }
-                }
-
-                inputField.dispatchEvent(new Event('input', { bubbles: true }));
-                injectedPromptIds.add(record.id);
-                void deps.proposalRepository.clearPendingBridgePrompt(record.id);
-            }, 500);
-        } else if (attempts >= maxAttempts) {
-            clearInterval(interval);
-            void deps.proposalRepository.clearPendingBridgePrompt(record.id);
-            console.error(
-                'Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.'
-            );
+        if (nativeTextAreaValueSetter) {
+            nativeTextAreaValueSetter(record.prompt);
+        } else {
+            inputField.value = record.prompt;
         }
-    }, 500);
+    }
+
+    inputField.dispatchEvent(new Event('input', { bubbles: true }));
+    state.injectedPromptIds.add(record.id);
+    void deps.proposalRepository.clearPendingBridgePrompt(record.id);
 }
 
 // Listen for changes in storage (for when tab is reused/focused without reload)
 export function initChatgptBridge(deps: ChatgptBridgeDependencies) {
-    deps.proposalRepository.onPendingBridgePromptChanged((record) => {
-        setTimeout(() => {
-            void injectPrompt(deps, record);
-        }, 500);
-    });
+    const state = getBridgeRuntimeState();
+
+    if (!state.storageListenerRegistered) {
+        deps.proposalRepository.onPendingBridgePromptChanged((record) => {
+            setTimeout(() => {
+                void injectPrompt(deps, state, record);
+            }, STORAGE_CHANGE_INJECTION_DELAY_MS);
+        });
+        state.storageListenerRegistered = true;
+    }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            void injectPrompt(deps);
+            void injectPrompt(deps, state);
         });
         return;
     }
 
     setTimeout(() => {
-        void injectPrompt(deps);
-    }, 1000);
+        void injectPrompt(deps, state);
+    }, INITIAL_INJECTION_DELAY_MS);
 }

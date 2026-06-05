@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { initChatgptBridge } from '../../../../src/app/chatgpt-bridge';
 import type { PendingBridgePrompt } from '../../../../src/shared/storage/modules/proposal-state-storage';
@@ -30,6 +30,10 @@ function createDeps(record: PendingBridgePrompt | null) {
 }
 
 describe('ChatGPT bridge', () => {
+    beforeEach(() => {
+        delete window.__rasidChatgptBridgeState__;
+    });
+
     afterEach(() => {
         vi.useRealTimers();
         vi.restoreAllMocks();
@@ -123,6 +127,64 @@ describe('ChatGPT bridge', () => {
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledTimes(1);
     });
 
+    it('does not register duplicate storage listeners when injected repeatedly', async () => {
+        vi.useFakeTimers();
+        installTestDom('<!doctype html><textarea id="prompt-textarea"></textarea>');
+        setWindowHost('chatgpt.com');
+        const record: PendingBridgePrompt = {
+            id: 'bridge-repeat',
+            prompt: 'Draft once',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository, emit } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        initChatgptBridge({ proposalRepository });
+
+        expect(proposalRepository.onPendingBridgePromptChanged).toHaveBeenCalledOnce();
+
+        emit(record);
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect((document.getElementById('prompt-textarea') as HTMLTextAreaElement).value).toBe(
+            'Draft once'
+        );
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses composer-scoped inputs instead of unrelated global textareas', async () => {
+        vi.useFakeTimers();
+        installTestDom(`
+            <!doctype html>
+            <textarea id="unrelated"></textarea>
+            <form>
+                <textarea id="composer-input"></textarea>
+                <button type="submit">Send</button>
+            </form>
+        `);
+        setWindowHost('chatgpt.com');
+        const record: PendingBridgePrompt = {
+            id: 'bridge-scoped',
+            prompt: 'Scoped prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect((document.getElementById('unrelated') as HTMLTextAreaElement).value).toBe('');
+        expect((document.getElementById('composer-input') as HTMLTextAreaElement).value).toBe(
+            'Scoped prompt'
+        );
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith('bridge-scoped');
+    });
+
     it('clears stale pending prompts when the ChatGPT input never appears', async () => {
         vi.useFakeTimers();
         const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -145,7 +207,7 @@ describe('ChatGPT bridge', () => {
             'bridge-missing-input'
         );
         expect(error).toHaveBeenCalledWith(
-            'Mostaql Job Notifier: Could not find ChatGPT input field after multiple attempts.'
+            'Mostaql Job Notifier: Could not find ChatGPT input field before timeout.'
         );
     });
 });
