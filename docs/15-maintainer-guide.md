@@ -67,12 +67,19 @@ When adding state:
 
 Before release:
 
-- run the validation suite in [`13-build-test-release.md`](13-build-test-release.md)
+- update `package.json` version in a normal PR; generated manifests read from that version
+- run `npm run release:check`
+- run `npm run release:zip`
+- run `npm run release:evidence`
+- run `npm run release:notes -- 1.0.0 .output/release-notes.md`
+- inspect `.output/` release assets and generated manifests
 - run `dotnet restore server/src/Rasid.Server.sln --locked-mode`, `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`, and `dotnet test server/src/Rasid.Server.sln -c Release --no-build` when backend/admin-broadcast/freshness contracts changed
 - run `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` when backend release behavior changed
-- inspect generated manifests
 - verify only the intended supported platforms appear in source, UI, permissions, and generated manifests
 - keep README, privacy text, store-review notes, and generated manifest claims aligned
+- dispatch `Extension Release` once with `create_release=false`, then with `create_release=true` for the draft GitHub Release
+
+Chrome Web Store submission, Firefox AMO signing, automated browser-store submission, and backend release artifacts are outside the documented extension release flow.
 
 Related docs:
 

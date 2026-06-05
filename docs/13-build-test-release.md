@@ -33,13 +33,21 @@ Outputs:
 ```bash
 npm run zip:chrome
 npm run zip:firefox
+npm run release:zip
 ```
 
-The ZIP commands are WXT package commands for the browser target and MV3 manifest version.
+The browser ZIP commands are WXT package commands for the browser target and MV3 manifest version. `npm run release:zip` cleans `.output/`, runs the Chrome and Firefox WXT ZIPs, and stages the release assets under `.output/`.
+
+Expected GitHub release ZIPs for `v1.0.0`:
+
+- `.output/frelancia-v1.0.0-chrome-mv3.zip`
+- `.output/frelancia-v1.0.0-firefox-mv3.zip`
+- `.output/frelancia-v1.0.0-firefox-sources.zip`
 
 ## Validation Commands
 
 ```bash
+npm run release:check
 npm run test:typecheck
 npm run test:unit
 npm run test:integration
@@ -60,6 +68,8 @@ dotnet test server/src/Rasid.Server.sln -c Release --no-build
 2. `eslint .`
 
 `npm run lint:ts` runs TypeScript with `--noEmit --noUnusedLocals --noUnusedParameters`.
+
+`npm run release:check` runs the extension release gate: format check, lint, tests, build, Firefox lint, Chrome E2E, and Firefox E2E.
 
 ## Automated Tests
 
@@ -120,14 +130,34 @@ Firefox:
 ## Release Checklist
 
 - `npm ci`
-- validation commands pass
+- `npm run release:check`
 - generated manifests inspected
+- `npm run release:zip`
+- `npm run release:evidence`
+- `npm run release:notes -- 1.0.0 .output/release-notes.md`
+- `.output/` contains the expected ZIPs, `SHA256SUMS.txt`, `release-evidence.json`, and release notes
 - backend locked restore/build/test sequence run when backend contracts changed
 - `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` run when backend release behavior changed
 - README and privacy docs match generated permissions
 - store-review notes updated for any permission/privacy/platform changes
 - source package excludes generated and private local artifacts
-- ZIP commands run for target browsers
+- browser-store submission remains out of scope
+
+## GitHub Draft Release
+
+The extension release workflow is manual only:
+
+```text
+.github/workflows/extension-release.yml
+```
+
+Dispatch inputs:
+
+- `version`: expected package version without the `v` prefix.
+- `create_release`: set `false` for CI packaging validation, then `true` to create a draft GitHub Release.
+- `generate_attestations`: optional GitHub artifact attestations for the release ZIPs.
+
+The workflow fails when the requested version does not match `package.json` or the generated manifest versions. It creates draft GitHub Releases only; Chrome Web Store upload, Firefox AMO signing, and automated store submission are intentionally excluded.
 
 Related docs:
 

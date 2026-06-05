@@ -1,6 +1,6 @@
 # Store Review Notes
 
-This document summarizes review-facing behavior for Chrome Web Store and AMO preparation.
+This document summarizes review-facing behavior for Chrome Web Store and AMO preparation. The current `v1.0.0` release flow creates GitHub draft releases only; Chrome Web Store submission, Firefox AMO signing, and automated browser-store submission are intentionally out of scope.
 
 ## Generated Manifest Claims
 

@@ -18,6 +18,7 @@ Frelancia is a private cross-browser Manifest V3 WebExtension for Arabic freelan
 - [Getting Started](#getting-started)
 - [Development Commands](#development-commands)
 - [Build Commands](#build-commands)
+- [GitHub Release Flow](#github-release-flow)
 - [Loading In Chrome](#loading-in-chrome)
 - [Loading In Firefox](#loading-in-firefox)
 - [Configuration Overview](#configuration-overview)
@@ -230,6 +231,31 @@ npm ci
 
 Run `npm run build` before Firefox linting because `lint:firefox` reads the generated Firefox output directory.
 
+## GitHub Release Flow
+
+Extension releases are manual GitHub draft releases. Chrome Web Store upload, Firefox AMO signing, and automated browser-store submission are intentionally out of scope.
+
+The version source of truth is `package.json`. Update it in a normal PR before dispatching the release workflow.
+
+Local release commands:
+
+| Command                                                   | Purpose                                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run release:check`                                   | Format check, lint, tests, build, Firefox lint, and Chrome/Firefox E2E. |
+| `npm run release:zip`                                     | Build and package Chrome/Firefox MV3 ZIPs under `.output/`.             |
+| `npm run release:evidence`                                | Write `.output/SHA256SUMS.txt` and `.output/release-evidence.json`.     |
+| `npm run release:notes -- 1.0.0 .output/release-notes.md` | Extract the matching changelog section for GitHub Release notes.        |
+
+The manual workflow is [`.github/workflows/extension-release.yml`](.github/workflows/extension-release.yml). Dispatch it first with `create_release=false` to validate packaging, then with `create_release=true` to create the draft release for human approval. Optional GitHub artifact attestations can be enabled with `generate_attestations=true`.
+
+Expected `v1.0.0` release assets:
+
+- `frelancia-v1.0.0-chrome-mv3.zip`
+- `frelancia-v1.0.0-firefox-mv3.zip`
+- `frelancia-v1.0.0-firefox-sources.zip`
+- `SHA256SUMS.txt`
+- `release-evidence.json`
+
 ## Loading In Chrome
 
 1. Run:
@@ -441,12 +467,7 @@ Dashboard backup import:
 Primary release checks:
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run format:check
-npm run build
-npm run lint:firefox
+npm run release:check
 dotnet restore server/src/Rasid.Server.sln --locked-mode
 dotnet build server/src/Rasid.Server.sln -c Release --no-restore
 dotnet test server/src/Rasid.Server.sln -c Release --no-build
@@ -462,13 +483,13 @@ The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafe
 
 ## Release Checklist
 
-1. Install with `npm ci`.
-2. Run `npm run typecheck`.
-3. Run `npm run lint`.
-4. Run `npm test`.
-5. Run `npm run format:check`.
-6. Run `npm run build`.
-7. Run `npm run lint:firefox`.
+1. Update `package.json` version in a normal PR.
+2. Install with `npm ci`.
+3. Run `npm run release:check`.
+4. Run `npm run release:zip`.
+5. Run `npm run release:evidence`.
+6. Run `npm run release:notes -- 1.0.0 .output/release-notes.md`.
+7. Verify `.output/` contains the expected Chrome MV3, Firefox MV3, Firefox source, checksum, evidence, and release-notes files.
 8. Run the backend CI-equivalent sequence when backend behavior or docs are in scope:
 
     ```bash
@@ -482,8 +503,9 @@ The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafe
 9. Inspect `dist/chrome-mv3/manifest.json` and `dist/firefox-mv3/manifest.json` for permissions, required hosts, optional hosts, and content scripts.
 10. Load `dist/chrome-mv3` in Chrome and smoke test popup, dashboard, notifications, SignalR/polling controls, supported content scripts, and on-demand ChatGPT bridge injection.
 11. Load `dist/firefox-mv3/manifest.json` in Firefox and smoke test the same release-critical flows.
-12. Run `npm run zip:chrome` and `npm run zip:firefox` for store packages.
-13. Keep [`PRIVACY.md`](PRIVACY.md), [`docs/16-store-review-notes.md`](docs/16-store-review-notes.md), and generated manifests synchronized.
+12. Dispatch `Extension Release` with `create_release=false` to validate CI packaging.
+13. Dispatch it again with `create_release=true` to create a draft GitHub Release.
+14. Keep [`PRIVACY.md`](PRIVACY.md), [`docs/16-store-review-notes.md`](docs/16-store-review-notes.md), and generated manifests synchronized.
 
 ## Troubleshooting
 
@@ -519,6 +541,7 @@ Start with [`docs/README.md`](docs/README.md). Key docs:
 
 - Direct AI mode is intentionally absent from normal builds. Unsafe side builds necessarily send prompt content and the user-provided API key to the selected provider from the browser extension runtime.
 - ChatGPT bridge mode writes a prompt into the ChatGPT page but does not submit it.
+- Browser-store submission is intentionally outside the documented release flow; release artifacts are GitHub draft-release assets for human approval.
 - Chrome browser E2E is available through Playwright after `npm run build:chrome`; Firefox automation covers generated-manifest checks, `web-ext run` temporary installation, and Playwright Firefox rendering of generated popup/dashboard pages.
 - Full TypeScript-aware ESLint is not configured because no TypeScript ESLint dependency has been added.
 - The optional `server/` tree remains a repository-scope decision and is not part of the documented WebExtension release package.
