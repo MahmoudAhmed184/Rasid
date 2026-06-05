@@ -303,6 +303,28 @@ describe('background message contracts', () => {
                     ok: true,
                     action: 'checkNow',
                     data: {
+                        kind: 'failed',
+                        source: 'polling',
+                        totalChecked: 10,
+                        reason: 'fetch-failed',
+                        monitoringErrors: {
+                            mostaql: {
+                                message: 'مستقل: Request failed with HTTP 403.',
+                                failedAt: '2026-05-22T12:00:00.000Z',
+                            },
+                        },
+                    },
+                },
+                'checkNow'
+            )
+        ).toBe(true);
+
+        expect(
+            isBackgroundTransportResponseForAction(
+                {
+                    ok: true,
+                    action: 'checkNow',
+                    data: {
                         kind: 'suppressed',
                         source: 'polling',
                         totalChecked: 10,

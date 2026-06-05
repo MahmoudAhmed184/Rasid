@@ -1,6 +1,7 @@
 import { applyJobFilters } from './job-filters';
 import { fetchPlatformFeedJobsResult, hydratePlatformJob } from './fetch-platform-html';
 import {
+    createFailedJobBatchResult,
     createNoopJobBatchResult,
     publishJobBatch,
     type JobBatchResult,
@@ -82,7 +83,12 @@ export async function runPollingCycle(options: {
             lastMonitoringAttemptAt: attemptedAt,
             lastMonitoringErrors: monitoringErrors,
         });
-        return createNoopJobBatchResult('polling', snapshot.seenJobs.length, 'no-new-jobs');
+        return createFailedJobBatchResult(
+            'polling',
+            snapshot.seenJobs.length,
+            'fetch-failed',
+            monitoringErrors
+        );
     }
 
     const ingested = await storage.ingestJobs([...feedJobs.values()]);

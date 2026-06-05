@@ -188,10 +188,15 @@ describe('polling cycle orchestration', () => {
                 monitoring: [createAdapter()],
             })
         ).resolves.toEqual({
-            kind: 'noop',
+            kind: 'failed',
             source: 'polling',
-            reason: 'no-new-jobs',
+            reason: 'fetch-failed',
             totalChecked: 1,
+            monitoringErrors: {
+                mostaql: expect.objectContaining({
+                    message: 'مستقل: Request failed with HTTP 403.',
+                }),
+            },
         });
         expect(storage.patchRuntimeState).toHaveBeenCalledWith(
             expect.objectContaining({

@@ -115,6 +115,22 @@ function isFiniteNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isMonitoringErrors(value: unknown): value is Record<
+    string,
+    { readonly message: string; readonly failedAt: string }
+> {
+    if (!isRecord(value)) {
+        return false;
+    }
+
+    return Object.values(value).every(
+        (error) =>
+            isRecord(error) &&
+            typeof error.message === 'string' &&
+            typeof error.failedAt === 'string'
+    );
+}
+
 function isBoundedString(value: unknown, maxLength: number): value is string {
     return typeof value === 'string' && value.length > 0 && value.length <= maxLength;
 }
@@ -256,6 +272,8 @@ function isJobBatchResult(value: unknown): value is JobBatchResult {
                 value.reason === 'no-platforms' ||
                 value.reason === 'no-new-jobs'
             );
+        case 'failed':
+            return value.reason === 'fetch-failed' && isMonitoringErrors(value.monitoringErrors);
         case 'suppressed':
             return isFiniteNumber(value.suppressed);
         case 'published':

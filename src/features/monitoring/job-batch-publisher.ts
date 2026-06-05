@@ -4,6 +4,7 @@ import type { ExtensionSettings } from '../../entities/settings/model';
 
 export type JobBatchSource = 'signalr' | 'polling';
 export type JobBatchNoopReason = 'system-disabled' | 'no-platforms' | 'no-new-jobs';
+export type JobBatchFailedReason = 'fetch-failed';
 
 export interface JobNotifier {
     (jobs: JobRecord[]): Promise<unknown>;
@@ -15,6 +16,13 @@ export type JobBatchResult =
           readonly source: JobBatchSource;
           readonly reason: JobBatchNoopReason;
           readonly totalChecked: number;
+      }
+    | {
+          readonly kind: 'failed';
+          readonly source: JobBatchSource;
+          readonly reason: JobBatchFailedReason;
+          readonly totalChecked: number;
+          readonly monitoringErrors: Record<string, { readonly message: string; readonly failedAt: string }>;
       }
     | {
           readonly kind: 'suppressed';
@@ -40,6 +48,21 @@ export function createNoopJobBatchResult(
         source,
         reason,
         totalChecked,
+    };
+}
+
+export function createFailedJobBatchResult(
+    source: JobBatchSource,
+    totalChecked: number,
+    reason: JobBatchFailedReason,
+    monitoringErrors: Record<string, { readonly message: string; readonly failedAt: string }>
+): JobBatchResult {
+    return {
+        kind: 'failed',
+        source,
+        reason,
+        totalChecked,
+        monitoringErrors,
     };
 }
 

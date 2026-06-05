@@ -201,8 +201,24 @@ function createPopupController(deps: PopupDependencies) {
         hidePopupStatus();
 
         try {
-            await requestCheckNow();
+            const result = await requestCheckNow();
             await loadStats(deps);
+
+            if (result.kind === 'failed') {
+                const errors = Object.values(result.monitoringErrors)
+                    .map((error) => error.message)
+                    .filter(Boolean)
+                    .join(' | ');
+
+                showPopupStatus(
+                    'error',
+                    errors
+                        ? `تعذر تنفيذ الفحص: ${errors}`
+                        : 'تعذر تنفيذ الفحص لأن كل مصادر المراقبة فشلت.'
+                );
+                return;
+            }
+
             showPopupStatus('success', 'تم الفحص وتحديث الإحصائيات.');
         } catch (error) {
             console.error('Error checking now:', error);

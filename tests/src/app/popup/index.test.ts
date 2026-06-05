@@ -272,6 +272,51 @@ describe('popup controller', () => {
         expect(toggleButton.textContent).toContain('الإشعارات: مفعلة');
     });
 
+    it('shows resolved manual-check failures as popup errors', async () => {
+        vi.useFakeTimers();
+        const root = installTestDom(`
+            <button id="open-dashboard-btn"></button>
+            <button id="checkNowBtn"></button>
+            <button id="toggleNotificationsBtn"></button>
+            <button id="checkConnectionBtn"></button>
+            <div id="connectionReport" class="hidden"></div>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+        `);
+        const { requestCheckNow } =
+            await import('../../../../src/app/background/background-messages');
+        vi.mocked(requestCheckNow).mockResolvedValueOnce({
+            kind: 'failed',
+            source: 'polling',
+            reason: 'fetch-failed',
+            totalChecked: 0,
+            monitoringErrors: {
+                mostaql: {
+                    message: 'مستقل: Request failed with HTTP 403.',
+                    failedAt: '2026-05-22T12:00:00.000Z',
+                },
+            },
+        });
+        const monitoringRepository = {
+            getOverview: vi.fn(async () => createOverview()),
+            getNotificationsEnabled: vi.fn(async () => true),
+            setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+        };
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
+
+        root.getElementById('checkNowBtn')?.click();
+
+        await vi.waitFor(() =>
+            expect(root.getElementById('connectionReport')?.textContent).toBe(
+                'تعذر تنفيذ الفحص: مستقل: Request failed with HTTP 403.'
+            )
+        );
+        expect(root.getElementById('connectionReport')?.className).toBe('connection-report error');
+    });
+
     it('handles thrown diagnostics errors and stops periodic refresh on unload', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
