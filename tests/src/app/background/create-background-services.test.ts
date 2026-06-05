@@ -316,6 +316,7 @@ describe('background app factory', () => {
                 proposalRepository: factoryMocks.state.proposalRepository,
             })
         );
+        expect(factoryMocks.state.createAiProviderRegistry).not.toHaveBeenCalled();
         expect(factoryMocks.state.storage.ensureDefaults).toHaveBeenCalledOnce();
         expect(factoryMocks.state.offscreen.bootstrap).toHaveBeenCalledOnce();
         expect(factoryMocks.state.downloads.reconcilePendingCleanups).toHaveBeenCalledOnce();

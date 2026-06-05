@@ -31,7 +31,6 @@ export interface ExtensionSettings {
     aiSystemPrompt: string;
     interval: number;
     notificationMode: NotificationMode;
-    signalrServerUrl: string;
     aiChatUrl: string;
     minBudget: number;
     minHiringRate: number;

@@ -1,4 +1,4 @@
-import { resolveSignalRServerUrl } from '../../../entities/runtime/signalr';
+import { DEFAULT_SIGNALR_URL } from '../../../entities/runtime/signalr';
 import { DEFAULT_RUNTIME_STATE } from '../schema';
 import type { StorageClient } from '../../browser/storage-client';
 import { STORAGE_FIELDS } from '../storage-keys';
@@ -105,7 +105,7 @@ export function normalizeSignalRState(value: unknown): SignalRState {
         return { ...DEFAULT_RUNTIME_STATE.signalr };
     }
 
-    const serverUrl = resolveSignalRServerUrl(value.serverUrl);
+    const serverUrl = DEFAULT_SIGNALR_URL;
     const reconnectAttempt = normalizeReconnectAttempt(value.reconnectAttempt);
     const lastConnectedAt =
         normalizeNullableText(value.lastConnectedAt) ?? normalizeNullableText(value.lastEventAt);

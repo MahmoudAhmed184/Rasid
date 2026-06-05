@@ -6,7 +6,7 @@ import {
 } from '@microsoft/signalr';
 
 import { ALARM_NAMES, SIGNALR_LEASE_WINDOW_MS, SIGNALR_RECONNECT_DELAY_MINUTES } from './constants';
-import { redactSignalRUrl, resolveSignalRServerUrl } from '../../entities/runtime/signalr';
+import { DEFAULT_SIGNALR_URL, redactSignalRUrl } from '../../entities/runtime/signalr';
 import { createRecurringSignalREffects, executeSignalREffects } from './signalr-effects';
 import {
     computeReconnectDelayMinutes,
@@ -174,7 +174,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason,
             attempt,
             nextReconnectAt,
-            serverUrl: resolveSignalRServerUrl(runtime.signalr.serverUrl),
+            serverUrl: DEFAULT_SIGNALR_URL,
             status: config.status ?? 'backoff',
         });
     }
@@ -204,7 +204,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason: disconnectReason,
             nextReconnectAt: signalr.nextReconnectAt,
             reconnectAttempt: signalr.reconnectAttempt,
-            serverUrl: resolveSignalRServerUrl(signalr.serverUrl),
+            serverUrl: DEFAULT_SIGNALR_URL,
         });
 
         return disconnectReason;
@@ -316,7 +316,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             return connectPromise;
         }
 
-        const serverUrl = resolveSignalRServerUrl(settings.signalrServerUrl);
+        const serverUrl = DEFAULT_SIGNALR_URL;
         const safeServerUrl = redactSignalRUrl(serverUrl);
         const revision = connectionRevision + 1;
 

@@ -4,7 +4,6 @@ import { runPollingCycle } from '../../features/monitoring/run-polling-cycle';
 import { createProposalGenerator } from '../../features/proposals/generate-proposal';
 import { createProposalTemplateCatalog } from '../../features/proposals/proposal-template-catalog';
 import { createBackgroundRuntimeHandlers } from './background-runtime-handlers';
-import { createAiProviderRegistry } from '../../entities/ai/provider-registry';
 import { createDownloadCleanupService } from '../../features/downloads/download-cleanup-service';
 import { createAudioService } from '../../features/notifications/audio-service';
 import { createOffscreenManager } from '../../features/offscreen/manager';
@@ -56,12 +55,21 @@ export function createBackgroundApp(): BackgroundApp {
     const downloads = createDownloadCleanupService(storage, offscreen);
     const monitoringHtmlParser = createPlatformMonitoringHtmlParser(offscreen);
     const platformMonitoring = createPlatformMonitoringAdapters(monitoringHtmlParser);
-    const aiProviders = createAiProviderRegistry();
     const proposalTemplates = createProposalTemplateCatalog(storage);
     const proposalGenerator = createProposalGenerator({
         settings: storage,
         templates: proposalTemplates,
-        providers: aiProviders,
+        ...(import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true'
+            ? {
+                  loadProviders: async () => {
+                      const { createAiProviderRegistry } = await import(
+                          '../../entities/ai/provider-registry'
+                      );
+
+                      return createAiProviderRegistry();
+                  },
+              }
+            : {}),
     });
     let ingestionQueue: Promise<void> = Promise.resolve();
 

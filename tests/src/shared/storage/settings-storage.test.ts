@@ -111,12 +111,12 @@ describe('settings storage normalization', () => {
         });
 
         expect(settings.aiApiKey).toBe('sk-next');
-        expect(settings.aiExecutionMode).toBe('direct');
+        expect(settings.aiExecutionMode).toBe('bridge');
         expect(settings.aiModel).toBe('gpt-test');
         expect(storage.snapshot().aiApiKeySecret).toBe('sk-next');
         expect(storage.snapshot().settings).toMatchObject({
             aiApiKey: '',
-            aiExecutionMode: 'direct',
+            aiExecutionMode: 'bridge',
             aiModel: 'gpt-test',
         });
     });

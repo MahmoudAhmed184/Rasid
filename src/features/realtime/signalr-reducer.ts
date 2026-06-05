@@ -3,7 +3,7 @@ import {
     SIGNALR_LEASE_WINDOW_MINUTES,
     SIGNALR_RECONNECT_DELAY_MINUTES,
 } from './constants';
-import { resolveSignalRServerUrl } from '../../entities/runtime/signalr';
+import { DEFAULT_SIGNALR_URL } from '../../entities/runtime/signalr';
 import type { SignalRState } from '../../entities/runtime/model';
 import type { ExtensionSettings } from '../../entities/settings/model';
 import { hasEnabledSignalRPlatform } from '../../platforms/registry';
@@ -85,8 +85,9 @@ export interface SignalRTransition {
     readonly effects: readonly SignalREffect[];
 }
 
-function resolveServerUrl(current: SignalRState, serverUrl?: string): string {
-    return resolveSignalRServerUrl(serverUrl ?? current.serverUrl);
+function resolveServerUrl(...args: readonly unknown[]): string {
+    void args;
+    return DEFAULT_SIGNALR_URL;
 }
 
 export function resolveDesiredTransport(settings: Readonly<ExtensionSettings>): DesiredTransport {

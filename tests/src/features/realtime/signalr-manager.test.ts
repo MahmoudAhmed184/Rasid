@@ -461,10 +461,7 @@ describe('SignalR manager', () => {
     });
 
     it('handles unexpected connection close with polling fallback and redacted error logging', async () => {
-        const storage = createStorage({
-            ...DEFAULT_SETTINGS,
-            signalrServerUrl: 'https://signalr.example/hub?access_token=secret',
-        });
+        const storage = createStorage(DEFAULT_SETTINGS);
         const onPollingFallback = vi.fn(async () => undefined);
         const logger = {
             info: vi.fn(),
@@ -492,7 +489,7 @@ describe('SignalR manager', () => {
         expect(logger.warn).toHaveBeenCalledWith(
             'SignalR connection closed, polling fallback enabled:',
             'signalr-closed',
-            'https://signalr.example/hub',
+            DEFAULT_SIGNALR_URL,
             'Error'
         );
     });

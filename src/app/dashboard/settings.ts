@@ -74,6 +74,8 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
     const { backupRepository, proposalRepository, settingsRepository } = options.repositories;
     let hideStatusTimer: number | null = null;
     let isBound = false;
+    let unsafeDirectControlsRendered = false;
+    const unsafeDirectAiEnabled = import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true';
 
     function getField(id: string): FormField | null {
         const field = root.getElementById(id);
@@ -123,6 +125,122 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         field.value = value == null ? '' : String(value);
     }
 
+    function appendText(parent: HTMLElement, text: string): void {
+        parent.append(root.createTextNode(text));
+    }
+
+    function createFormGroup(labelText: string, field: FormField, helpText?: string): HTMLElement {
+        const group = root.createElement('div');
+        const label = root.createElement('label');
+
+        group.className = 'form-group';
+        label.htmlFor = field.id;
+        label.textContent = labelText;
+        group.append(label, field);
+
+        if (helpText) {
+            const help = root.createElement('p');
+
+            help.className = 'help-text';
+            help.id = `${field.id}Help`;
+            help.textContent = helpText;
+            field.setAttribute('aria-describedby', help.id);
+            group.append(help);
+        }
+
+        return group;
+    }
+
+    function renderUnsafeDirectAiControls(): void {
+        if (!unsafeDirectAiEnabled || unsafeDirectControlsRendered) {
+            return;
+        }
+
+        unsafeDirectControlsRendered = true;
+
+        const modeSelect = getField('aiExecutionMode');
+        if (modeSelect instanceof HTMLSelectElement && !modeSelect.querySelector('[value="direct"]')) {
+            const directOption = root.createElement('option');
+
+            directOption.value = 'direct';
+            directOption.textContent = 'Direct عبر API';
+            modeSelect.append(directOption);
+        }
+
+        const modeHelp = root.getElementById('aiExecutionModeHelp');
+        if (modeHelp instanceof HTMLElement && !modeHelp.dataset.unsafeDirectHelp) {
+            modeHelp.dataset.unsafeDirectHelp = 'true';
+            modeHelp.append(root.createElement('br'));
+            const strong = root.createElement('strong');
+
+            strong.textContent = 'Direct:';
+            modeHelp.append(strong);
+            appendText(
+                modeHelp,
+                ' وضع غير آمن للبناءات الجانبية فقط. مفاتيح BYOK تكون مكشوفة داخل سياق المتصفح بعد منح صلاحية المضيف، ومفاتيح Gemini غير المقيدة تتوقف عن العمل بعد 19 يونيو 2026.'
+            );
+        }
+
+        const mount = root.getElementById('aiDirectSettingsMount');
+        if (!(mount instanceof HTMLElement)) {
+            return;
+        }
+
+        const container = root.createElement('div');
+        container.id = 'aiDirectSettings';
+        container.className = 'hidden';
+
+        const provider = root.createElement('select');
+        provider.id = 'aiProvider';
+        provider.className = 'form-control';
+
+        for (const [value, label] of [
+            ['openai', 'OpenAI'],
+            ['gemini', 'Gemini'],
+            ['claude', 'Claude'],
+        ] as const) {
+            const option = root.createElement('option');
+
+            option.value = value;
+            option.textContent = label;
+            provider.append(option);
+        }
+
+        const model = root.createElement('input');
+        model.type = 'text';
+        model.id = 'aiModel';
+        model.className = 'form-control';
+        model.placeholder = 'اكتب اسم النموذج الذي تريد استخدامه';
+        model.dir = 'ltr';
+
+        const apiKey = root.createElement('input');
+        apiKey.type = 'password';
+        apiKey.id = 'aiApiKey';
+        apiKey.className = 'form-control';
+        apiKey.placeholder = 'أدخل مفتاح الـ API';
+        apiKey.dir = 'ltr';
+        apiKey.autocomplete = 'off';
+
+        const systemPrompt = root.createElement('textarea');
+        systemPrompt.id = 'aiSystemPrompt';
+        systemPrompt.rows = 6;
+        systemPrompt.className = 'form-control';
+        systemPrompt.placeholder = 'تعليمات إضافية تُحقن قبل القالب المختار عند التوليد المباشر.';
+
+        container.append(
+            createFormGroup('المزود', provider),
+            createFormGroup('اسم النموذج', model),
+            createFormGroup(
+                'مفتاح API',
+                apiKey,
+                'يُحفظ المفتاح مؤقتاً في مساحة جلسة الإضافة ولا يدخل في النسخ الاحتياطية، لكنه يظل مستخدماً من المتصفح مباشرة في هذا البناء الجانبي غير الآمن.'
+            ),
+            createFormGroup('تعليمات النظام المشتركة', systemPrompt)
+        );
+
+        mount.replaceChildren(container);
+    }
+
     function parseNumberValue(value: unknown) {
         if (typeof value === 'number') {
             return Math.trunc(value) || 0;
@@ -164,6 +282,18 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         }
     }
 
+    function getErrorMessage(error: unknown): string {
+        if (error instanceof Error) {
+            return error.message.trim();
+        }
+
+        if (typeof error === 'string') {
+            return error.trim();
+        }
+
+        return '';
+    }
+
     function setButtonBusy(button: HTMLButtonElement | null, busy: boolean) {
         if (!button) {
             return;
@@ -174,7 +304,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
     }
 
     function updateAiFieldsVisibility(mode: AiExecutionMode) {
-        const directMode = mode === 'direct';
+        const directMode = unsafeDirectAiEnabled && mode === 'direct';
         const bridgeMode = mode === 'bridge';
 
         root.getElementById('aiDirectSettings')?.classList.toggle('hidden', !directMode);
@@ -255,7 +385,9 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
     }
 
     function validateSettingsForm() {
-        const mode = String(getFieldValue('aiExecutionMode') ?? 'bridge') as AiExecutionMode;
+        const mode = (
+            unsafeDirectAiEnabled ? String(getFieldValue('aiExecutionMode') ?? 'bridge') : 'bridge'
+        ) as AiExecutionMode;
 
         updateAiFieldsVisibility(mode);
 
@@ -298,6 +430,11 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
     }
 
     function apply(settings: Partial<ExtensionSettings>) {
+        renderUnsafeDirectAiControls();
+
+        const aiExecutionMode =
+            unsafeDirectAiEnabled && settings.aiExecutionMode === 'direct' ? 'direct' : 'bridge';
+
         for (const [platformId, fieldId] of Object.entries(PLATFORM_FIELD_IDS) as Array<
             [SupportedMonitoringPlatformId, string]
         >) {
@@ -314,7 +451,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         setFieldValue('cat-development', settings.development !== false);
         setFieldValue('cat-ai', settings.ai !== false);
         setFieldValue('cat-all', settings.all !== false);
-        setFieldValue('aiExecutionMode', settings.aiExecutionMode || 'bridge');
+        setFieldValue('aiExecutionMode', aiExecutionMode);
         setFieldValue('aiProvider', settings.aiProvider || 'openai');
         setFieldValue('aiModel', settings.aiModel || '');
         setFieldValue('aiApiKey', settings.aiApiKey || '');
@@ -326,8 +463,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         setFieldValue('checkInterval', settings.interval || 1);
         setFieldValue('systemToggle', settings.systemEnabled !== false);
         setFieldValue('notificationMode', settings.notificationMode || 'auto');
-        setFieldValue('signalrServerUrl', settings.signalrServerUrl || '');
-        updateAiFieldsVisibility(settings.aiExecutionMode || 'bridge');
+        updateAiFieldsVisibility(aiExecutionMode);
     }
 
     function collectSettings(baseSettings: Partial<ExtensionSettings> = {}): ExtensionSettings {
@@ -352,8 +488,8 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             development: getFieldValue('cat-development') !== false,
             ai: getFieldValue('cat-ai') !== false,
             all: getFieldValue('cat-all') !== false,
-            aiExecutionMode: String(
-                getFieldValue('aiExecutionMode') ?? 'bridge'
+            aiExecutionMode: (
+                unsafeDirectAiEnabled ? String(getFieldValue('aiExecutionMode') ?? 'bridge') : 'bridge'
             ) as ExtensionSettings['aiExecutionMode'],
             aiProvider: String(
                 getFieldValue('aiProvider') ?? 'openai'
@@ -370,10 +506,32 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             notificationMode: String(
                 getFieldValue('notificationMode') ?? 'auto'
             ) as ExtensionSettings['notificationMode'],
-            signalrServerUrl: String(getFieldValue('signalrServerUrl') ?? ''),
             sound: baseSettings.sound !== false,
             minClientAge: Number(baseSettings.minClientAge ?? 0),
         };
+    }
+
+    async function ensureDirectAiPermissionBeforeSave(
+        settings: ExtensionSettings
+    ): Promise<boolean> {
+        if (!unsafeDirectAiEnabled || settings.aiExecutionMode !== 'direct') {
+            return true;
+        }
+
+        const { requestAiProviderHostPermission } = await import(
+            '../../features/proposals/ai-provider-host-permissions'
+        );
+        const granted = await requestAiProviderHostPermission(settings.aiProvider);
+
+        if (!granted) {
+            showSaveStatus(
+                'تعذر حفظ Direct عبر API لأن صلاحية مضيف المزود لم تُمنح.',
+                'error',
+                false
+            );
+        }
+
+        return granted;
     }
 
     async function saveAll(button?: HTMLButtonElement) {
@@ -389,6 +547,10 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             const settings = collectSettings(await settingsRepository.get());
             const proposalTemplate =
                 (getField('proposalTemplate') as HTMLTextAreaElement | null)?.value ?? '';
+
+            if (!(await ensureDirectAiPermissionBeforeSave(settings))) {
+                return;
+            }
 
             await Promise.all([
                 settingsRepository.save(settings),
@@ -594,6 +756,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         }
 
         isBound = true;
+        renderUnsafeDirectAiControls();
 
         root.getElementById('saveAllBtn')?.addEventListener('click', (event) => {
             void saveAll(event.currentTarget as HTMLButtonElement);
@@ -610,8 +773,16 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
                     showSaveStatus('تم إرسال الإشعار التجريبي.');
                 })
                 .catch((error) => {
+                    const detail = getErrorMessage(error);
+
                     console.error('Error testing notification:', error);
-                    showSaveStatus('تعذر إرسال الإشعار التجريبي.', 'error', false);
+                    showSaveStatus(
+                        detail
+                            ? `تعذر إرسال الإشعار التجريبي: ${detail}`
+                            : 'تعذر إرسال الإشعار التجريبي.',
+                        'error',
+                        false
+                    );
                 })
                 .finally(() => {
                     setButtonBusy(button, false);
@@ -644,7 +815,9 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
 
         getField('aiExecutionMode')?.addEventListener('change', (event) => {
             const select = event.currentTarget as HTMLSelectElement;
-            updateAiFieldsVisibility(select.value as AiExecutionMode);
+            updateAiFieldsVisibility(
+                (unsafeDirectAiEnabled ? select.value : 'bridge') as AiExecutionMode
+            );
         });
 
         root.getElementById('exportBackupBtn')?.addEventListener('click', (event) => {
