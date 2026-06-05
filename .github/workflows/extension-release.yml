@@ -62,7 +62,7 @@ jobs:
                   echo "artifact_name=frelancia-v$PACKAGE_VERSION-release-assets" >> "$GITHUB_OUTPUT"
 
             - name: Run release checks
-              run: npm run release:check
+              run: xvfb-run -a npm run release:check
 
             - name: Package release ZIPs
               run: npm run release:zip
