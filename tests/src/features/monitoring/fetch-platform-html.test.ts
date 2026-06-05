@@ -7,6 +7,7 @@ import {
     debugFetchMonitoringSources,
     fetchPlatformFeedJobsResult,
     hydratePlatformJob,
+    MONITORING_FETCH_TIMEOUT_MS,
 } from '../../../../src/features/monitoring/fetch-platform-html';
 import { DEFAULT_SETTINGS } from '../../../../src/shared/storage/schema';
 
@@ -177,6 +178,73 @@ describe('platform HTML fetching', () => {
         expect(missingDetailsResult).not.toHaveProperty('description');
     });
 
+    it('does not let undefined detail fields overwrite listing data during hydration', async () => {
+        const adapter = createAdapter({
+            parseProjectHtml: vi.fn(async () => ({
+                description: undefined,
+                budget: '$500',
+            })),
+        });
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response('<article>details</article>'))
+        );
+
+        await expect(
+            hydratePlatformJob(adapter, {
+                id: '3',
+                platformId: 'mostaql',
+                title: 'مشروع',
+                description: 'وصف من القائمة',
+                url: 'https://mostaql.com/project/3',
+            })
+        ).resolves.toMatchObject({
+            id: '3',
+            description: 'وصف من القائمة',
+            budget: '$500',
+        });
+    });
+
+    it('normalizes platform fetch timeouts for feeds and debug probes', async () => {
+        vi.useFakeTimers();
+        vi.spyOn(AbortSignal, 'timeout').mockImplementation((timeoutMs: number) => {
+            const controller = new AbortController();
+            setTimeout(() => {
+                controller.abort(new DOMException('timeout', 'TimeoutError'));
+            }, timeoutMs);
+
+            return controller.signal;
+        });
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                (_url: string, init?: RequestInit) =>
+                    new Promise<Response>((_resolve, reject) => {
+                        init?.signal?.addEventListener('abort', () => {
+                            reject(init.signal?.reason);
+                        });
+                    })
+            )
+        );
+
+        const feedResult = fetchPlatformFeedJobsResult(
+            createAdapter(),
+            'https://mostaql.com/projects'
+        );
+        await vi.advanceTimersByTimeAsync(MONITORING_FETCH_TIMEOUT_MS);
+        await expect(feedResult).resolves.toEqual({
+            kind: 'error',
+            reason: `Request timed out after ${MONITORING_FETCH_TIMEOUT_MS}ms.`,
+        });
+
+        const debugResult = debugFetchMonitoringSource(createAdapter());
+        await vi.advanceTimersByTimeAsync(MONITORING_FETCH_TIMEOUT_MS);
+        await expect(debugResult).resolves.toEqual({
+            success: false,
+            error: `مستقل: Request timed out after ${MONITORING_FETCH_TIMEOUT_MS}ms.`,
+        });
+    });
+
     it('aggregates debug fetch source results', async () => {
         vi.stubGlobal(
             'fetch',
@@ -217,7 +285,7 @@ describe('platform HTML fetching', () => {
 
         await expect(debugFetchMonitoringSource(createAdapter())).resolves.toEqual({
             success: false,
-            error: 'body stream failed',
+            error: 'مستقل: body stream failed',
         });
 
         const fetchMock = vi

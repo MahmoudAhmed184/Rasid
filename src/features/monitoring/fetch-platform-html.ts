@@ -2,6 +2,8 @@ import type { JobRecord } from '../../entities/job/model';
 import type { PlatformMonitoringAdapter } from '../../platforms/contracts';
 import { detectChallengePage } from '../../shared/network/challenge-page';
 
+export const MONITORING_FETCH_TIMEOUT_MS = 15_000;
+
 type HtmlFetchResult =
     | {
           readonly kind: 'success';
@@ -22,7 +24,18 @@ export type PlatformFeedJobsResult =
           readonly reason: string;
       };
 
+function isAbortLikeError(error: unknown): boolean {
+    return (
+        error instanceof DOMException &&
+        (error.name === 'AbortError' || error.name === 'TimeoutError')
+    );
+}
+
 function sanitizeFetchError(error: unknown): string {
+    if (isAbortLikeError(error)) {
+        return `Request timed out after ${MONITORING_FETCH_TIMEOUT_MS}ms.`;
+    }
+
     if (error instanceof TypeError) {
         return 'Network request failed.';
     }
@@ -30,12 +43,45 @@ function sanitizeFetchError(error: unknown): string {
     return error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240);
 }
 
+function createFetchTimeoutSignal(): {
+    readonly signal: AbortSignal;
+    cleanup(): void;
+} {
+    if (typeof AbortSignal.timeout === 'function') {
+        return {
+            signal: AbortSignal.timeout(MONITORING_FETCH_TIMEOUT_MS),
+            cleanup() {
+                // Native timeout signals clean themselves up.
+            },
+        };
+    }
+
+    const controller = new AbortController();
+    const timerId = setTimeout(() => {
+        controller.abort(
+            new DOMException(
+                `Request timed out after ${MONITORING_FETCH_TIMEOUT_MS}ms.`,
+                'TimeoutError'
+            )
+        );
+    }, MONITORING_FETCH_TIMEOUT_MS);
+
+    return {
+        signal: controller.signal,
+        cleanup() {
+            clearTimeout(timerId);
+        },
+    };
+}
+
 async function fetchHtml(url: string): Promise<HtmlFetchResult> {
     let response: Response;
+    const timeout = createFetchTimeoutSignal();
 
     try {
         response = await fetch(url, {
             method: 'GET',
+            signal: timeout.signal,
             credentials: 'omit',
             cache: 'no-store',
             referrerPolicy: 'no-referrer',
@@ -47,6 +93,7 @@ async function fetchHtml(url: string): Promise<HtmlFetchResult> {
             },
         });
     } catch (error) {
+        timeout.cleanup();
         return {
             kind: 'error',
             reason: sanitizeFetchError(error),
@@ -54,13 +101,25 @@ async function fetchHtml(url: string): Promise<HtmlFetchResult> {
     }
 
     if (!response.ok) {
+        timeout.cleanup();
         return {
             kind: 'error',
             reason: `Request failed with HTTP ${response.status}.`,
         };
     }
 
-    const html = await response.text();
+    let html: string;
+    try {
+        html = await response.text();
+    } catch (error) {
+        return {
+            kind: 'error',
+            reason: sanitizeFetchError(error),
+        };
+    } finally {
+        timeout.cleanup();
+    }
+
     if (!html.trim()) {
         return {
             kind: 'error',
@@ -79,6 +138,24 @@ async function fetchHtml(url: string): Promise<HtmlFetchResult> {
     return {
         kind: 'success',
         html,
+    };
+}
+
+function mergeDefinedJobDetails(
+    job: Readonly<JobRecord>,
+    details: Partial<JobRecord> | null | undefined
+): JobRecord {
+    if (!details) {
+        return { ...job };
+    }
+
+    const definedDetails = Object.fromEntries(
+        Object.entries(details).filter(([, value]) => value !== undefined)
+    ) as Partial<JobRecord>;
+
+    return {
+        ...job,
+        ...definedDetails,
     };
 }
 
@@ -111,10 +188,7 @@ export async function hydratePlatformJob(
         return { ...job };
     }
 
-    return {
-        ...job,
-        ...((await monitoring.parseProjectHtml(result.html)) ?? {}),
-    };
+    return mergeDefinedJobDetails(job, await monitoring.parseProjectHtml(result.html));
 }
 
 export async function debugFetchMonitoringSource(monitoring: PlatformMonitoringAdapter): Promise<{
