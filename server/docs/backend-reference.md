@@ -15,7 +15,33 @@ The project now builds and runs as `Rasid.Server`, and the runtime supports:
 - `khamsat`
 - `nafezly`
 
-The backend targets .NET 10. The repository root `global.json` pins SDK `10.0.300` with `latestFeature` roll-forward disabled for previews.
+## .NET 10 Toolchain And Build Policy
+
+The app project `server/src/Rasid.Server.csproj` and test project `server/tests/Rasid.Server.Tests/Rasid.Server.Tests.csproj` both target `net10.0`. The repository root `global.json` pins SDK `10.0.300`, allows `latestFeature` roll-forward, and disables prerelease SDK selection.
+
+`server/Directory.Build.props` applies the backend build policy:
+
+- `AnalysisLevel=latest`
+- .NET analyzers and code-style analysis enabled in builds
+- warnings treated as errors
+- deterministic builds
+- `ContinuousIntegrationBuild=true` in CI
+- package lock-file generation enabled
+- locked restore enabled automatically in CI
+
+`server/Directory.Packages.props` enables central package management and owns versions for the backend package set, including HtmlAgilityPack, Swashbuckle, ASP.NET test host packages, xUnit v3, and Microsoft.NET.Test.Sdk. The tracked lock files are:
+
+- `server/src/packages.lock.json`
+- `server/tests/Rasid.Server.Tests/packages.lock.json`
+
+Use `dotnet restore server/src/Rasid.Server.sln --locked-mode` before build/test validation so lock files, central versions, and project references stay synchronized.
+
+The dedicated CI workflow `.github/workflows/server-dotnet.yml` runs:
+
+1. `dotnet restore server/src/Rasid.Server.sln --locked-mode`
+2. `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`
+3. `dotnet test server/src/Rasid.Server.sln -c Release --no-build`
+4. `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o "${{ runner.temp }}/rasid-server-publish"`
 
 ## Runtime Components
 
@@ -431,14 +457,13 @@ In `Production`, startup fails when `AdminToken` is missing, empty, or set to `c
 
 ### SDK Setup
 
-Install .NET SDK `10.0.300`. On CachyOS/Arch-style systems:
+Install .NET SDK `10.0.300`. The root `global.json` uses `rollForward: latestFeature`, so newer 10.0 feature-band SDKs can satisfy local commands when needed. On CachyOS/Arch-style systems, install the current SDK package:
 
 ```bash
 sudo pacman -Syu dotnet-sdk-bin
-sudo pacman -Rns dotnet-sdk-8.0 aspnet-runtime-8.0 dotnet-runtime-8.0 dotnet-targeting-pack-8.0
 ```
 
-Keep `dotnet-host`; it is required by .NET runtimes.
+If older SDK/runtime packages conflict with the current SDK package, remove the conflicting packages with your package manager. Keep `dotnet-host`; it is required by .NET runtimes.
 
 From `src/`:
 
@@ -463,16 +488,26 @@ Swagger UI is only enabled in development.
 From the repository root:
 
 ```bash
-dotnet restore server/src/Rasid.Server.sln
-dotnet list server/src/Rasid.Server.sln package --outdated
-dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
 dotnet restore server/src/Rasid.Server.sln --locked-mode
 dotnet build server/src/Rasid.Server.sln -c Release --no-restore
 dotnet test server/src/Rasid.Server.sln -c Release --no-build
+```
+
+Dependency maintenance commands:
+
+```bash
+dotnet restore server/src/Rasid.Server.sln
+dotnet list server/src/Rasid.Server.sln package --outdated
+dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
+```
+
+Publish smoke command for backend release changes:
+
+```bash
 dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
 ```
 
-Current server tests cover health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior.
+Current server tests use xUnit v3 with the Microsoft Testing Platform runner and ASP.NET Core test host coverage. They cover health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior.
 
 ## Operational Notes
 

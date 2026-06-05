@@ -26,21 +26,33 @@ Endpoints:
 - `GET /broadcast-tool`
 - SignalR hub at `/jobNotificationHub`
 
-## Toolchain
+## .NET 10 Toolchain
 
-The backend targets .NET 10 and is pinned by the repository root [../global.json](../global.json):
+The backend app and test projects both target `net10.0`. The repository root [../global.json](../global.json) pins the SDK used by local development and CI:
 
 - SDK: `10.0.300`
-- Runtime: `10.0.8`
+- roll-forward: `latestFeature`
+- prerelease SDKs: disabled
 
-On CachyOS/Arch-style systems, install the current .NET 10 SDK package and remove the old .NET 8 packages:
+On CachyOS/Arch-style systems, install the current .NET 10 SDK package:
 
 ```bash
 sudo pacman -Syu dotnet-sdk-bin
-sudo pacman -Rns dotnet-sdk-8.0 aspnet-runtime-8.0 dotnet-runtime-8.0 dotnet-targeting-pack-8.0
 ```
 
-Keep `dotnet-host`; it is required by the installed runtimes.
+If older SDK/runtime packages conflict with the current SDK package, remove the conflicting packages with your package manager. Keep `dotnet-host`; it is required by the installed runtimes.
+
+Build policy lives in [Directory.Build.props](Directory.Build.props):
+
+- .NET analyzers and code-style analysis run in builds.
+- Warnings are treated as errors.
+- Builds are deterministic.
+- CI builds set `ContinuousIntegrationBuild=true`.
+- Package lock files are generated and CI restore runs in locked mode.
+
+Package versions live in [Directory.Packages.props](Directory.Packages.props) through central package management. App and test lock files are tracked at [src/packages.lock.json](src/packages.lock.json) and [tests/Rasid.Server.Tests/packages.lock.json](tests/Rasid.Server.Tests/packages.lock.json); use `dotnet restore --locked-mode` to verify that project files and lock files agree.
+
+The dedicated server workflow [.github/workflows/server-dotnet.yml](../.github/workflows/server-dotnet.yml) restores, builds, tests, and runs a publish smoke check whenever `global.json`, `server/**`, or the workflow changes.
 
 ## Run Locally
 
@@ -93,12 +105,22 @@ Relevant sections:
 From the repository root:
 
 ```bash
-dotnet restore server/src/Rasid.Server.sln
-dotnet list server/src/Rasid.Server.sln package --outdated
-dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
 dotnet restore server/src/Rasid.Server.sln --locked-mode
 dotnet build server/src/Rasid.Server.sln -c Release --no-restore
 dotnet test server/src/Rasid.Server.sln -c Release --no-build
+```
+
+Dependency maintenance commands:
+
+```bash
+dotnet restore server/src/Rasid.Server.sln
+dotnet list server/src/Rasid.Server.sln package --outdated
+dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
+```
+
+Publish smoke command for backend release changes:
+
+```bash
 dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
 ```
 
@@ -122,7 +144,7 @@ dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/ra
 - [`src/Services/InMemorySeenJobCache.cs`](src/Services/InMemorySeenJobCache.cs): in-memory seen-job cache
 - [`src/Services/SignalRJobBroadcaster.cs`](src/Services/SignalRJobBroadcaster.cs): SignalR broadcaster
 - [`src/Platforms/`](src/Platforms): per-platform scraper implementations
-- [`tests/Rasid.Server.Tests`](tests/Rasid.Server.Tests): .NET tests for endpoints, admin broadcasts, startup validation, Khamsat freshness, and scraping behavior
+- [`tests/Rasid.Server.Tests`](tests/Rasid.Server.Tests): xUnit v3 tests run through Microsoft Testing Platform for endpoints, admin broadcasts, startup validation, Khamsat freshness, and scraping behavior
 
 ## Further Reading
 
