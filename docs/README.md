@@ -4,13 +4,13 @@ This directory documents the current Frelancia WebExtension source tree. The sou
 
 ## Recommended Reading Paths
 
-| Reader                 | Start here                                                                       | Then read                                                                                                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New developer          | [`../README.md`](../README.md)                                                   | [`01-overview.md`](01-overview.md), [`13-build-test-release.md`](13-build-test-release.md), [`reference/folder-structure.md`](reference/folder-structure.md)     |
-| Maintainer             | [`15-maintainer-guide.md`](15-maintainer-guide.md)                               | [`05-module-boundaries.md`](05-module-boundaries.md), [`06-storage-and-state.md`](06-storage-and-state.md), [`20-testing-strategy.md`](20-testing-strategy.md)   |
-| Store reviewer         | [`12-browser-permissions-and-privacy.md`](12-browser-permissions-and-privacy.md) | [`16-store-review-notes.md`](16-store-review-notes.md), [`17-privacy-and-security-model.md`](17-privacy-and-security-model.md), [`../PRIVACY.md`](../PRIVACY.md) |
-| Platform contributor   | [`09-content-scripts-and-platforms.md`](09-content-scripts-and-platforms.md)     | [`18-adding-a-platform.md`](18-adding-a-platform.md), relevant files under [`reference/source/`](reference/source/)                                              |
-| AI provider maintainer | [`10-ai-proposals-and-chatgpt-bridge.md`](10-ai-proposals-and-chatgpt-bridge.md) | [`19-ai-provider-maintenance.md`](19-ai-provider-maintenance.md), [`reference/source/entities.md`](reference/source/entities.md)                                 |
+| Reader                 | Start here                                                                       | Then read                                                                                                                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| New developer          | [`../README.md`](../README.md)                                                   | [`01-overview.md`](01-overview.md), [`13-build-test-release.md`](13-build-test-release.md), [`reference/folder-structure.md`](reference/folder-structure.md)                                                             |
+| Maintainer             | [`15-maintainer-guide.md`](15-maintainer-guide.md)                               | [`05-module-boundaries.md`](05-module-boundaries.md), [`06-storage-and-state.md`](06-storage-and-state.md), [`20-testing-strategy.md`](20-testing-strategy.md)                                                           |
+| Store reviewer         | [`12-browser-permissions-and-privacy.md`](12-browser-permissions-and-privacy.md) | [`16-store-review-notes.md`](16-store-review-notes.md), [`17-privacy-and-security-model.md`](17-privacy-and-security-model.md), [`../PRIVACY.md`](../PRIVACY.md), [`../SOURCE_CODE_REVIEW.md`](../SOURCE_CODE_REVIEW.md) |
+| Platform contributor   | [`09-content-scripts-and-platforms.md`](09-content-scripts-and-platforms.md)     | [`18-adding-a-platform.md`](18-adding-a-platform.md), relevant files under [`reference/source/`](reference/source/)                                                                                                      |
+| AI provider maintainer | [`10-ai-proposals-and-chatgpt-bridge.md`](10-ai-proposals-and-chatgpt-bridge.md) | [`19-ai-provider-maintenance.md`](19-ai-provider-maintenance.md), [`reference/source/entities.md`](reference/source/entities.md)                                                                                         |
 
 ## Main Docs
 
@@ -36,6 +36,8 @@ This directory documents the current Frelancia WebExtension source tree. The sou
 | [`18-adding-a-platform.md`](18-adding-a-platform.md)                             | Steps and review gates for adding a new platform safely.                                                               |
 | [`19-ai-provider-maintenance.md`](19-ai-provider-maintenance.md)                 | Maintaining direct AI providers, prompts, bridge behavior, and provider error handling.                                |
 | [`20-testing-strategy.md`](20-testing-strategy.md)                               | Current automated tests, validation commands, manual smoke tests, and remaining coverage gaps.                         |
+| [`../CHANGELOG.md`](../CHANGELOG.md)                                             | Release notes used by the manual GitHub Release workflow.                                                              |
+| [`../SOURCE_CODE_REVIEW.md`](../SOURCE_CODE_REVIEW.md)                           | Firefox source ZIP rebuild instructions for review.                                                                    |
 
 ## Reference Docs
 
