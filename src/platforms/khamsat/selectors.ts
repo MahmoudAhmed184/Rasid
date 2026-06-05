@@ -1,8 +1,17 @@
 const KHAMSAT_REQUEST_PATH_PATTERN = /\/community\/requests\/(\d+)/;
 
 export const KHAMSAT_SELECTORS = {
+    listing: {
+        rows: 'tr.forum_post',
+        requestLinks: ['.details-head a[href*="/community/requests/"]'],
+        detailsCell: '.details-td',
+        ownerLink: '.details-list a.user',
+        lastInteractionTime: '.details-list span[title]',
+    },
     project: {
         titleCandidates: ['h1', '.details-head', '.post-title', '.topic-title'],
+        sidebarContainers: ['#community_sidebar #sidebar', '#sidebar'],
+        sidebarOwnerLinks: ['#community_sidebar #sidebar a.sidebar_user', '#sidebar a.sidebar_user'],
         descriptionCandidates: [
             '.card-body > article.replace_urls',
             '.card-body .replace_urls',

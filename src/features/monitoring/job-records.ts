@@ -52,6 +52,8 @@ export function normalizeJobRecord(value: unknown): JobRecord | null {
         poster: typeof record.poster === 'string' ? record.poster : undefined,
         time: typeof record.time === 'string' ? record.time : undefined,
         postedAt: typeof record.postedAt === 'string' ? record.postedAt : undefined,
+        lastInteractionAt:
+            typeof record.lastInteractionAt === 'string' ? record.lastInteractionAt : undefined,
         bidsText: typeof record.bidsText === 'string' ? record.bidsText : undefined,
         category: typeof record.category === 'string' ? record.category : undefined,
         clientName: typeof record.clientName === 'string' ? record.clientName : undefined,

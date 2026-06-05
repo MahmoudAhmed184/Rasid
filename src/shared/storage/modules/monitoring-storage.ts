@@ -68,6 +68,8 @@ function resetDailyStats(stats: ExtensionStats): ExtensionStats {
 }
 
 export interface MonitoringStorageModule {
+    getUnseenJobs(snapshot: StoredState, jobs: JobRecord[]): JobRecord[];
+    rememberJobsWithoutStats(snapshot: StoredState, jobs: JobRecord[]): Promise<string[]>;
     ingestJobs(snapshot: StoredState, jobs: JobRecord[]): Promise<IngestedJobsResult>;
     mergeRecentJobs(jobs: JobRecord[]): Promise<JobRecord[]>;
     touchLastCheck(runtime: RuntimeState, reason: string): Promise<ExtensionStats>;
@@ -75,6 +77,24 @@ export interface MonitoringStorageModule {
 
 export function createMonitoringStorage(client: StorageClient): MonitoringStorageModule {
     return {
+        getUnseenJobs(snapshot, jobs) {
+            const seenJobs = new Set(snapshot.seenJobs);
+
+            return jobs.filter((job) => job.id && !seenJobs.has(getJobRecordKey(job)));
+        },
+        async rememberJobsWithoutStats(snapshot, jobs) {
+            const seenJobs = new Set(snapshot.seenJobs);
+
+            for (const job of jobs) {
+                if (job.id) {
+                    seenJobs.add(getJobRecordKey(job));
+                }
+            }
+
+            const nextSeenJobs = [...seenJobs].slice(-MAX_SEEN_JOBS);
+            await client.set({ [STORAGE_FIELDS.seenJobs]: nextSeenJobs });
+            return nextSeenJobs;
+        },
         async ingestJobs(snapshot, jobs) {
             const seenJobs = new Set(snapshot.seenJobs);
             const newJobs: JobRecord[] = [];

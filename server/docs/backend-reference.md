@@ -307,6 +307,10 @@ Listening addresses for local development.
   delay between polling cycles
 - `MaxSeenJobs`
   max number of cached `platform:id` keys kept in memory
+- `MaxConcurrentEnrichmentsPerPlatform`
+  max parallel detail-page enrichments per platform
+- `KhamsatPublishFreshnessHours`
+  publish-date freshness window used to suppress stale Khamsat requests after detail hydration
 
 ## Local Development
 

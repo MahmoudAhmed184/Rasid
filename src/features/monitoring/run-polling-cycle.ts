@@ -12,6 +12,25 @@ import type { JobRecord } from '../../entities/job/model';
 import type { PlatformMonitoringAdapter } from '../../platforms/contracts';
 import type { PlatformId } from '../../platforms/platform-ids';
 import { getJobRecordKey, resolveJobPlatformId } from '../../entities/job/identity';
+import { parseJobPostedAt } from '../../shared/parsing/arabic-date';
+
+export const KHAMSAT_PUBLISH_FRESHNESS_HOURS = 48;
+const KHAMSAT_PUBLISH_FRESHNESS_WINDOW_MS = KHAMSAT_PUBLISH_FRESHNESS_HOURS * 60 * 60 * 1000;
+
+function classifyKhamsatFreshness(
+    job: Readonly<JobRecord>,
+    now: Date
+): 'fresh' | 'stale' | 'retry' {
+    const postedAt = parseJobPostedAt(job.postedAt);
+
+    if (!postedAt) {
+        return 'retry';
+    }
+
+    return postedAt.getTime() >= now.getTime() - KHAMSAT_PUBLISH_FRESHNESS_WINDOW_MS
+        ? 'fresh'
+        : 'stale';
+}
 
 export async function runPollingCycle(options: {
     storage: ExtensionStorage;
@@ -91,7 +110,48 @@ export async function runPollingCycle(options: {
         );
     }
 
-    const ingested = await storage.ingestJobs([...feedJobs.values()]);
+    const monitoringById = new Map<PlatformId, PlatformMonitoringAdapter>(
+        activeMonitoring.map((adapter) => [adapter.id, adapter])
+    );
+    const feedJobList = [...feedJobs.values()];
+    const eligibleJobs = new Map(feedJobList.map((job) => [getJobRecordKey(job), job]));
+    const staleKhamsatJobs: JobRecord[] = [];
+    const unseenCandidates = await storage.getUnseenJobs(feedJobList);
+    const freshnessNow = new Date(attemptedAt);
+
+    for (const job of unseenCandidates) {
+        if (resolveJobPlatformId(job) !== 'khamsat') {
+            continue;
+        }
+
+        const jobKey = getJobRecordKey(job);
+        const monitoringAdapter = monitoringById.get('khamsat');
+        const hydrated = monitoringAdapter ? await hydratePlatformJob(monitoringAdapter, job) : job;
+        const freshness = classifyKhamsatFreshness(hydrated, freshnessNow);
+
+        if (freshness === 'fresh') {
+            eligibleJobs.set(jobKey, hydrated);
+            continue;
+        }
+
+        eligibleJobs.delete(jobKey);
+
+        if (freshness === 'stale') {
+            staleKhamsatJobs.push(hydrated);
+            continue;
+        }
+
+        monitoringErrors.khamsat = {
+            message: `Khamsat: missing publish date after detail hydration for job ${job.id}.`,
+            failedAt: attemptedAt,
+        };
+    }
+
+    if (staleKhamsatJobs.length > 0) {
+        await storage.rememberJobsWithoutStats(staleKhamsatJobs);
+    }
+
+    const ingested = await storage.ingestJobs([...eligibleJobs.values()]);
     await storage.patchRuntimeState({
         lastPollingReason: reason,
         lastMonitoringAttemptAt: attemptedAt,
@@ -100,13 +160,13 @@ export async function runPollingCycle(options: {
     });
 
     const hydratedJobs: JobRecord[] = [];
-    const monitoringById = new Map<PlatformId, PlatformMonitoringAdapter>(
-        activeMonitoring.map((adapter) => [adapter.id, adapter])
-    );
 
     for (const job of ingested.newJobs) {
         const monitoringAdapter = monitoringById.get(resolveJobPlatformId(job));
-        const hydrated = monitoringAdapter ? await hydratePlatformJob(monitoringAdapter, job) : job;
+        const hydrated =
+            resolveJobPlatformId(job) === 'khamsat' || !monitoringAdapter
+                ? job
+                : await hydratePlatformJob(monitoringAdapter, job);
 
         if (applyJobFilters(hydrated, settings)) {
             hydratedJobs.push(hydrated);

@@ -53,7 +53,8 @@ Relevant sections:
   "InitialDelaySeconds": 5,
   "CheckIntervalSeconds": 60,
   "MaxSeenJobs": 500,
-  "MaxConcurrentEnrichmentsPerPlatform": 4
+  "MaxConcurrentEnrichmentsPerPlatform": 4,
+  "KhamsatPublishFreshnessHours": 48
 },
 "Cors": {
   "Mode": "AllowAll",

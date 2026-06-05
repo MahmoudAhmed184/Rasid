@@ -47,6 +47,8 @@ export interface ExtensionStorage {
     getRuntimeState(): Promise<RuntimeState>;
     patchRuntimeState(patch: RuntimeStatePatch): Promise<RuntimeState>;
     setSignalRState(state: SignalRState): Promise<SignalRState>;
+    getUnseenJobs(jobs: JobRecord[]): Promise<JobRecord[]>;
+    rememberJobsWithoutStats(jobs: JobRecord[]): Promise<string[]>;
     ingestJobs(jobs: JobRecord[]): Promise<IngestedJobsResult>;
     mergeRecentJobs(jobs: JobRecord[]): Promise<JobRecord[]>;
     touchLastCheck(reason: string): Promise<ExtensionStats>;
@@ -131,6 +133,16 @@ export function createExtensionStorage(
         return monitoringStorage.ingestJobs(snapshot, jobs);
     }
 
+    async function getUnseenJobs(jobs: JobRecord[]): Promise<JobRecord[]> {
+        const snapshot = await getSnapshot();
+        return monitoringStorage.getUnseenJobs(snapshot, jobs);
+    }
+
+    async function rememberJobsWithoutStats(jobs: JobRecord[]): Promise<string[]> {
+        const snapshot = await getSnapshot();
+        return monitoringStorage.rememberJobsWithoutStats(snapshot, jobs);
+    }
+
     async function mergeRecentJobs(jobs: JobRecord[]): Promise<JobRecord[]> {
         return monitoringStorage.mergeRecentJobs(jobs);
     }
@@ -156,6 +168,8 @@ export function createExtensionStorage(
         getRuntimeState: () => runtimeStorage.getRuntimeState(),
         patchRuntimeState: (patch) => runtimeStorage.patchRuntimeState(patch),
         setSignalRState: (state) => runtimeStorage.setSignalRState(state),
+        getUnseenJobs,
+        rememberJobsWithoutStats,
         ingestJobs,
         mergeRecentJobs,
         touchLastCheck,

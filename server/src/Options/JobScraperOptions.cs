@@ -8,4 +8,5 @@ public sealed class JobScraperOptions
     public int CheckIntervalSeconds { get; set; } = 60;
     public int MaxSeenJobs { get; set; } = 500;
     public int MaxConcurrentEnrichmentsPerPlatform { get; set; } = 4;
+    public int KhamsatPublishFreshnessHours { get; set; } = 48;
 }
