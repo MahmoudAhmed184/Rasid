@@ -40,11 +40,11 @@ function normalizeNotificationUrl(value: string): string | null {
 function getNotificationIcon(platformId: string | undefined): string {
     switch (platformId) {
         case 'mostaql':
-            return browser.runtime.getURL('/Platforms/Mostql.png');
+            return browser.runtime.getURL('/platforms/Mostql.png');
         case 'khamsat':
-            return browser.runtime.getURL('/Platforms/Khamsat.png');
+            return browser.runtime.getURL('/platforms/Khamsat.png');
         case 'nafezly':
-            return browser.runtime.getURL('/Platforms/Nafezly.png');
+            return browser.runtime.getURL('/platforms/Nafezly.png');
         default:
             return browser.runtime.getURL('/icons/icon128.png');
     }

@@ -164,9 +164,9 @@ Current files:
 - `public/icons/icon16.png`
 - `public/icons/icon48.png`
 - `public/icons/icon128.png`
-- `public/Platforms/Mostql.png`
-- `public/Platforms/Khamsat.png`
-- `public/Platforms/Nafezly.png`
+- `public/platforms/Mostql.png`
+- `public/platforms/Khamsat.png`
+- `public/platforms/Nafezly.png`
 
 Runtime role: manifest icons, popup/dashboard icons, fallback notification icon, and per-platform notification icons.
 

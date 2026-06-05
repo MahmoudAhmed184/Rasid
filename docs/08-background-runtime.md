@@ -78,7 +78,7 @@ The manager schedules reconnects with bounded exponential delay capped at 15 min
 Notifications:
 
 - are created through `browser.notifications.create`
-- use platform icons from `/Platforms/Mostql.png`, `/Platforms/Khamsat.png`, and `/Platforms/Nafezly.png`, falling back to `/icons/icon128.png`
+- use platform icons from `/platforms/Mostql.png`, `/platforms/Khamsat.png`, and `/platforms/Nafezly.png`, falling back to `/icons/icon128.png`
 - store click payloads before notification creation
 - remove payloads when notifications close
 - consume payloads on click

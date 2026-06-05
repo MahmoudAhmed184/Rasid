@@ -359,15 +359,15 @@ Files:
 - `public/icons/icon48.png`
 - `public/icons/icon128.png`
 
-### `public/Platforms/`
+### `public/platforms/`
 
 Purpose: per-platform notification icon assets.
 
 Files:
 
-- `public/Platforms/Mostql.png`
-- `public/Platforms/Khamsat.png`
-- `public/Platforms/Nafezly.png`
+- `public/platforms/Mostql.png`
+- `public/platforms/Khamsat.png`
+- `public/platforms/Nafezly.png`
 
 Related docs:
 

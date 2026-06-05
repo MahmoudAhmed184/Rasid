@@ -94,7 +94,7 @@ describe('notification service', () => {
         expect(create).toHaveBeenCalledOnce();
         expect(create.mock.calls[0]?.[1]).toEqual({
             type: 'basic',
-            iconUrl: fakeBrowser.runtime.getURL('/Platforms/Mostql.png'),
+            iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
             title: 'مشروع جديد: فرصة فايرفوكس',
             message: expect.stringContaining('وصف مناسب لاختبار إشعار فايرفوكس'),
         });
@@ -117,7 +117,7 @@ describe('notification service', () => {
 
         expect(create.mock.calls[0]?.[1]).toMatchObject({
             type: 'basic',
-            iconUrl: fakeBrowser.runtime.getURL('/Platforms/Mostql.png'),
+            iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
             title: 'مشروع جديد: فرصة كروم',
             contextMessage: 'Frelancia - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
