@@ -15,10 +15,7 @@ const hostPermissions = [
     'http://localhost/*',
 ] as const;
 
-const chatBridgeHostPermissions = [
-    'https://chatgpt.com/*',
-    'https://chat.openai.com/*',
-] as const;
+const chatBridgeHostPermissions = ['https://chatgpt.com/*', 'https://chat.openai.com/*'] as const;
 
 const unsafeDirectAiHostPermissions = [
     'https://api.openai.com/*',

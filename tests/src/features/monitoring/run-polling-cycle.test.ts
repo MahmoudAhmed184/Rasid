@@ -391,8 +391,7 @@ describe('polling cycle orchestration', () => {
             expect.objectContaining({
                 lastMonitoringErrors: {
                     khamsat: expect.objectContaining({
-                        message:
-                            'Khamsat: missing publish date after detail hydration for job 8.',
+                        message: 'Khamsat: missing publish date after detail hydration for job 8.',
                     }),
                 },
             })

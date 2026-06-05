@@ -81,8 +81,7 @@ export default defineConfig(
             'no-restricted-syntax': [
                 'error',
                 {
-                    selector:
-                        "AssignmentExpression[left.property.name=/^(innerHTML|outerHTML)$/]",
+                    selector: 'AssignmentExpression[left.property.name=/^(innerHTML|outerHTML)$/]',
                     message: 'Avoid assigning HTML strings directly; build DOM nodes instead.',
                 },
                 {

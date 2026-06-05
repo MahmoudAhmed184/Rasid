@@ -2,11 +2,11 @@
 
 ## Install And Build
 
-| Symptom                                          | Cause to check                       | Action                                                                                 |
-| ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| TypeScript cannot find WXT types                 | `.wxt/` missing                      | Run `npm ci` or `npm run postinstall`.                                                 |
-| Firefox lint fails because source dir is missing | `dist/firefox-mv3` not built         | Run `npm run build:firefox`.                                                           |
-| Build emits Firefox offscreen skip warning       | Chrome-only offscreen entrypoint     | Expected because offscreen is Chrome-only in this repo.                                |
+| Symptom                                          | Cause to check                                                | Action                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| TypeScript cannot find WXT types                 | `.wxt/` missing                                               | Run `npm ci` or `npm run postinstall`.                                                  |
+| Firefox lint fails because source dir is missing | `dist/firefox-mv3` not built                                  | Run `npm run build:firefox`.                                                            |
+| Build emits Firefox offscreen skip warning       | Chrome-only offscreen entrypoint                              | Expected because offscreen is Chrome-only in this repo.                                 |
 | Prettier reports server Markdown                 | `server/` is not ignored wholesale by current Prettier config | Format or fix the reported Markdown; explicit docs checks may include `server/**/*.md`. |
 
 ## Runtime

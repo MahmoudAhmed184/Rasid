@@ -11,7 +11,10 @@ export const KHAMSAT_SELECTORS = {
     project: {
         titleCandidates: ['h1', '.details-head', '.post-title', '.topic-title'],
         sidebarContainers: ['#community_sidebar #sidebar', '#sidebar'],
-        sidebarOwnerLinks: ['#community_sidebar #sidebar a.sidebar_user', '#sidebar a.sidebar_user'],
+        sidebarOwnerLinks: [
+            '#community_sidebar #sidebar a.sidebar_user',
+            '#sidebar a.sidebar_user',
+        ],
         descriptionCandidates: [
             '.card-body > article.replace_urls',
             '.card-body .replace_urls',

@@ -16,7 +16,9 @@ const bridgeEntrypointMocks = vi.hoisted(() => {
         reset() {
             createChatGptBridgeRepositories.mockReset().mockReturnValue(repositories);
             initChatgptBridge.mockReset();
-            defineUnlistedScript.mockReset().mockImplementation((definition: unknown) => definition);
+            defineUnlistedScript
+                .mockReset()
+                .mockImplementation((definition: unknown) => definition);
         },
     };
 });

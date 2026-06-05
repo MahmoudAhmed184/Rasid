@@ -22,7 +22,10 @@ export type JobBatchResult =
           readonly source: JobBatchSource;
           readonly reason: JobBatchFailedReason;
           readonly totalChecked: number;
-          readonly monitoringErrors: Record<string, { readonly message: string; readonly failedAt: string }>;
+          readonly monitoringErrors: Record<
+              string,
+              { readonly message: string; readonly failedAt: string }
+          >;
       }
     | {
           readonly kind: 'suppressed';

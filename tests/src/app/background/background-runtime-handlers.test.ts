@@ -198,7 +198,9 @@ describe('background runtime handlers', () => {
             url: 'https://chatgpt.com/',
         } as Browser.tabs.Tab);
         const create = vi.spyOn(fakeBrowser.tabs, 'create');
-        const executeScript = vi.spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const executeScript = vi
+            .spyOn(fakeBrowser.scripting, 'executeScript')
+            .mockResolvedValue([]);
         const deps = createDeps();
         const handlers = createBackgroundRuntimeHandlers(deps as never);
 

@@ -1,7 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
 
 :root {
-    --font-ui: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+    --font-ui:
+        'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
     --primary: #2386c8;
     --primary-hover: #1c6da0;
     --primary-strong: #155278;
@@ -409,7 +410,6 @@ button {
     color: #92400e;
     text-decoration: underline;
 }
-
 
 .popup-footer {
     display: grid;

@@ -142,10 +142,9 @@ function isFiniteNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value);
 }
 
-function isMonitoringErrors(value: unknown): value is Record<
-    string,
-    { readonly message: string; readonly failedAt: string }
-> {
+function isMonitoringErrors(
+    value: unknown
+): value is Record<string, { readonly message: string; readonly failedAt: string }> {
     if (!isRecord(value)) {
         return false;
     }
@@ -443,9 +442,7 @@ const BACKGROUND_REQUEST_VALIDATORS: {
         isRecord(value) && hasOnlyAction(value, 'debugFetch'),
     generateProposal: (value): value is BackgroundMessageRequestMap['generateProposal'] =>
         isRecord(value) && isGenerateProposalMessage(value),
-    openChatBridgePrompt: (
-        value
-    ): value is BackgroundMessageRequestMap['openChatBridgePrompt'] =>
+    openChatBridgePrompt: (value): value is BackgroundMessageRequestMap['openChatBridgePrompt'] =>
         isRecord(value) && isOpenChatBridgePromptMessage(value),
     downloadZip: (value): value is BackgroundMessageRequestMap['downloadZip'] =>
         isRecord(value) && isDownloadZipMessage(value),

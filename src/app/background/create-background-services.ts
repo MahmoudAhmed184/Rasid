@@ -62,9 +62,8 @@ export function createBackgroundApp(): BackgroundApp {
         ...(import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true'
             ? {
                   loadProviders: async () => {
-                      const { createAiProviderRegistry } = await import(
-                          '../../entities/ai/provider-registry'
-                      );
+                      const { createAiProviderRegistry } =
+                          await import('../../entities/ai/provider-registry');
 
                       return createAiProviderRegistry();
                   },

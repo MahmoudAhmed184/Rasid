@@ -159,7 +159,10 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         unsafeDirectControlsRendered = true;
 
         const modeSelect = getField('aiExecutionMode');
-        if (modeSelect instanceof HTMLSelectElement && !modeSelect.querySelector('[value="direct"]')) {
+        if (
+            modeSelect instanceof HTMLSelectElement &&
+            !modeSelect.querySelector('[value="direct"]')
+        ) {
             const directOption = root.createElement('option');
 
             directOption.value = 'direct';
@@ -488,9 +491,9 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             development: getFieldValue('cat-development') !== false,
             ai: getFieldValue('cat-ai') !== false,
             all: getFieldValue('cat-all') !== false,
-            aiExecutionMode: (
-                unsafeDirectAiEnabled ? String(getFieldValue('aiExecutionMode') ?? 'bridge') : 'bridge'
-            ) as ExtensionSettings['aiExecutionMode'],
+            aiExecutionMode: (unsafeDirectAiEnabled
+                ? String(getFieldValue('aiExecutionMode') ?? 'bridge')
+                : 'bridge') as ExtensionSettings['aiExecutionMode'],
             aiProvider: String(
                 getFieldValue('aiProvider') ?? 'openai'
             ) as ExtensionSettings['aiProvider'],
@@ -518,9 +521,8 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             return true;
         }
 
-        const { requestAiProviderHostPermission } = await import(
-            '../../features/proposals/ai-provider-host-permissions'
-        );
+        const { requestAiProviderHostPermission } =
+            await import('../../features/proposals/ai-provider-host-permissions');
         const granted = await requestAiProviderHostPermission(settings.aiProvider);
 
         if (!granted) {

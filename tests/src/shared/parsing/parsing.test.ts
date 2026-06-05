@@ -61,9 +61,7 @@ describe('shared parsing helpers', () => {
         expect(parseJobPostedAt('05/06/2026 08:30 GMT')?.toISOString()).toBe(
             '2026-06-05T08:30:00.000Z'
         );
-        expect(parseJobPostedAt('05/06/2026 GMT')?.toISOString()).toBe(
-            '2026-06-05T00:00:00.000Z'
-        );
+        expect(parseJobPostedAt('05/06/2026 GMT')?.toISOString()).toBe('2026-06-05T00:00:00.000Z');
         expect(parseJobPostedAt('31/02/2026 08:30 GMT')).toBeNull();
     });
 });

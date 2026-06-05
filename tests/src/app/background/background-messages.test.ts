@@ -683,9 +683,7 @@ describe('background message contracts', () => {
                 context: validContext,
             })
         ).resolves.toEqual({ success: false, error: 'provider unavailable' });
-        await expect(
-            requestOpenChatBridgePrompt('Draft', 'https://chatgpt.com')
-        ).resolves.toEqual({
+        await expect(requestOpenChatBridgePrompt('Draft', 'https://chatgpt.com')).resolves.toEqual({
             success: true,
             tabId: 11,
             tabStatus: 'created',

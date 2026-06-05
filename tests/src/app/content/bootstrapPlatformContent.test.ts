@@ -311,8 +311,9 @@ describe('platform content bootstrap', () => {
             matches: ['https://mostaql.com/*'],
             isContextValid: () => true,
             matchPage: () => ({ kind: 'project', key: 'project:1', projectId: '1' }) as const,
-            getObservationTargets: ({ document }) =>
-                [...document.querySelectorAll<Element>('[data-observe-target]')],
+            getObservationTargets: ({ document }) => [
+                ...document.querySelectorAll<Element>('[data-observe-target]'),
+            ],
             extractProposalSource: () => null,
             ui: [],
             applyProposalAutofill: async () => ({ kind: 'applied' as const }),

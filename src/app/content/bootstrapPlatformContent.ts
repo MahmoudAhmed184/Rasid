@@ -31,8 +31,7 @@ export function bootstrapPlatformContent(options: BootstrapPlatformContentOption
     const routePollIntervalMs = options.routePollIntervalMs ?? DEFAULT_ROUTE_POLL_INTERVAL_MS;
     const observationDiscoveryWindowMs =
         options.observationDiscoveryWindowMs ?? DEFAULT_OBSERVATION_DISCOVERY_WINDOW_MS;
-    const deferredRetryDelaysMs =
-        options.deferredRetryDelaysMs ?? DEFAULT_DEFERRED_RETRY_DELAYS_MS;
+    const deferredRetryDelaysMs = options.deferredRetryDelaysMs ?? DEFAULT_DEFERRED_RETRY_DELAYS_MS;
 
     let activePageKey = '';
     let observerStarted = false;

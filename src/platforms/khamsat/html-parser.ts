@@ -46,7 +46,10 @@ function findKhamsatSidebarPublishDate(doc: Document): string {
                 continue;
             }
 
-            return normalizeText(titledValue.getAttribute('title')) || normalizeText(titledValue.textContent);
+            return (
+                normalizeText(titledValue.getAttribute('title')) ||
+                normalizeText(titledValue.textContent)
+            );
         }
     }
 
@@ -100,15 +103,14 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
 export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null {
     const doc = parseDocument(html);
     const description =
-        KHAMSAT_SELECTORS.project.descriptionCandidates
-            .flatMap((selector) => {
-                const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
-                    .map((element) => normalizeText(element.textContent))
-                    .filter(Boolean);
+        KHAMSAT_SELECTORS.project.descriptionCandidates.flatMap((selector) => {
+            const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
+                .map((element) => normalizeText(element.textContent))
+                .filter(Boolean);
 
-                const detailedCandidate = texts.find((text) => text.length >= 80);
-                return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
-            })[0] ?? '';
+            const detailedCandidate = texts.find((text) => text.length >= 80);
+            return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
+        })[0] ?? '';
     const clientName = normalizeText(
         queryFirst<HTMLElement>(doc, KHAMSAT_SELECTORS.project.sidebarOwnerLinks)?.textContent ??
             queryFirst<HTMLElement>(doc, KHAMSAT_SELECTORS.project.authorCandidates)?.textContent
@@ -121,10 +123,7 @@ export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null
         findKhamsatSidebarPublishDate(doc) ||
         normalizeText(publishDateEl?.getAttribute('datetime') ?? publishDateEl?.textContent);
 
-    const attachments = queryAll<HTMLAnchorElement>(
-        doc,
-        KHAMSAT_SELECTORS.project.attachmentLinks
-    )
+    const attachments = queryAll<HTMLAnchorElement>(doc, KHAMSAT_SELECTORS.project.attachmentLinks)
         .map((link) => {
             const url = resolveKhamsatUrl(link.getAttribute('href'));
             const name = normalizeText(link.textContent) || normalizeText(url?.split('/').at(-1));
