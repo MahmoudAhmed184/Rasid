@@ -1,0 +1,139 @@
+name: Extension Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: Package version to release, without the v prefix.
+                required: true
+                default: '1.0.0'
+            create_release:
+                description: Create a draft GitHub Release after packaging.
+                required: true
+                type: boolean
+                default: true
+            generate_attestations:
+                description: Generate GitHub artifact attestations for release ZIPs.
+                required: true
+                type: boolean
+                default: false
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Validate And Package
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        outputs:
+            artifact_name: ${{ steps.version.outputs.artifact_name }}
+            tag: ${{ steps.version.outputs.tag }}
+            version: ${{ steps.version.outputs.version }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Set up Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Install Playwright browsers
+              run: npx playwright install --with-deps chromium firefox
+
+            - name: Validate requested version
+              id: version
+              env:
+                  REQUESTED_VERSION: ${{ inputs.version }}
+              run: |
+                  PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+                  if [ "$PACKAGE_VERSION" != "$REQUESTED_VERSION" ]; then
+                    echo "Requested version $REQUESTED_VERSION does not match package.json version $PACKAGE_VERSION" >&2
+                    exit 1
+                  fi
+                  echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "tag=v$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "artifact_name=frelancia-v$PACKAGE_VERSION-release-assets" >> "$GITHUB_OUTPUT"
+
+            - name: Run release checks
+              run: npm run release:check
+
+            - name: Package release ZIPs
+              run: npm run release:zip
+
+            - name: Generate release evidence
+              run: npm run release:evidence -- "$REQUESTED_VERSION"
+              env:
+                  REQUESTED_VERSION: ${{ steps.version.outputs.version }}
+
+            - name: Extract release notes
+              run: npm run release:notes -- "$REQUESTED_VERSION" .output/release-notes.md
+              env:
+                  REQUESTED_VERSION: ${{ steps.version.outputs.version }}
+
+            - name: Upload release assets
+              uses: actions/upload-artifact@v7
+              with:
+                  name: ${{ steps.version.outputs.artifact_name }}
+                  path: .output/
+                  if-no-files-found: error
+                  compression-level: 0
+
+    release:
+        name: Draft GitHub Release
+        runs-on: ubuntu-latest
+        needs: build
+        if: ${{ inputs.create_release }}
+        permissions:
+            contents: write
+        steps:
+            - name: Download release assets
+              uses: actions/download-artifact@v8
+              with:
+                  name: ${{ needs.build.outputs.artifact_name }}
+                  path: release-assets
+
+            - name: Create draft release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ needs.build.outputs.tag }}
+                  RELEASE_VERSION: ${{ needs.build.outputs.version }}
+              run: |
+                  gh release create "$RELEASE_TAG" \
+                    "release-assets/frelancia-v$RELEASE_VERSION-chrome-mv3.zip" \
+                    "release-assets/frelancia-v$RELEASE_VERSION-firefox-mv3.zip" \
+                    "release-assets/frelancia-v$RELEASE_VERSION-firefox-sources.zip" \
+                    "release-assets/SHA256SUMS.txt" \
+                    "release-assets/release-evidence.json" \
+                    --draft \
+                    --target "$GITHUB_SHA" \
+                    --title "Frelancia $RELEASE_TAG" \
+                    --notes-file release-assets/release-notes.md
+
+    attest:
+        name: Attest Release ZIPs
+        runs-on: ubuntu-latest
+        needs: build
+        if: ${{ inputs.generate_attestations }}
+        permissions:
+            contents: read
+            id-token: write
+            attestations: write
+            artifact-metadata: write
+        steps:
+            - name: Download release assets
+              uses: actions/download-artifact@v8
+              with:
+                  name: ${{ needs.build.outputs.artifact_name }}
+                  path: release-assets
+
+            - name: Generate artifact attestations
+              uses: actions/attest@v4
+              with:
+                  subject-path: release-assets/*.zip
