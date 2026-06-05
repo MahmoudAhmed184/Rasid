@@ -11,23 +11,25 @@
 
 ## Runtime
 
-| Symptom                          | Check                                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| No notifications                 | Browser notification permission, dashboard notification state, quiet hours, filters, and platform toggles.  |
-| Manual check returns no jobs     | Popup diagnostics and dashboard runtime monitoring errors.                                                  |
-| Realtime never connects          | Default backend reachability and `notificationMode`; packaged build does not accept custom SignalR origins. |
-| Polling only mode stays active   | `notificationMode === "polling"` or SignalR fallback state.                                                 |
-| Notification click does not open | Stored notification payload may be expired, consumed, or URL may fail supported HTTPS host validation.      |
+| Symptom                          | Check                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| No notifications                 | Browser notification permission, dashboard notification state, quiet hours, filters, and platform toggles.     |
+| Manual check returns no jobs     | Popup diagnostics and dashboard runtime monitoring errors.                                                     |
+| Realtime never connects          | Default backend reachability and `notificationMode`; current settings always resolve the packaged backend URL. |
+| Polling only mode stays active   | `notificationMode === "polling"` or SignalR fallback state.                                                    |
+| Notification click does not open | Stored notification payload may be expired, consumed, or URL may fail supported HTTPS host validation.         |
 
 ## AI And Bridge
 
-| Symptom                                           | Check                                                                                              |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Direct mode says API key required                 | Dashboard direct-mode API key field and session storage lifetime.                                  |
-| Direct mode says model required                   | Dashboard model field.                                                                             |
-| Provider returns authentication/rate/safety error | Provider key, model, quota, and provider policy.                                                   |
-| Bridge prompt does not appear                     | ChatGPT URL host, prompt expiry, content script match, and whether the ChatGPT input is available. |
-| Bridge prompt appears but is not sent             | Expected current behavior; the extension does not click submit.                                    |
+| Symptom                                           | Check                                                                                                |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Direct mode is unavailable                        | The build must include `WXT_ENABLE_UNSAFE_DIRECT_AI=true`; normal builds force bridge mode.          |
+| Direct mode says API key required                 | Dashboard direct-mode API key field and session storage lifetime.                                    |
+| Direct mode says model required                   | Dashboard model field.                                                                               |
+| Direct mode requires host permission              | Re-enable direct mode so the dashboard can request the selected provider host permission.            |
+| Provider returns authentication/rate/safety error | Provider key, model, quota, and provider policy.                                                     |
+| Bridge prompt does not appear                     | ChatGPT URL host, optional host permission, injection status, prompt expiry, and input availability. |
+| Bridge prompt appears but is not sent             | Expected current behavior; the extension does not click submit.                                      |
 
 ## Content Scripts
 
@@ -60,7 +62,7 @@ Targeted scans:
 
 ```bash
 rg -n "mostaql|khamsat|nafezly" README.md docs src entrypoints wxt.config.ts
-rg -n "pendingChatGptPrompt|aiApiKeySecret|signalrServerUrl" src README.md PRIVACY.md docs
+rg -n "pendingChatGptPrompt|aiApiKeySecret|adminMessages|openChatBridgePrompt|WXT_ENABLE_UNSAFE_DIRECT_AI" src README.md PRIVACY.md docs
 ```
 
 Related docs:

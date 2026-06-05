@@ -1,6 +1,6 @@
 # Module Boundaries
 
-Rasid uses source ownership boundaries to keep browser entrypoints thin and platform-specific behavior isolated.
+Frelancia uses source ownership boundaries to keep browser entrypoints thin and platform-specific behavior isolated.
 
 ## Boundary Table
 
@@ -26,6 +26,7 @@ Current examples:
 
 - `entrypoints/background.ts` delegates to `createBackgroundApp()` and `registerBackgroundRuntimeMessageBus()`.
 - platform content entrypoints delegate to `bootstrapPlatformContent()` and `bootstrapPlatformAutofill()`.
+- `entrypoints/chatgpt-bridge.ts` defines an unlisted script and delegates prompt insertion to `initChatgptBridge()`.
 - popup/dashboard entrypoints only mount app controllers.
 
 ## Repository Surface Rule
@@ -34,7 +35,7 @@ Current examples:
 
 - `createBrowserRepositories()` for extension pages
 - `createPlatformContentRepositories()` for platform content scripts
-- `createChatGptBridgeRepositories()` for the bridge content script
+- `createChatGptBridgeRepositories()` for the injected ChatGPT bridge script
 
 Content scripts do not receive backup or settings repositories.
 

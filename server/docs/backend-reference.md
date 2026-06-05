@@ -2,17 +2,20 @@
 
 ## Overview
 
-This backend is the real-time monitoring server used by the Rasid extension. It does three things:
+This backend is the real-time monitoring server used by the Frelancia extension. It does four things:
 
 1. polls supported marketplace listing pages on a schedule
 2. enriches newly detected items when a detail page can be fetched
 3. broadcasts job batches to connected extension clients over SignalR
+4. broadcasts admin messages to connected extension clients over SignalR
 
 The project now builds and runs as `Rasid.Server`, and the runtime supports:
 
 - `mostaql`
 - `khamsat`
 - `nafezly`
+
+The backend targets .NET 10. The repository root `global.json` pins SDK `10.0.300` with `latestFeature` roll-forward disabled for previews.
 
 ## Runtime Components
 
@@ -28,9 +31,11 @@ Bootstraps the app and registers:
 - the SignalR broadcaster
 - the per-platform scrapers
 - Swagger in development
-- two minimal endpoints:
+- minimal endpoints:
     - `GET /health`
     - `GET /api/providers`
+    - `POST /api/admin/broadcast`
+    - `GET /broadcast-tool`
 
 ### `src/Services/JobPollingWorker.cs`
 
@@ -152,6 +157,7 @@ Methods/events:
 
 - server -> client: `Connected`
 - server -> client: `NewJobsDetected`
+- server -> client: `AdminMessageReceived`
 - client -> server: `Ping`
 - server -> client: `Pong`
 
@@ -180,6 +186,39 @@ Important properties:
 - `clientName`
 - `clientType`
 - `tags`
+
+### `src/Models/AdminMessageRequest.cs`
+
+Request body for `POST /api/admin/broadcast`.
+
+Properties:
+
+- `Message`
+- `Url`
+
+### `src/Options/AdminOptions.cs`
+
+Admin broadcast token options.
+
+Important members:
+
+- `DefaultToken = "change-me-in-production"`
+- `Token`
+- `UsesDefaultToken`
+
+### `src/Options/OptionsValidation.cs`
+
+Startup validators for:
+
+- `JobScraperOptions`
+- `BrowserExtensionCorsOptions`
+- `AdminOptions`
+
+Production startup rejects permissive CORS with credentials and rejects the default admin token.
+
+### `src/Services/AdminTokenComparer.cs`
+
+Compares supplied and expected admin tokens by hashing both with SHA-256 and using `CryptographicOperations.FixedTimeEquals()`.
 
 ## Polling Lifecycle
 
@@ -247,6 +286,23 @@ Example shape:
 }
 ```
 
+### AdminMessageReceived
+
+Broadcast to all connected clients after an authorized admin broadcast request.
+
+Example shape:
+
+```json
+{
+    "id": "9ab7b912-8c0f-4c46-8f7b-cf36c5ed61bd",
+    "message": "سيتم تحديث النظام خلال 10 دقائق.",
+    "createdAt": "2026-04-08T12:00:00Z",
+    "url": "https://mostaql.com"
+}
+```
+
+The browser extension validates `id`, non-empty `message`, and `createdAt`, stores valid payloads under `adminMessages`, shows an admin notification, and renders unread messages in the popup.
+
 ## HTTP Endpoints
 
 ### `GET /health`
@@ -289,6 +345,50 @@ Example:
 ]
 ```
 
+### `POST /api/admin/broadcast`
+
+Administrative SignalR broadcast endpoint.
+
+Headers:
+
+- `X-Admin-Token`
+
+Request shape:
+
+```json
+{
+    "Message": "Maintenance starts in 10 minutes.",
+    "Url": "https://mostaql.com"
+}
+```
+
+Successful response shape is unchanged:
+
+```json
+{
+    "success": true,
+    "broadcasted": true
+}
+```
+
+Behavior:
+
+- invalid or missing tokens return `401`
+- blank messages return `400`
+- messages longer than 1000 characters return `400`
+- `Url`, when present, must be an absolute `http` or `https` URL
+- token comparison uses fixed-time hash comparison
+- the endpoint is rate limited to five accepted requests per minute
+- successful requests emit `AdminMessageReceived` with generated `id`, `message`, UTC `createdAt`, and optional `url`
+
+The browser extension still validates notification click URLs before opening them.
+
+### `GET /broadcast-tool`
+
+Development helper page for manually sending admin broadcasts. It is kept for the current backend workflow and uses the same `POST /api/admin/broadcast` endpoint.
+
+The form includes the example token value from source for local convenience. Replace the token and harden access before exposing this route.
+
 ## Configuration
 
 Local configuration lives in `src/appsettings.json`.
@@ -312,7 +412,33 @@ Listening addresses for local development.
 - `KhamsatPublishFreshnessHours`
   publish-date freshness window used to suppress stale Khamsat requests after detail hydration
 
+### `Cors`
+
+- `Mode`
+  `AllowAll` for local development, or `AllowConfiguredOrigins` for explicit origin checks
+- `AllowedOrigins`
+  exact allowed origins used when `Mode` is `AllowConfiguredOrigins`
+
+In `Production`, startup fails when `Mode` is `AllowAll` because credentials are enabled. Production deployments must use explicit origins.
+
+### `AdminToken`
+
+Shared secret required by `POST /api/admin/broadcast`.
+
+In `Production`, startup fails when `AdminToken` is missing, empty, or set to `change-me-in-production`.
+
 ## Local Development
+
+### SDK Setup
+
+Install .NET SDK `10.0.300`. On CachyOS/Arch-style systems:
+
+```bash
+sudo pacman -Syu dotnet-sdk-bin
+sudo pacman -Rns dotnet-sdk-8.0 aspnet-runtime-8.0 dotnet-runtime-8.0 dotnet-targeting-pack-8.0
+```
+
+Keep `dotnet-host`; it is required by .NET runtimes.
 
 From `src/`:
 
@@ -326,15 +452,34 @@ Useful local URLs:
 
 - `http://localhost:5000/health`
 - `http://localhost:5000/api/providers`
+- `http://localhost:5000/broadcast-tool`
+- `http://localhost:5000/api/admin/broadcast`
 - `http://localhost:5000/jobNotificationHub`
 
 Swagger UI is only enabled in development.
+
+### Validation Commands
+
+From the repository root:
+
+```bash
+dotnet restore server/src/Rasid.Server.sln
+dotnet list server/src/Rasid.Server.sln package --outdated
+dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
+dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
+```
+
+Current server tests cover health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior.
 
 ## Operational Notes
 
 - The seen-job cache is in memory only. A process restart clears it.
 - The baseline-on-first-scrape behavior avoids replaying the current first page after restart.
-- CORS is intentionally permissive for extension development and should be tightened before a public deployment.
+- CORS is intentionally permissive for extension development and fails fast in production unless explicit origins are configured.
+- Production admin broadcasts require a non-default `AdminToken`.
 - Khamsat listing pages are scrapeable with plain HTTP requests, but detail pages may be blocked by upstream WAF challenges.
 - The shared scraper base skips obvious Cloudflare or challenge pages instead of attempting to parse them as job HTML.
 

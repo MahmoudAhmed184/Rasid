@@ -10,10 +10,10 @@ Purpose: chooses bridge or direct proposal generation based on settings.
 
 Functions:
 
-| Function                                      | Purpose                                                             | Inputs                                                                             | Outputs                    | Side effects, errors, security                              |
-| --------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------------------- |
-| `generateProposal(deps, templateId, context)` | Resolves settings/template and dispatches to bridge or direct mode. | settings repository, template catalog, optional providers, template ID, AI context | `GenerateProposalResponse` | Reads settings/prompts; returns error for unknown template. |
-| `createProposalGenerator(deps)`               | Wraps `generateProposal()` in a service object.                     | dependencies                                                                       | `ProposalGenerator`        | No side effects until `generate()` is called.               |
+| Function                                      | Purpose                                                                    | Inputs                                                                             | Outputs                    | Side effects, errors, security                                                                                                                   |
+| --------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `generateProposal(deps, templateId, context)` | Resolves settings/template and dispatches to bridge or unsafe direct mode. | settings repository, template catalog, optional providers, template ID, AI context | `GenerateProposalResponse` | Reads settings/prompts; returns error for unknown template; falls back to bridge when unsafe direct flag or provider host permission is missing. |
+| `createProposalGenerator(deps)`               | Wraps `generateProposal()` in a service object.                            | dependencies                                                                       | `ProposalGenerator`        | No side effects until `generate()` is called.                                                                                                    |
 
 ### `src/features/proposals/generate-bridge-proposal.ts`
 
@@ -39,6 +39,27 @@ Functions:
 | Function                              | Purpose                                                                                | Inputs                                 | Outputs                                 | Side effects, errors, security                                                     |
 | ------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
 | `generateDirectProposal(deps, input)` | Validates direct settings, renders prompt, calls provider, returns generated proposal. | providers, settings, template, context | direct/error `GenerateProposalResponse` | Requires API key/model; catches provider errors through `formatAiProviderError()`. |
+
+### `src/features/proposals/ai-provider-host-permissions.ts`
+
+Purpose: unsafe direct-AI optional host permission helper.
+
+Exports:
+
+- `AI_PROVIDER_HOST_PERMISSIONS`
+- `isUnsafeDirectAiEnabled()`
+- `getAiProviderHostPermission()`
+- `hasAiProviderHostPermission()`
+- `requestAiProviderHostPermission()`
+
+Functions:
+
+| Function                                      | Purpose                                | Inputs      | Outputs            | Side effects, errors, security                            |
+| --------------------------------------------- | -------------------------------------- | ----------- | ------------------ | --------------------------------------------------------- |
+| `isUnsafeDirectAiEnabled()`                   | Checks unsafe direct-AI build flag.    | none        | boolean            | Reads `import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI`.      |
+| `getAiProviderHostPermission(providerId)`     | Maps provider to optional origin.      | provider ID | origin string      | Pure lookup.                                              |
+| `hasAiProviderHostPermission(providerId)`     | Checks granted optional provider host. | provider ID | `Promise<boolean>` | Uses `browser.permissions.contains`; false if absent.     |
+| `requestAiProviderHostPermission(providerId)` | Requests optional provider host.       | provider ID | `Promise<boolean>` | Uses `browser.permissions.request`; false if unsupported. |
 
 ## Prompt Templates
 

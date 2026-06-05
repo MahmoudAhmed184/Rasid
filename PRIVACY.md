@@ -27,6 +27,8 @@ The extension stores operational state in `browser.storage.local`. Direct-mode A
 - `khamsat_pending_autofill`
 - `nafezly_pending_autofill`
 - `notification:<notificationId>`
+- `download-cleanup:<downloadId>`
+- `adminMessages`
 
 ### AI API keys
 
@@ -41,6 +43,8 @@ The persistent `settings` object stores `settings.aiApiKey` as an empty string. 
 The backup export path normalizes and exports the stored settings snapshot plus non-secret proposal-state keys. Default backups do not include `settings.aiApiKey`, `aiApiKeySecret`, or `pendingChatGptPrompt`.
 
 Importing a backup does not import API keys or stale ChatGPT bridge prompts. Import clears the current session API key so the user must explicitly enter any direct-mode key again.
+
+Admin messages received from the backend are auxiliary state, not part of the persistent backup snapshot. The extension keeps at most 20 `adminMessages` records, deduplicates by message ID, marks them read when dismissed in the popup, and does not include them in backup exports.
 
 ## What Is Sent To Mostaql
 
@@ -69,6 +73,7 @@ Request properties:
 - credentials: `omit`
 - cache: `no-store`
 - referrerPolicy: `no-referrer`
+- timeout: 15 seconds
 - headers:
     - `Accept`
     - `Accept-Language`
@@ -84,6 +89,7 @@ Request properties:
 - method: `GET`
 - body: none
 - credentials: `omit`
+- timeout: 15 seconds
 
 ### Popup diagnostics request
 
@@ -157,6 +163,7 @@ Request properties:
 - credentials: `omit`
 - cache: `no-store`
 - referrerPolicy: `no-referrer`
+- timeout: 15 seconds
 
 ### Project/detail hydration requests
 
@@ -167,6 +174,9 @@ Request properties:
 - method: `GET`
 - body: none
 - credentials: `omit`
+- timeout: 15 seconds
+
+Khamsat detail hydration is also used to classify request freshness. Requests with a parsed publish date outside the configured 48-hour freshness window are remembered as seen without being published as new notifications.
 
 ### Page-side content features
 
@@ -197,6 +207,7 @@ Request properties:
 - credentials: `omit`
 - cache: `no-store`
 - referrerPolicy: `no-referrer`
+- timeout: 15 seconds
 
 ### Project/detail hydration requests
 
@@ -207,6 +218,7 @@ Request properties:
 - method: `GET`
 - body: none
 - credentials: `omit`
+- timeout: 15 seconds
 
 ### Page-side content features
 
@@ -214,13 +226,13 @@ The Nafezly content script reads the currently open project page DOM for trackin
 
 The current Nafezly content workflow does not add custom platform-origin network requests beyond the page the user already opened.
 
-## What Is Sent To The Custom SignalR Server
+## What Is Sent To The SignalR Server
 
 The extension connects to:
 
 - `https://rasid.runasp.net/jobNotificationHub`
 
-The store build uses only this packaged default backend origin. Custom backend origins require a custom build with matching host permissions.
+The packaged extension uses only this backend origin. Current settings do not persist an alternate SignalR URL.
 
 This connection is managed by:
 
@@ -238,15 +250,22 @@ Application-level behavior in this repository:
 
 - the extension opens the SignalR connection
 - the extension listens for the `NewJobsDetected` event
+- the extension listens for the `AdminMessageReceived` event
 - the extension receives job payloads from the hub
+- the extension receives admin-message payloads containing `id`, `message`, `createdAt`, and optional `url`
 
 Custom outbound hub method calls that send project details, prompts, or proposals back to the SignalR server are not implemented in the repository code.
 
+Received admin messages are stored locally under `adminMessages`, displayed in the popup until marked read, and may create a browser notification. If an admin message includes a URL, notification click handling opens it only when it normalizes to an allowed HTTPS marketplace host.
+
 ## What Is Sent To AI Providers
 
-AI provider requests are sent only when:
+AI provider requests are sent only in unsafe side builds when all of these are true:
 
+- the extension was built with `WXT_ENABLE_UNSAFE_DIRECT_AI=true`
 - `settings.aiExecutionMode === 'direct'`
+- the selected provider host permission has been granted
+- the model and session-scoped API key are present
 
 The prompt content is built from supported platform pages and may include:
 
@@ -335,8 +354,10 @@ Instead it:
 
 1. renders the proposal prompt locally
 2. stores that text as a short-lived one-shot `browser.storage.local.pendingChatGptPrompt` record with an expiry and target ChatGPT host
-3. opens the normalized ChatGPT URL, restricted to `https://chatgpt.com/` or `https://chat.openai.com/`
-4. injects the prompt into the DOM on:
+3. requests the optional ChatGPT host permission if it is not already granted
+4. opens or focuses the normalized ChatGPT URL, restricted to `https://chatgpt.com/` or `https://chat.openai.com/`
+5. injects the packaged `/chatgpt-bridge.js` script with `browser.scripting.executeScript`
+6. writes the prompt into the DOM on:
     - `https://chatgpt.com/*`
     - `https://chat.openai.com/*`
 
@@ -354,4 +375,5 @@ Based on the repository code:
 - it does not send user prompts or project payloads to the SignalR server
 - it does not auto-submit bridge-mode prompts to ChatGPT
 - it does not include AI API keys or pending bridge prompts in default backup exports
+- it does not include admin messages in default backup exports
 - it does not encrypt AI API keys before storing them in browser session storage

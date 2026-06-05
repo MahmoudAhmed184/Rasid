@@ -63,10 +63,12 @@ The manager schedules reconnects with bounded exponential delay capped at 15 min
 
 - exits early when the system is disabled
 - exits early when no active platform feeds are enabled
-- fetches feed HTML with challenge-page detection
+- fetches feed HTML with a 15-second timeout and challenge-page detection
+- records per-platform fetch failures in runtime state
 - parses listings through platform monitoring adapters
 - ingests and deduplicates jobs
-- hydrates new jobs
+- hydrates unseen Khamsat requests for publish-date freshness before ingestion
+- hydrates newly ingested jobs where possible
 - applies filters
 - merges recent jobs
 - publishes the batch
@@ -76,10 +78,13 @@ The manager schedules reconnects with bounded exponential delay capped at 15 min
 Notifications:
 
 - are created through `browser.notifications.create`
-- use `/icons/icon128.png`
+- use platform icons from `/Platforms/Mostql.png`, `/Platforms/Khamsat.png`, and `/Platforms/Nafezly.png`, falling back to `/icons/icon128.png`
 - store click payloads before notification creation
 - remove payloads when notifications close
 - consume payloads on click
+- omit rich fields and buttons on Firefox
+
+Admin broadcasts received through SignalR `AdminMessageReceived` are stored in `adminMessages`, trigger `showAdminMessageNotification()`, and appear in the popup unread banner.
 
 Audio:
 

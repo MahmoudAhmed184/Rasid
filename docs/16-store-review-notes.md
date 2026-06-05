@@ -7,15 +7,18 @@ This document summarizes review-facing behavior for Chrome Web Store and AMO pre
 Current WXT config generates:
 
 - MV3 manifest
-- extension name `Rasid | راصد`
+- extension name `Frelancia | فريلانسيا`
+- short name `Frelancia`
 - version `1.0.0`
 - Chrome minimum version `120`
 - Firefox strict minimum version `140.0`
 - Firefox Android strict minimum version `142.0`
+- Gecko ID `frelancia@mostaql-notifier`
 - action popup
 - dashboard/options page
 - background entrypoint
-- four content-script surfaces: ChatGPT bridge, Khamsat, Mostaql, Nafezly
+- three static content-script surfaces: Khamsat, Mostaql, Nafezly
+- unlisted ChatGPT bridge script injected on demand after optional host permission approval
 
 ## Permission Justification
 
@@ -24,12 +27,15 @@ Current WXT config generates:
 | `alarms`        | Required for polling and SignalR lifecycle in MV3.                                               |
 | `downloads`     | Required for generated ZIP exports.                                                              |
 | `notifications` | Core job notification feature.                                                                   |
+| `scripting`     | Required for on-demand ChatGPT bridge injection.                                                 |
 | `storage`       | Required for settings, jobs, prompts, runtime state, bridge/autofill state, and cleanup records. |
 | `offscreen`     | Chrome-only audio, DOM parsing, and Blob URL generation.                                         |
 
 ## Host Permission Justification
 
-Marketplace hosts are tied to shipped monitoring/content features. ChatGPT hosts are tied to the bridge content script. AI provider hosts are tied to direct mode. The default backend host is tied to SignalR realtime mode.
+Marketplace hosts are required and tied to shipped monitoring/content features. The default backend host is required for SignalR realtime mode and admin broadcasts. `http://localhost/*` is required for local extension/backend development.
+
+ChatGPT hosts are optional and requested when a user opens bridge mode. AI provider hosts are optional only in unsafe side builds where `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
 
 ## Remote Code And Generated Code
 

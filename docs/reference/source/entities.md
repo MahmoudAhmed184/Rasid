@@ -72,6 +72,8 @@ Functions/classes:
 
 Purpose: direct AI provider registry.
 
+Normal builds do not load this registry. It is imported by the background proposal generator only in unsafe side builds with `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
+
 Functions:
 
 | Function                                                  | Purpose                                      | Inputs                        | Outputs                     | Side effects, errors, security                   |
@@ -212,10 +214,9 @@ Constants:
 
 Functions:
 
-| Function                         | Purpose                                             | Inputs  | Outputs     | Side effects, errors, security       |
-| -------------------------------- | --------------------------------------------------- | ------- | ----------- | ------------------------------------ |
-| `resolveSignalRServerUrl(value)` | Resolves backend URL for current store build.       | unknown | default URL | Always returns packaged default URL. |
-| `redactSignalRUrl(value)`        | Returns origin/path without credentials/query/hash. | unknown | string      | Uses resolved default backend.       |
+| Function                  | Purpose                                             | Inputs     | Outputs | Side effects, errors, security                  |
+| ------------------------- | --------------------------------------------------- | ---------- | ------- | ----------------------------------------------- |
+| `redactSignalRUrl(value)` | Returns origin/path without credentials/query/hash. | URL string | string  | Falls back to packaged default on parse errors. |
 
 ## Settings, Monitoring, Prompt Entities
 

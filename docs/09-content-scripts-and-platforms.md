@@ -1,15 +1,16 @@
 # Content Scripts And Platforms
 
-The extension ships content scripts for Mostaql, Khamsat, Nafezly, and the ChatGPT bridge.
+The extension ships static content scripts for Mostaql, Khamsat, and Nafezly. The ChatGPT bridge is packaged as an unlisted script and injected on demand.
 
 ## Entrypoints
 
-| Entrypoint                              | Matches                                              | Adapter            |
-| --------------------------------------- | ---------------------------------------------------- | ------------------ |
-| `entrypoints/mostaql.content/index.ts`  | `https://mostaql.com/*`                              | `mostaqlAdapter`   |
-| `entrypoints/khamsat.content/index.ts`  | `https://khamsat.com/*`                              | `khamsatAdapter`   |
-| `entrypoints/nafezly.content/index.ts`  | `https://nafezly.com/*`                              | `nafezlyAdapter`   |
-| `entrypoints/chatgpt-bridge.content.ts` | `https://chatgpt.com/*`, `https://chat.openai.com/*` | ChatGPT bridge app |
+| Entrypoint                             | Matches                 | Adapter          |
+| -------------------------------------- | ----------------------- | ---------------- |
+| `entrypoints/mostaql.content/index.ts` | `https://mostaql.com/*` | `mostaqlAdapter` |
+| `entrypoints/khamsat.content/index.ts` | `https://khamsat.com/*` | `khamsatAdapter` |
+| `entrypoints/nafezly.content/index.ts` | `https://nafezly.com/*` | `nafezlyAdapter` |
+
+`entrypoints/chatgpt-bridge.ts` is not listed as a static manifest content script. The background runtime injects `/chatgpt-bridge.js` into `chatgpt.com` or `chat.openai.com` after optional host permission approval.
 
 ## Platform Adapter Contract
 

@@ -1,6 +1,6 @@
-# Contributing to Rasid
+# Contributing to Frelancia
 
-Rasid is a cross-browser Manifest V3 extension built with WXT and TypeScript. Contributions should keep the shipped extension coherent across source, generated manifests, privacy text, documentation, and store-review expectations.
+Frelancia is a cross-browser Manifest V3 extension built with WXT and TypeScript. Contributions should keep the shipped extension coherent across source, generated manifests, privacy text, documentation, and store-review expectations.
 
 ## Before You Start
 
@@ -11,13 +11,13 @@ Rasid is a cross-browser Manifest V3 extension built with WXT and TypeScript. Co
 
 ## Current Release Scope
 
-| Area                | Current scope                                                              |
-| ------------------- | -------------------------------------------------------------------------- |
-| Browser targets     | Chrome/Chromium MV3 and Firefox MV3                                        |
-| Supported platforms | Mostaql, Khamsat, Nafezly                                                  |
-| AI modes            | Direct OpenAI/Gemini/Claude requests and user-mediated ChatGPT bridge mode |
-| Realtime backend    | Default SignalR endpoint configured in source                              |
-| Generated output    | `.wxt/` and `dist/` are generated and should not be hand-edited            |
+| Area                | Current scope                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Browser targets     | Chrome/Chromium MV3 and Firefox MV3                                                                         |
+| Supported platforms | Mostaql, Khamsat, Nafezly                                                                                   |
+| AI modes            | Bridge-first ChatGPT workflow; unsafe direct AI only in side builds with `WXT_ENABLE_UNSAFE_DIRECT_AI=true` |
+| Realtime backend    | Default SignalR endpoint configured in source plus admin broadcast reception                                |
+| Generated output    | `.wxt/` and `dist/` are generated and should not be hand-edited                                             |
 
 Any change that expands platform support, host permissions, AI destinations, storage keys, or browser permissions must update source, generated-manifest validation notes, README, privacy text, store-review docs, and relevant source-reference docs together.
 
@@ -86,7 +86,7 @@ Update documentation in the same PR when changing:
 - content scripts or generated manifest behavior
 - storage keys, backup/import/export behavior, or secret handling
 - AI provider behavior, prompt variables, or ChatGPT bridge behavior
-- SignalR, polling, notifications, downloads, or offscreen/local task behavior
+- SignalR, admin broadcasts, polling, notifications, downloads, or offscreen/local task behavior
 - popup, dashboard, or content-script UI behavior
 - build, test, packaging, or release workflow
 
@@ -102,6 +102,7 @@ npm run lint
 npm run format:check
 npm run build
 npm run lint:firefox
+dotnet test server/src/Rasid.Server.sln
 ```
 
 Run tests when behavior or storage contracts change:
@@ -116,7 +117,7 @@ For browser-facing changes, also do manual smoke testing on the affected browser
 - dashboard settings, prompts, backup, diagnostics, tracked projects, and bid tracker
 - content panels and autofill on affected platforms
 - notifications, realtime, and polling fallback
-- direct AI provider mode and ChatGPT bridge mode
+- bridge mode and, only for unsafe side builds, direct AI provider mode
 - Chrome package load from `dist/chrome-mv3`
 - Firefox temporary load or `web-ext lint` from `dist/firefox-mv3`
 

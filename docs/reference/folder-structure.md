@@ -28,7 +28,7 @@ Ownership:
 Important files:
 
 - `background.ts`
-- `chatgpt-bridge.content.ts`
+- `chatgpt-bridge.ts`
 - `mostaql.content/`
 - `khamsat.content/`
 - `nafezly.content/`
@@ -38,7 +38,7 @@ Important files:
 
 Runtime role:
 
-- generated manifest background, popup, dashboard/options page, content scripts, and Chrome offscreen page.
+- generated manifest background, popup, dashboard/options page, marketplace content scripts, unlisted ChatGPT bridge script, and Chrome offscreen page.
 
 Do not place:
 
@@ -163,8 +163,11 @@ Current files:
 - `public/icons/icon16.png`
 - `public/icons/icon48.png`
 - `public/icons/icon128.png`
+- `public/Platforms/Mostql.png`
+- `public/Platforms/Khamsat.png`
+- `public/Platforms/Nafezly.png`
 
-Runtime role: manifest icons, popup/dashboard icons, notification icon.
+Runtime role: manifest icons, popup/dashboard icons, fallback notification icon, and per-platform notification icons.
 
 Do not place:
 

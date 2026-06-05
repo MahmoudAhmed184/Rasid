@@ -1,6 +1,6 @@
 # High-Level Architecture
 
-Rasid uses a feature-first WebExtension architecture. WXT owns browser entrypoint discovery and manifest generation; the reusable logic lives under `src/`.
+Frelancia uses a feature-first WebExtension architecture. WXT owns browser entrypoint discovery and manifest generation; the reusable logic lives under `src/`.
 
 ## Component Map
 
@@ -26,21 +26,22 @@ src/shared/
 
 ## Runtime Model
 
-| Runtime context                  | Entrypoint                              | Main responsibilities                                                                                 |
-| -------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Background service worker/script | `entrypoints/background.ts`             | Bootstrap storage/services, own alarms, SignalR, polling, notifications, downloads, runtime messages. |
-| Popup extension page             | `entrypoints/popup/`                    | Quick stats, manual check, notification toggle, source diagnostics, dashboard open action.            |
-| Dashboard/options page           | `entrypoints/dashboard/`                | Settings, filters, prompts, proposal template, backup import/export, tracked projects, bid tracker.   |
-| Platform content scripts         | `entrypoints/*.content/`                | Mount supported platform UI, extract project context, queue autofill, track projects.                 |
-| ChatGPT bridge content script    | `entrypoints/chatgpt-bridge.content.ts` | Inject one-shot bridge prompt into ChatGPT input and clear consumed prompt.                           |
-| Chrome offscreen document        | `entrypoints/offscreen/`                | Audio playback, DOM parsing, ZIP object URL creation/revocation.                                      |
-| Firefox local task path          | `src/features/offscreen/manager.ts`     | Runs the same offscreen task contract in background-local mode.                                       |
+| Runtime context                  | Entrypoint                          | Main responsibilities                                                                                                            |
+| -------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Background service worker/script | `entrypoints/background.ts`         | Bootstrap storage/services, own alarms, SignalR, polling, notifications, downloads, runtime messages.                            |
+| Popup extension page             | `entrypoints/popup/`                | Quick stats, manual check, notification toggle, source diagnostics, dashboard open action.                                       |
+| Dashboard/options page           | `entrypoints/dashboard/`            | Settings, filters, prompts, proposal template, backup import/export, tracked projects, bid tracker.                              |
+| Platform content scripts         | `entrypoints/*.content/`            | Mount supported platform UI, extract project context, queue autofill, track projects.                                            |
+| ChatGPT bridge unlisted script   | `entrypoints/chatgpt-bridge.ts`     | Inject one-shot bridge prompt after the background requests ChatGPT host permission and calls `browser.scripting.executeScript`. |
+| Chrome offscreen document        | `entrypoints/offscreen/`            | Audio playback, DOM parsing, ZIP object URL creation/revocation.                                                                 |
+| Firefox local task path          | `src/features/offscreen/manager.ts` | Runs the same offscreen task contract in background-local mode.                                                                  |
 
 ## Chrome vs Firefox MV3 Differences
 
 Chrome:
 
 - `wxt.config.ts` adds `offscreen` permission.
+- `wxt.config.ts` adds `scripting` for on-demand bridge injection.
 - `entrypoints/offscreen/index.html` is included only for Chrome through `meta name="wxt.include" content='["chrome"]'`.
 - Offscreen document is created with reasons `AUDIO_PLAYBACK`, `BLOBS`, and `DOM_PARSER`.
 
@@ -71,6 +72,7 @@ The popup and dashboard use repositories from `src/app/repositories/browser-repo
 - Popup uses `MonitoringRepository` for stats and notification toggles plus background messages for actions.
 - Dashboard uses backup, monitoring, prompt, proposal, settings, and tracking repositories.
 - Both pages are Arabic RTL extension pages.
+- Popup also reads `adminMessages`, renders unread backend broadcasts, and marks them read on dismissal.
 
 ## Content Script Role
 
@@ -85,14 +87,15 @@ Platform content scripts:
 
 ## Data Boundaries
 
-| Boundary                           | Mechanism                                                    |
-| ---------------------------------- | ------------------------------------------------------------ |
-| Persistent extension state         | `browser.storage.local` through storage modules.             |
-| Direct AI API key                  | `browser.storage.session` under `aiApiKeySecret`.            |
-| Popup/dashboard/background actions | Validated runtime messages in `background-messages.ts`.      |
-| Background/offscreen tasks         | Validated task envelopes in `features/offscreen/manager.ts`. |
-| Platform-specific DOM              | Platform adapter modules under `src/platforms/<platform>/`.  |
-| Provider network requests          | Provider adapters under `src/entities/ai/providers/`.        |
+| Boundary                           | Mechanism                                                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Persistent extension state         | `browser.storage.local` through storage modules.                                                           |
+| Direct AI API key                  | `browser.storage.session` under `aiApiKeySecret`, only used in unsafe direct-AI side builds.               |
+| Popup/dashboard/background actions | Validated runtime messages in `background-messages.ts`.                                                    |
+| Background/offscreen tasks         | Validated task envelopes in `features/offscreen/manager.ts`.                                               |
+| Platform-specific DOM              | Platform adapter modules under `src/platforms/<platform>/`.                                                |
+| Provider network requests          | Provider adapters under `src/entities/ai/providers/`, loaded only when `WXT_ENABLE_UNSAFE_DIRECT_AI=true`. |
+| Backend admin messages             | `AdminMessageReceived` SignalR payloads stored under `adminMessages`.                                      |
 
 Related docs:
 

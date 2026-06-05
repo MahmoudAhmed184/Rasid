@@ -1,6 +1,6 @@
 # Source Reference: App Content And Bridge
 
-Runtime contexts: platform content scripts and ChatGPT bridge content script.
+Runtime contexts: platform content scripts and the injected ChatGPT bridge script.
 
 ## `src/app/content/bootstrapPlatformContent.ts`
 
@@ -51,14 +51,11 @@ Types:
 
 Functions:
 
-| Function                                      | Purpose                                                                        | Inputs                     | Outputs                    | Side effects, errors, security                                                                                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `normalizeProposalGenerationResult(response)` | Converts background proposal response into platform content result.            | `GenerateProposalResponse` | `ProposalGenerationResult` | Maps errors to `{ kind: "error" }`; preserves direct/bridge metadata.                                                                                                               |
-| `createPlatformContentServices(deps)`         | Builds prompt/tracking/proposal/download/toast services for platform adapters. | narrowed repositories      | `PlatformContentServices`  | Proposal generation calls validated background message; bridge results are stored with `setPendingBridgePrompt()` and ChatGPT tab is opened; ZIP downloads call background message. |
-
-Browser APIs:
-
-- `window.open` for bridge ChatGPT URL in content context.
+| Function                                      | Purpose                                                                        | Inputs                     | Outputs                    | Side effects, errors, security                                                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `normalizeProposalGenerationResult(response)` | Converts background proposal response into platform content result.            | `GenerateProposalResponse` | `ProposalGenerationResult` | Maps errors to `{ kind: "error" }`; preserves direct/bridge metadata.                                                                                      |
+| `getBridgeFailureMessage(reason)`             | Converts bridge-open failure reason into Arabic UI message.                    | failure reason             | string                     | Covers permission, unsupported API, tab-open, and injection failures.                                                                                      |
+| `createPlatformContentServices(deps)`         | Builds prompt/tracking/proposal/download/toast services for platform adapters. | narrowed repositories      | `PlatformContentServices`  | Proposal generation calls validated background message; `openBridgePrompt()` calls `requestOpenChatBridgePrompt()`; ZIP downloads call background message. |
 
 ## `src/app/chatgpt-bridge/index.ts`
 
@@ -70,12 +67,12 @@ Types:
 
 Functions:
 
-| Function                                    | Purpose                                                   | Inputs                        | Outputs                                                  | Side effects, errors, security                                                                                                        |
-| ------------------------------------------- | --------------------------------------------------------- | ----------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `findChatInput()`                           | Locates a ChatGPT prompt input.                           | none                          | `HTMLTextAreaElement`, editable `HTMLElement`, or `null` | Searches textareas and contenteditable textbox-like elements.                                                                         |
-| `writePromptToEditable(inputField, prompt)` | Writes prompt text to textarea or editable element.       | input element, prompt string  | `void`                                                   | Updates DOM value/text, dispatches `input` and `change` events with bubbling.                                                         |
-| `injectPrompt(deps, pendingPrompt?)`        | Injects a pending prompt for the current ChatGPT host.    | repositories, optional prompt | `Promise<void>`                                          | Clears expired/mismatched prompts, retries input lookup, clears prompt after success or terminal failure. Does not submit the prompt. |
-| `initChatgptBridge(deps)`                   | Initializes bridge injection and storage-change listener. | proposal repository           | disposer-like function from listener is internal         | Reads current pending prompt and listens for new pending bridge prompts.                                                              |
+| Function                                    | Purpose                                                   | Inputs                        | Outputs                                                  | Side effects, errors, security                                                                                                               |
+| ------------------------------------------- | --------------------------------------------------------- | ----------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `findChatInput()`                           | Locates a ChatGPT prompt input.                           | none                          | `HTMLTextAreaElement`, editable `HTMLElement`, or `null` | Searches textareas and contenteditable textbox-like elements.                                                                                |
+| `writePromptToEditable(inputField, prompt)` | Writes prompt text to editable element.                   | input element, prompt string  | `void`                                                   | Replaces editable content with paragraph/line-break nodes.                                                                                   |
+| `injectPrompt(deps, pendingPrompt?)`        | Injects a pending prompt for the current ChatGPT host.    | repositories, optional prompt | `Promise<void>`                                          | Writes textarea/editable content, dispatches a bubbling `input` event, clears prompt after success or terminal failure, and does not submit. |
+| `initChatgptBridge(deps)`                   | Initializes bridge injection and storage-change listener. | proposal repository           | disposer-like function from listener is internal         | Reads current pending prompt and listens for new pending bridge prompts.                                                                     |
 
 Security/privacy notes:
 
@@ -101,7 +98,7 @@ Functions:
 | `composeBrowserStorage()`             | Creates full repository set for extension pages.                                 | none   | `BrowserStorageComposition`           | Exposes backup, monitoring, prompt, proposal, settings, and tracking repositories. |
 | `createBrowserRepositories()`         | Public full repository factory.                                                  | none   | `BrowserRepositories`                 | Used by popup/dashboard entrypoints.                                               |
 | `createPlatformContentRepositories()` | Narrow repository factory for platform content scripts.                          | none   | prompt/proposal/tracking repositories | Avoids exposing backup/settings repositories to platform pages.                    |
-| `createChatGptBridgeRepositories()`   | Narrow repository factory for ChatGPT bridge.                                    | none   | proposal repository only              | Limits bridge content script to pending prompt operations.                         |
+| `createChatGptBridgeRepositories()`   | Narrow repository factory for ChatGPT bridge.                                    | none   | proposal repository only              | Limits injected bridge script to pending prompt operations.                        |
 
 Related docs:
 

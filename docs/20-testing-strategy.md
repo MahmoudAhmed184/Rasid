@@ -9,11 +9,13 @@ Current automated coverage includes:
 - pure entities: AI chat URLs, provider adapters, job identity, platform URL safety, settings clamps
 - shared utilities: Arabic/date/duration/number parsing, challenge-page detection, storage modules
 - storage/contracts: settings secret migration, backup import/export, proposal state TTL/one-shot behavior, notification payloads, download cleanup records
-- background/runtime contracts: runtime message request/response validation and dispatch
-- monitoring/realtime/downloads: filters, batch publication, SignalR reducer, ZIP safety
+- background/runtime contracts: runtime message request/response validation, bridge opening, admin-message handling, and dispatch
+- monitoring/realtime/downloads: filters, batch publication, per-platform fetch failures, Khamsat freshness handling, SignalR reducer/manager, ZIP safety
 - platform fixtures: Mostaql, Khamsat, and Nafezly listing/project HTML parsers
-- proposals/AI: prompt rendering with untrusted delimiters, direct-provider request settings, OpenAI/Gemini/Claude payload/error behavior
-- UI behavior: dashboard tab ARIA state and keyboard behavior
+- proposals/AI: prompt rendering with untrusted delimiters, bridge fallback, unsafe direct-provider request settings, OpenAI/Gemini/Claude payload/error behavior
+- UI behavior: dashboard tab ARIA state, unsafe direct-control gating, popup admin banner, and keyboard behavior
+- entrypoint/policy tests: generated manifest permission policy, unlisted ChatGPT bridge entrypoint, and test-policy guards
+- server tests: health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior through `server/src/Rasid.Server.sln`
 
 ## Validation Commands
 
@@ -30,6 +32,7 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
+dotnet test server/src/Rasid.Server.sln
 ```
 
 ## Documentation Consistency Checks
@@ -71,6 +74,7 @@ Chrome and Firefox:
 - test notification and sound
 - verify content panels on supported platform pages
 - verify bridge prompt insertion on an allowed ChatGPT host
+- verify admin-message notification/banner behavior when backend/admin broadcast changes
 
 ## Remaining Coverage Gaps
 

@@ -1,6 +1,6 @@
-# Rasid Documentation
+# Frelancia Documentation
 
-This directory documents the current Rasid WebExtension source tree. The source of truth is the current code, config, generated manifest behavior, README, and privacy policy.
+This directory documents the current Frelancia WebExtension source tree. The source of truth is the current code, config, generated manifest behavior, README, and privacy policy.
 
 ## Recommended Reading Paths
 
@@ -25,7 +25,7 @@ This directory documents the current Rasid WebExtension source tree. The source 
 | [`07-runtime-messaging.md`](07-runtime-messaging.md)                             | Background and offscreen message contracts, validators, sender checks, and error behavior.                             |
 | [`08-background-runtime.md`](08-background-runtime.md)                           | Background service worker bootstrap, alarms, SignalR, polling, notifications, downloads, and offscreen/local tasks.    |
 | [`09-content-scripts-and-platforms.md`](09-content-scripts-and-platforms.md)     | Platform adapters, content scripts, page routing, proposal sources, autofill, selectors, and monitoring parsers.       |
-| [`10-ai-proposals-and-chatgpt-bridge.md`](10-ai-proposals-and-chatgpt-bridge.md) | Prompt rendering, direct provider mode, ChatGPT bridge mode, API key storage, provider errors, and privacy notes.      |
+| [`10-ai-proposals-and-chatgpt-bridge.md`](10-ai-proposals-and-chatgpt-bridge.md) | Prompt rendering, bridge mode, unsafe direct provider mode, API key storage, provider errors, and privacy notes.       |
 | [`11-ui-popup-dashboard.md`](11-ui-popup-dashboard.md)                           | Popup and dashboard behavior, Arabic/RTL UI, accessibility, settings validation, and backup workflows.                 |
 | [`12-browser-permissions-and-privacy.md`](12-browser-permissions-and-privacy.md) | Manifest permissions, host permissions, browser differences, privacy boundaries, and review constraints.               |
 | [`13-build-test-release.md`](13-build-test-release.md)                           | Setup, build, test, format, Firefox lint, package, generated manifest, and release checklist.                          |

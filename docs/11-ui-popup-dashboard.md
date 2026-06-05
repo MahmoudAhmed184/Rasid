@@ -20,9 +20,10 @@ The popup displays:
 - manual check button
 - notification toggle
 - source diagnostics button
+- unread admin-message banner with optional link and dismiss action
 - platform footer links for Mostaql, Khamsat, and Nafezly
 
-Popup actions call background messages for manual polling and diagnostics.
+Popup actions call background messages for manual polling and diagnostics. Admin broadcasts are read from `adminMessages`; dismissing the banner marks stored messages read.
 
 ## Dashboard
 
@@ -69,10 +70,12 @@ Dashboard save validates:
 
 - polling interval and numeric bounds
 - ChatGPT URL host
-- direct mode model/API-key requirements
+- direct mode model/API-key requirements only when unsafe direct controls are present
 - native input constraints for URLs and numbers
 
 Storage normalization repeats critical validation defensively.
+
+Direct AI controls are rendered only when the build has `WXT_ENABLE_UNSAFE_DIRECT_AI=true`. Normal builds show bridge settings and force direct-mode state back to bridge.
 
 ## Backup UI
 

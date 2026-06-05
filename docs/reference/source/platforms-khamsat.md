@@ -41,15 +41,16 @@ Purpose: parse fetched Khamsat listing/detail HTML.
 
 Functions:
 
-| Function                         | Purpose                         | Inputs                | Outputs          | Side effects, errors, security                                                                    |
-| -------------------------------- | ------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
-| `parseDocument(html)`            | Creates DOM document.           | HTML string           | `Document`       | Uses `DOMParser`.                                                                                 |
-| `normalizeText(value)`           | Collapses whitespace.           | string/null/undefined | string           | Pure helper.                                                                                      |
-| `resolveKhamsatRequestUrl(href)` | Normalizes request URL.         | href/null             | URL/null         | Requires HTTPS `khamsat.com` and request path.                                                    |
-| `resolveKhamsatUrl(href)`        | Normalizes general Khamsat URL. | href/null             | URL/null         | Requires HTTPS `khamsat.com`.                                                                     |
-| `extractKhamsatRequestId(url)`   | Extracts request ID.            | URL string            | ID/null          | Uses community request path pattern.                                                              |
-| `parseKhamsatListingHtml(html)`  | Parses request listing rows.    | HTML string           | `JobRecord[]`    | Deduplicates by ID; extracts title, poster, time, postedAt.                                       |
-| `parseKhamsatProjectHtml(html)`  | Parses request detail page.     | HTML string           | partial job/null | Extracts description, client name, publish date, attachments; returns null when no useful fields. |
+| Function                             | Purpose                                      | Inputs                | Outputs          | Side effects, errors, security                                                                    |
+| ------------------------------------ | -------------------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `parseDocument(html)`                | Creates DOM document.                        | HTML string           | `Document`       | Uses `DOMParser`.                                                                                 |
+| `normalizeText(value)`               | Collapses whitespace.                        | string/null/undefined | string           | Pure helper.                                                                                      |
+| `resolveKhamsatRequestUrl(href)`     | Normalizes request URL.                      | href/null             | URL/null         | Requires HTTPS `khamsat.com` and request path.                                                    |
+| `resolveKhamsatUrl(href)`            | Normalizes general Khamsat URL.              | href/null             | URL/null         | Requires HTTPS `khamsat.com`.                                                                     |
+| `extractKhamsatRequestId(url)`       | Extracts request ID.                         | URL string            | ID/null          | Uses community request path pattern.                                                              |
+| `findKhamsatSidebarPublishDate(doc)` | Finds titled publish date in detail sidebar. | document              | string           | Used before generic datetime/text fallback.                                                       |
+| `parseKhamsatListingHtml(html)`      | Parses request listing rows.                 | HTML string           | `JobRecord[]`    | Deduplicates by ID; extracts title, poster, time, postedAt.                                       |
+| `parseKhamsatProjectHtml(html)`      | Parses request detail page.                  | HTML string           | partial job/null | Extracts description, client name, publish date, attachments; returns null when no useful fields. |
 
 ## `src/platforms/khamsat/adapter.ts`
 

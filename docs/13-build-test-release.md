@@ -49,6 +49,7 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
+dotnet test server/src/Rasid.Server.sln
 ```
 
 `npm run lint` runs:
@@ -84,8 +85,10 @@ After `npm run build`, inspect:
 Confirm:
 
 - supported platform hosts only for marketplace content scripts
-- ChatGPT bridge hosts present
-- direct AI provider hosts present
+- `scripting` permission is present for on-demand bridge injection
+- ChatGPT bridge hosts are optional host permissions, not static content-script hosts
+- direct AI provider hosts are absent from normal builds and present only in unsafe side builds
+- required hosts include supported marketplaces, `https://rasid.runasp.net/*`, and `http://localhost/*`
 - Chrome includes `offscreen`
 - Firefox omits `offscreen`
 - browser-specific settings match `wxt.config.ts`
@@ -102,6 +105,7 @@ Chrome:
 6. Save settings.
 7. Test notification and sound.
 8. Visit supported platform pages and verify panels/autofill behavior where safe.
+9. Trigger bridge mode and verify the ChatGPT permission/open/injection path.
 
 Firefox:
 
@@ -114,6 +118,7 @@ Firefox:
 - `npm ci`
 - validation commands pass
 - generated manifests inspected
+- `dotnet test server/src/Rasid.Server.sln` run when backend contracts changed
 - README and privacy docs match generated permissions
 - store-review notes updated for any permission/privacy/platform changes
 - source package excludes generated and private local artifacts

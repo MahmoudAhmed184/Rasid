@@ -24,6 +24,7 @@ Fixes #
 - [ ] Nafezly
 - [ ] AI direct provider mode
 - [ ] ChatGPT bridge mode
+- [ ] Backend admin broadcast or popup admin-message behavior
 - [ ] Storage, backup, import, export, or secret handling
 - [ ] Manifest permissions, host permissions, or generated build output
 - [ ] Documentation or GitHub metadata
@@ -35,6 +36,7 @@ Fixes #
 - [ ] No new stored data, exported data, or backup schema change
 - [ ] No change to supported platform scope
 - [ ] No change to AI provider or ChatGPT bridge behavior
+- [ ] Normal builds remain bridge-first; direct AI remains gated by `WXT_ENABLE_UNSAFE_DIRECT_AI=true`
 - [ ] Store-review notes and privacy text are updated when needed
 
 Explain any checked item that is not true:
@@ -53,6 +55,7 @@ Commands run:
 - [ ] `npm test`
 - [ ] `npm run build`
 - [ ] `npm run lint:firefox`
+- [ ] `dotnet test server/src/Rasid.Server.sln`
 
 Manual testing:
 
@@ -62,8 +65,8 @@ Manual testing:
 - [ ] Dashboard
 - [ ] Content script on affected platform
 - [ ] Notifications, realtime, or polling
-- [ ] AI direct provider mode
-- [ ] ChatGPT bridge mode
+- [ ] ChatGPT bridge mode and optional host permission prompt
+- [ ] Unsafe side-build direct provider mode
 - [ ] Backup, import, export, or download flow
 
 Environment:

@@ -58,10 +58,11 @@ Purpose: parse Arabic month dates and compute age in days.
 
 Functions:
 
-| Function                                  | Purpose                                 | Inputs                  | Outputs     | Side effects                        |
-| ----------------------------------------- | --------------------------------------- | ----------------------- | ----------- | ----------------------------------- |
-| `parseArabicDate(value)`                  | Parses Arabic date text.                | string/null/undefined   | `Date`/null | Uses Arabic month map.              |
-| `calculateArabicDateAgeDays(value, now?)` | Computes days since parsed Arabic date. | date text, optional now | number      | Returns `-1` for unparseable input. |
+| Function                                  | Purpose                                                   | Inputs                  | Outputs     | Side effects                         |
+| ----------------------------------------- | --------------------------------------------------------- | ----------------------- | ----------- | ------------------------------------ |
+| `parseArabicDate(value)`                  | Parses Arabic date text.                                  | string/null/undefined   | `Date`/null | Uses Arabic month map.               |
+| `parseJobPostedAt(value)`                 | Parses Khamsat GMT, generic, or Arabic publish date text. | string/null/undefined   | `Date`/null | Used by Khamsat freshness filtering. |
+| `calculateArabicDateAgeDays(value, now?)` | Computes days since parsed Arabic date.                   | date text, optional now | number      | Returns `-1` for unparseable input.  |
 
 ### `src/shared/parsing/duration.ts`
 
@@ -192,14 +193,18 @@ Constants:
 
 - `icons`
 - `hostPermissions`
+- `chatBridgeHostPermissions`
+- `unsafeDirectAiHostPermissions`
 - `sharedPermissions`
 
 Functions:
 
-| Function                               | Purpose                                                                          | Inputs             | Outputs         | Side effects, errors, security                                                                      |
-| -------------------------------------- | -------------------------------------------------------------------------------- | ------------------ | --------------- | --------------------------------------------------------------------------------------------------- |
-| `stripSignalRInvalidPureAnnotations()` | Vite plugin that removes invalid pure annotations from SignalR ESM utility file. | none               | Vite plugin     | Transform applies only to `node_modules/@microsoft/signalr/dist/esm/Utils.js`.                      |
-| `manifest({ browser })`                | Generates browser-specific manifest fields.                                      | WXT browser target | manifest object | Chrome gets `offscreen` and minimum Chrome version; Firefox gets Gecko settings and no `offscreen`. |
+| Function                               | Purpose                                                                          | Inputs             | Outputs         | Side effects, errors, security                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------- | ------------------ | --------------- | --------------------------------------------------------------------------------------------------------- |
+| `isUnsafeDirectAiEnabled()`            | Checks build-time unsafe direct-AI flag.                                         | none               | boolean         | Reads `WXT_ENABLE_UNSAFE_DIRECT_AI`.                                                                      |
+| `createRasidManifest(browser)`         | Generates browser-specific manifest fields.                                      | browser target     | manifest object | Emits Frelancia names, required hosts, optional ChatGPT hosts, and unsafe provider hosts only when gated. |
+| `stripSignalRInvalidPureAnnotations()` | Vite plugin that removes invalid pure annotations from SignalR ESM utility file. | none               | Vite plugin     | Transform applies only to `node_modules/@microsoft/signalr/dist/esm/Utils.js`.                            |
+| `manifest({ browser })`                | Delegates manifest generation.                                                   | WXT browser target | manifest object | Chrome gets `offscreen` and minimum Chrome version; Firefox gets Gecko settings and no `offscreen`.       |
 
 Host permissions are exactly listed in [`../../12-browser-permissions-and-privacy.md`](../../12-browser-permissions-and-privacy.md).
 
@@ -274,6 +279,16 @@ Files:
 - `public/icons/icon16.png`
 - `public/icons/icon48.png`
 - `public/icons/icon128.png`
+
+### `public/Platforms/`
+
+Purpose: per-platform notification icon assets.
+
+Files:
+
+- `public/Platforms/Mostql.png`
+- `public/Platforms/Khamsat.png`
+- `public/Platforms/Nafezly.png`
 
 Related docs:
 
