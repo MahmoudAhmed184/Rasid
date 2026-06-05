@@ -1,10 +1,13 @@
 .wxt/
 dist/
 node_modules/
+server/**/bin/
+server/**/obj/
 .test-dist/
 coverage/
 test-results/
 playwright-report/
 public/vendor/
 package-lock.json
+**/packages.lock.json
 *.min.js
