@@ -101,6 +101,17 @@ export default defineConfig({
     outDir: 'dist',
     outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
     manifestVersion: 3,
+    zip: {
+        artifactTemplate: 'frelancia-v{{version}}-{{browser}}-{{manifestVersion}}.zip',
+        sourcesTemplate: 'frelancia-v{{version}}-{{browser}}-sources.zip',
+        excludeSources: [
+            'coverage/**',
+            'playwright-report/**',
+            'server/**',
+            'test-results/**',
+            'tests/**',
+        ],
+    },
     vite: () => ({
         plugins: [stripSignalRInvalidPureAnnotations()],
     }),
