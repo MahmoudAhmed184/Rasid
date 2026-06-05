@@ -107,6 +107,7 @@ jobs:
                   RELEASE_VERSION: ${{ needs.build.outputs.version }}
               run: |
                   gh release create "$RELEASE_TAG" \
+                    --repo "$GITHUB_REPOSITORY" \
                     "release-assets/frelancia-v$RELEASE_VERSION-chrome-mv3.zip" \
                     "release-assets/frelancia-v$RELEASE_VERSION-firefox-mv3.zip" \
                     "release-assets/frelancia-v$RELEASE_VERSION-firefox-sources.zip" \
