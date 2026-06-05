@@ -7,6 +7,7 @@ import type { AdminMessage } from '../../shared/storage/modules/admin-message-st
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 
 const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
+const JOB_NOTIFICATION_BUTTON_TITLE = '🔗 عرض تفاصيل المشروع';
 
 export interface NotificationService {
     registerHandlers(): void;
@@ -49,6 +50,31 @@ function getNotificationIcon(platformId: string | undefined): string {
     }
 }
 
+function buildNotificationOptions(options: {
+    readonly iconUrl: string;
+    readonly title: string;
+    readonly message: string;
+    readonly contextMessage?: string;
+    readonly buttons?: Browser.notifications.NotificationButton[];
+}): Browser.notifications.NotificationCreateOptions {
+    const basicOptions: Browser.notifications.NotificationCreateOptions = {
+        type: 'basic',
+        iconUrl: options.iconUrl,
+        title: options.title,
+        message: options.message,
+    };
+
+    if (import.meta.env.BROWSER === 'firefox') {
+        return basicOptions;
+    }
+
+    return {
+        ...basicOptions,
+        ...(options.contextMessage ? { contextMessage: options.contextMessage } : {}),
+        ...(options.buttons && options.buttons.length > 0 ? { buttons: options.buttons } : {}),
+    };
+}
+
 function buildNotificationBody(jobs: JobRecord[]): {
     title: string;
     message: string;
@@ -57,12 +83,15 @@ function buildNotificationBody(jobs: JobRecord[]): {
 } {
     const primary = jobs[0];
     const platformIds = [...new Set(jobs.map((job) => resolveJobPlatformId(job)))];
+    const [platformId] = platformIds;
     const platformLabel =
-        platformIds.length === 1 ? getPlatformDisplayName(platformIds[0]!) : 'منصات العمل الحر';
+        platformIds.length === 1 && platformId
+            ? getPlatformDisplayName(platformId)
+            : 'منصات العمل الحر';
 
     let title: string;
     let message: string;
-    let contextMessage = `Frelancia - ${platformLabel}`;
+    const contextMessage = `Frelancia - ${platformLabel}`;
 
     if (jobs.length === 1) {
         title = `مشروع جديد: ${primary.title}`;
@@ -106,15 +135,18 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
             })();
         });
 
-        // Add button listener
-        browser.notifications.onButtonClicked?.addListener(async (notificationId) => {
-            const payload = await storage.consumeNotificationPayload(notificationId);
-            const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
+        if (import.meta.env.BROWSER !== 'firefox') {
+            browser.notifications.onButtonClicked?.addListener((notificationId) => {
+                void (async () => {
+                    const payload = await storage.consumeNotificationPayload(notificationId);
+                    const url = payload?.url ? normalizeNotificationUrl(payload.url) : null;
 
-            if (url) {
-                await browser.tabs.create({ url });
-            }
-        });
+                    if (url) {
+                        await browser.tabs.create({ url });
+                    }
+                })();
+            });
+        }
 
         browser.notifications.onClosed.addListener((notificationId) => {
             void storage.removeNotificationPayload(notificationId).catch((error) => {
@@ -141,14 +173,24 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
         }
 
         try {
-            await browser.notifications.create(notificationId, {
-                type: 'basic',
-                iconUrl: getNotificationIcon(primary.platformId),
-                title,
-                message,
-                contextMessage,
-                buttons: [{ title: '🔗 عرض تفاصيل المشروع' }]
-            });
+            await browser.notifications.create(
+                notificationId,
+                buildNotificationOptions(
+                    import.meta.env.BROWSER === 'firefox'
+                        ? {
+                              iconUrl: getNotificationIcon(primary.platformId),
+                              title,
+                              message,
+                          }
+                        : {
+                              iconUrl: getNotificationIcon(primary.platformId),
+                              title,
+                              message,
+                              contextMessage,
+                              buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
+                          }
+                )
+            );
         } catch (error) {
             if (payloadUrl) {
                 await storage.removeNotificationPayload(notificationId);
@@ -171,13 +213,23 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
         }
 
         try {
-            await browser.notifications.create(notificationId, {
-                type: 'basic',
-                iconUrl: browser.runtime.getURL('/icons/icon128.png'),
-                title: '📢 تنبيهات من المطورين',
-                message: msg.message,
-                contextMessage: 'Frelancia',
-            });
+            await browser.notifications.create(
+                notificationId,
+                buildNotificationOptions(
+                    import.meta.env.BROWSER === 'firefox'
+                        ? {
+                              iconUrl: getNotificationIcon(undefined),
+                              title: '📢 تنبيهات من المطورين',
+                              message: msg.message,
+                          }
+                        : {
+                              iconUrl: getNotificationIcon(undefined),
+                              title: '📢 تنبيهات من المطورين',
+                              message: msg.message,
+                              contextMessage: 'Frelancia',
+                          }
+                )
+            );
         } catch (error) {
             if (payloadUrl) {
                 await storage.removeNotificationPayload(notificationId);

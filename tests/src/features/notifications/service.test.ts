@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createNotificationService } from '../../../../src/features/notifications/service';
 import type { ExtensionStorage } from '../../../../src/shared/storage/extension-storage';
@@ -32,7 +32,15 @@ function createStorage() {
     };
 }
 
+function useBrowserBuild(browser: 'chrome' | 'firefox'): void {
+    vi.stubEnv('BROWSER', browser);
+}
+
 describe('notification service', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
     it('stores sanitized click payloads and creates Arabic browser notifications', async () => {
         vi.spyOn(Date, 'now').mockReturnValue(1_000);
         vi.spyOn(Math, 'random').mockReturnValue(0.5);
@@ -64,6 +72,79 @@ describe('notification service', () => {
                 message: expect.stringContaining('وصف طويل'),
             })
         );
+    });
+
+    it('creates Firefox-compatible basic job notifications without rich fields', async () => {
+        useBrowserBuild('firefox');
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        await service.showJobsNotification([
+            {
+                id: 'firefox-1',
+                platformId: 'mostaql',
+                title: 'فرصة فايرفوكس',
+                url: 'https://mostaql.com/project/firefox-1',
+                budget: '$500',
+                description: 'وصف مناسب لاختبار إشعار فايرفوكس',
+            },
+        ]);
+
+        expect(create).toHaveBeenCalledOnce();
+        expect(create.mock.calls[0]?.[1]).toEqual({
+            type: 'basic',
+            iconUrl: fakeBrowser.runtime.getURL('/Platforms/Mostql.png'),
+            title: 'مشروع جديد: فرصة فايرفوكس',
+            message: expect.stringContaining('وصف مناسب لاختبار إشعار فايرفوكس'),
+        });
+    });
+
+    it('keeps Chrome job notification context and action buttons', async () => {
+        useBrowserBuild('chrome');
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        await service.showJobsNotification([
+            {
+                id: 'chrome-1',
+                platformId: 'mostaql',
+                title: 'فرصة كروم',
+                url: 'https://mostaql.com/project/chrome-1',
+            },
+        ]);
+
+        expect(create.mock.calls[0]?.[1]).toMatchObject({
+            type: 'basic',
+            iconUrl: fakeBrowser.runtime.getURL('/Platforms/Mostql.png'),
+            title: 'مشروع جديد: فرصة كروم',
+            contextMessage: 'Frelancia - مستقل',
+            buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+        });
+    });
+
+    it('removes stored click payloads when browser notification creation fails', async () => {
+        vi.spyOn(fakeBrowser.notifications, 'create').mockRejectedValueOnce(
+            new Error('Property "buttons" is unsupported by Firefox')
+        );
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        await expect(
+            service.showJobsNotification([
+                {
+                    id: 'failed-1',
+                    platformId: 'mostaql',
+                    title: 'فشل الإشعار',
+                    url: 'https://mostaql.com/project/failed-1',
+                },
+            ])
+        ).rejects.toThrow('Property "buttons" is unsupported by Firefox');
+
+        expect(storage.storeNotificationPayload).toHaveBeenCalledOnce();
+        expect(storage.removeNotificationPayload).toHaveBeenCalledWith(expect.any(String));
+        expect(payloads.size).toBe(0);
     });
 
     it('does not store click payloads for unsupported URLs', async () => {

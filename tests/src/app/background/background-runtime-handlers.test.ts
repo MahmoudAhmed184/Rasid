@@ -88,6 +88,22 @@ describe('background runtime handlers', () => {
         expect(deps.signalr.disconnect).toHaveBeenCalledOnce();
     });
 
+    it('propagates rejected test notification errors', async () => {
+        const deps = createDeps({
+            notifications: {
+                showTestNotification: vi.fn(async () => {
+                    throw new Error('Property "buttons" is unsupported by Firefox');
+                }),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await expect(handlers.testNotification({ action: 'testNotification' })).rejects.toThrow(
+            'Property "buttons" is unsupported by Firefox'
+        );
+        expect(deps.notifications.showTestNotification).toHaveBeenCalledOnce();
+    });
+
     it('returns a deterministic debug fetch failure when all monitoring feeds are disabled', async () => {
         const deps = createDeps({
             monitoring: [
