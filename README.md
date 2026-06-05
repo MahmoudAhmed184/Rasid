@@ -91,7 +91,7 @@ WXT rewrites the source popup/dashboard entrypoints into generated extension pag
 - WebExtension source under `entrypoints/` and `src/`.
 - Static icons under `public/icons/`.
 - WXT, TypeScript, ESLint, Prettier, web-ext, Vitest, and Playwright test configuration.
-- Optional backend source under `server/`, which is out of the WebExtension release package unless the repository owner decides otherwise.
+- Optional .NET 10 backend source under `server/`, which is out of the WebExtension release package unless the repository owner decides otherwise.
 
 The browser extension does not execute remote scripts. AI provider calls and marketplace/backend fetches are network requests made by bundled extension code.
 
@@ -170,6 +170,7 @@ Generated or local-only folders:
 | File                                                                                                   | Purpose                                                                                                                     |
 | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | [`package.json`](package.json)                                                                         | Scripts, dependency list, Node engine, and WXT/web-ext tooling.                                                             |
+| [`global.json`](global.json)                                                                           | Backend .NET SDK pin: `10.0.300` with `latestFeature` roll-forward.                                                         |
 | [`wxt.config.ts`](wxt.config.ts)                                                                       | WXT config, generated manifest fields, browser-specific permissions, host permissions, and SignalR build plugin workaround. |
 | [`entrypoints/background.ts`](entrypoints/background.ts)                                               | MV3 background entrypoint and lifecycle registration.                                                                       |
 | [`src/app/background/create-background-services.ts`](src/app/background/create-background-services.ts) | Background composition root.                                                                                                |
@@ -178,6 +179,9 @@ Generated or local-only folders:
 | [`src/features/offscreen/manager.ts`](src/features/offscreen/manager.ts)                               | Chrome offscreen and Firefox local-task abstraction.                                                                        |
 | [`src/platforms/registry.ts`](src/platforms/registry.ts)                                               | Registered extension platform modules and SignalR support metadata.                                                         |
 | [`src/shared/storage/extension-storage.ts`](src/shared/storage/extension-storage.ts)                   | Storage facade over settings, jobs, prompts, tracking, runtime, notifications, and download cleanup.                        |
+| [`server/Directory.Build.props`](server/Directory.Build.props)                                         | Backend analyzer, warnings-as-errors, deterministic build, and CI locked-restore policy.                                    |
+| [`server/Directory.Packages.props`](server/Directory.Packages.props)                                   | Central package versions for backend app and test projects.                                                                 |
+| [`.github/workflows/server-dotnet.yml`](.github/workflows/server-dotnet.yml)                           | Server restore/build/test/publish smoke workflow.                                                                           |
 | [`PRIVACY.md`](PRIVACY.md)                                                                             | Privacy disclosure based on the current codebase.                                                                           |
 
 ## Getting Started
@@ -186,6 +190,7 @@ Prerequisites:
 
 - Node.js `>=20.19.0`
 - npm
+- .NET SDK `10.0.300` for optional backend work under `server/`
 
 Install dependencies from the committed lockfile:
 
@@ -442,14 +447,18 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
-dotnet test server/src/Rasid.Server.sln
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
 ```
+
+Run `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` as a publish smoke check for backend release changes.
 
 Targeted consistency checks should verify unsupported-platform references, deleted legacy-doc references, and unresolved editorial markers across README/docs/source. The required scans are listed in the documentation validation task for this release.
 
 Current unit tests cover AI chat URL normalization, settings normalization, backup secret handling, manifest policy, bridge injection contracts, admin-message flows, monitoring failures/freshness, and Mostaql bid tracker calculations.
 
-The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafezly, storage/message contracts, AI provider payloads, prompt rendering, monitoring/realtime reducers, ZIP export safety, dashboard tab behavior, generated manifests, Chrome Playwright extension E2E, and Firefox `web-ext`/Playwright browser smoke coverage. See [`tests/README.md`](tests/README.md) and [`docs/20-testing-strategy.md`](docs/20-testing-strategy.md).
+The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafezly, storage/message contracts, AI provider payloads, prompt rendering, monitoring/realtime reducers, ZIP export safety, dashboard tab behavior, generated manifests, Chrome Playwright extension E2E, Firefox `web-ext`/Playwright browser smoke coverage, and backend xUnit v3/Microsoft Testing Platform tests with ASP.NET Core test host coverage. See [`tests/README.md`](tests/README.md) and [`docs/20-testing-strategy.md`](docs/20-testing-strategy.md).
 
 ## Release Checklist
 
@@ -460,7 +469,16 @@ The expanded automated suite now covers parser fixtures for Mostaql/Khamsat/Nafe
 5. Run `npm run format:check`.
 6. Run `npm run build`.
 7. Run `npm run lint:firefox`.
-8. Run `dotnet test server/src/Rasid.Server.sln` when backend behavior or docs are in scope.
+8. Run the backend CI-equivalent sequence when backend behavior or docs are in scope:
+
+    ```bash
+    dotnet restore server/src/Rasid.Server.sln --locked-mode
+    dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+    dotnet test server/src/Rasid.Server.sln -c Release --no-build
+    ```
+
+    For backend release changes, also run `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish`.
+
 9. Inspect `dist/chrome-mv3/manifest.json` and `dist/firefox-mv3/manifest.json` for permissions, required hosts, optional hosts, and content scripts.
 10. Load `dist/chrome-mv3` in Chrome and smoke test popup, dashboard, notifications, SignalR/polling controls, supported content scripts, and on-demand ChatGPT bridge injection.
 11. Load `dist/firefox-mv3/manifest.json` in Firefox and smoke test the same release-critical flows.

@@ -185,6 +185,18 @@ Dev dependencies:
 - web-ext
 - WXT
 
+### `global.json`
+
+Purpose: .NET SDK selection for the optional backend.
+
+Key settings:
+
+- SDK version `10.0.300`
+- `rollForward: latestFeature`
+- `allowPrerelease: false`
+
+Release relevance: used by local backend commands and `.github/workflows/server-dotnet.yml`.
+
 ### `wxt.config.ts`
 
 Purpose: WXT config and manifest generation.
@@ -246,14 +258,80 @@ Functions:
 
 Purpose: ignore generated and out-of-scope local artifacts.
 
-Important ignored paths:
+Important `.gitignore` paths:
+
+- `.wxt/`
+- `.output/`
+- `dist/`
+- `node_modules/`
+- `.test-dist/`
+- `coverage/`
+- `test-results/`
+- `playwright-report/`
+- OS/editor artifacts
+
+Important `.prettierignore` paths:
 
 - `.wxt/`
 - `dist/`
 - `node_modules/`
 - `.test-dist/`
-- backend generated/private files
-- `server/` for Prettier
+- `coverage/`
+- `test-results/`
+- `playwright-report/`
+- `public/vendor/`
+- `package-lock.json`
+- `*.min.js`
+
+`server/` is not ignored wholesale by Prettier. Explicit documentation checks can include `server/**/*.md`.
+
+### `server/Directory.Build.props`
+
+Purpose: backend MSBuild policy.
+
+Key settings:
+
+- `AnalysisLevel=latest`
+- `EnableNETAnalyzers=true`
+- `EnforceCodeStyleInBuild=true`
+- `TreatWarningsAsErrors=true`
+- `Deterministic=true`
+- `ContinuousIntegrationBuild=true` when `CI=true`
+- `RestorePackagesWithLockFile=true`
+- `RestoreLockedMode=true` when `CI=true`
+
+### `server/Directory.Packages.props`
+
+Purpose: central package management for backend app and test projects.
+
+Key settings:
+
+- `ManagePackageVersionsCentrally=true`
+- central versions for HtmlAgilityPack, Swashbuckle, Microsoft.AspNetCore.Mvc.Testing, Microsoft.NET.Test.Sdk, xUnit runner, and xUnit v3
+
+Related lock files:
+
+- `server/src/packages.lock.json`
+- `server/tests/Rasid.Server.Tests/packages.lock.json`
+
+### `.github/workflows/server-dotnet.yml`
+
+Purpose: dedicated backend CI workflow.
+
+Triggers:
+
+- `global.json`
+- `server/**`
+- `.github/workflows/server-dotnet.yml`
+
+Steps:
+
+- checkout
+- setup .NET from `global.json`
+- `dotnet restore server/src/Rasid.Server.sln --locked-mode`
+- `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`
+- `dotnet test server/src/Rasid.Server.sln -c Release --no-build`
+- `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore`
 
 ### `.github/`
 
@@ -263,6 +341,7 @@ Files:
 
 - `.github/CONTRIBUTING.md`
 - `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/workflows/server-dotnet.yml`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/config.yml`

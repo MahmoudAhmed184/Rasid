@@ -8,6 +8,7 @@ This reference documents meaningful folders in the current repository.
 | ------------------------------- | ------------------------------------------------------------------ | -------------------------- | ------------------------------------------------ | -------------------------------------------- |
 | `package.json`                  | npm metadata, scripts, dependencies, Node engine.                  | Build/test tooling.        | Source of truth for commands.                    | Undocumented scripts or dependencies.        |
 | `package-lock.json`             | Locked npm dependency graph.                                       | Install reproducibility.   | Required for `npm ci`.                           | Manual edits outside npm.                    |
+| `global.json`                   | .NET SDK pin for optional backend work.                            | Backend toolchain.         | Required by server CI and local backend builds.  | Runtime app settings or secrets.             |
 | `wxt.config.ts`                 | WXT config and manifest generation.                                | Build-time manifest owner. | Permissions, host permissions, browser settings. | Runtime business logic.                      |
 | `tsconfig.json`                 | TypeScript config extending `.wxt/tsconfig.json`.                  | Typechecking.              | Release gate through `typecheck`/`lint:ts`.      | Generated output includes.                   |
 | `eslint.config.mjs`             | ESLint flat config for JS/MJS and ignore list.                     | Static checks.             | Release gate through `npm run lint`.             | TypeScript rule claims not backed by config. |
@@ -183,6 +184,7 @@ Important files:
 
 - `.github/CONTRIBUTING.md`
 - `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/workflows/server-dotnet.yml`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/config.yml`
@@ -239,4 +241,19 @@ Ownership:
 
 ## Optional Backend
 
-`server/` contains optional backend source and docs. It is outside the default WebExtension release documentation scope. Extension docs must not treat backend platform capabilities as shipped extension support unless extension source, registry, config, UI, privacy docs, and generated manifests all prove that support is shipped.
+`server/` contains optional ASP.NET Core backend source and docs. It is outside the default WebExtension release documentation scope. Extension docs must not treat backend platform capabilities as shipped extension support unless extension source, registry, config, UI, privacy docs, and generated manifests all prove that support is shipped.
+
+Backend toolchain and CI files:
+
+| Path                                                        | Purpose                                                                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `global.json`                                               | Pins .NET SDK `10.0.300` with `latestFeature` roll-forward and prerelease SDKs disabled.                           |
+| `server/Directory.Build.props`                              | Enables analyzers, code-style checks, warnings as errors, deterministic builds, lock files, and CI locked restore. |
+| `server/Directory.Packages.props`                           | Central package versions for backend app and test projects.                                                        |
+| `.github/workflows/server-dotnet.yml`                       | Restores with `--locked-mode`, builds Release, tests Release, and runs publish smoke.                              |
+| `server/src/Rasid.Server.sln`                               | Backend solution containing app and test projects.                                                                 |
+| `server/src/Rasid.Server.csproj`                            | ASP.NET Core app project targeting `net10.0`.                                                                      |
+| `server/src/packages.lock.json`                             | Tracked app dependency lock file.                                                                                  |
+| `server/tests/Rasid.Server.Tests/Rasid.Server.Tests.csproj` | xUnit v3 test project targeting `net10.0` with Microsoft Testing Platform enabled.                                 |
+| `server/tests/Rasid.Server.Tests/packages.lock.json`        | Tracked test dependency lock file.                                                                                 |
+| `server/docs/backend-reference.md`                          | Detailed backend runtime, admin broadcast, toolchain, and validation reference.                                    |
