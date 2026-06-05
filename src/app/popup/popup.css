@@ -1,30 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+
 :root {
-    --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
-    --primary: #0f766e;
-    --primary-hover: #115e59;
-    --primary-strong: #134e4a;
-    --primary-soft: #dff3ef;
-    --primary-softer: #effaf7;
-    --accent: #b45309;
-    --accent-soft: #fff1d6;
+    --font-ui: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+    --primary: #2386c8;
+    --primary-hover: #1c6da0;
+    --primary-strong: #155278;
+    --primary-soft: #e5f1f9;
+    --primary-softer: #f0f7fb;
+    --primary-gradient: linear-gradient(135deg, #2ea3f2 0%, #17659c 100%);
+    --accent: #f59e0b;
+    --accent-soft: #fef3c7;
     --success: #15803d;
     --success-soft: #e5f7eb;
     --danger: #be123c;
     --danger-soft: #ffe4eb;
     --warning: #b45309;
     --warning-soft: #fff1d6;
-    --bg: #f6f8f7;
-    --header: #123332;
+    --bg: #f4f9fd;
+    --header: #2386c8;
     --card: #ffffff;
-    --surface: #fbfdfc;
+    --surface: #ffffff;
     --surface-muted: #f1f5f4;
-    --text-main: #15231f;
-    --text-body: #374b46;
-    --text-sub: #657771;
-    --text-inverse: #f8fbfa;
-    --border: #d8e1df;
-    --border-strong: #b8c8c4;
-    --focus-ring: rgba(15, 118, 110, 0.28);
+    --text-main: #0f172a;
+    --text-body: #334155;
+    --text-sub: #64748b;
+    --text-inverse: #ffffff;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --focus-ring: rgba(35, 134, 200, 0.28);
     --radius: 8px;
     --shadow: 0 14px 34px rgba(21, 35, 31, 0.1);
     --transition: 160ms ease;
@@ -63,7 +66,7 @@ button {
     min-height: 520px;
     flex-direction: column;
     background:
-        linear-gradient(180deg, rgba(223, 243, 239, 0.72) 0, rgba(246, 248, 247, 0) 250px),
+        linear-gradient(180deg, rgba(224, 242, 254, 0.72) 0, rgba(244, 249, 253, 0) 250px),
         var(--bg);
 }
 
@@ -71,9 +74,8 @@ button {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 18px 20px 20px;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)), var(--header);
+    padding: 20px 20px 22px;
+    background: var(--primary-gradient);
     color: var(--text-inverse);
 }
 
@@ -108,7 +110,7 @@ button {
 
 .brand-copy p {
     margin-top: 5px;
-    color: #b8d2ce;
+    color: rgba(255, 255, 255, 0.85);
     font-size: 13px;
     font-weight: 700;
 }
@@ -304,6 +306,110 @@ button {
 .hidden {
     display: none !important;
 }
+
+/* ── Admin Messages Banner ─────────────────────────────────── */
+.admin-messages-banner {
+    position: relative;
+    padding: 12px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+    animation: admin-banner-in 0.25s ease-out;
+}
+
+@keyframes admin-banner-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.admin-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+}
+
+.admin-msg-icon {
+    font-size: 16px;
+    flex: 0 0 auto;
+}
+
+.admin-msg-title {
+    flex: 1;
+    color: #92400e;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.admin-msg-badge {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.admin-msg-dismiss {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(146, 64, 14, 0.1);
+    color: #92400e;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color var(--transition);
+}
+
+.admin-msg-dismiss:hover {
+    background: rgba(146, 64, 14, 0.2);
+}
+
+.admin-msg-text {
+    color: #78350f;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.admin-msg-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+.admin-msg-link:hover {
+    color: #92400e;
+    text-decoration: underline;
+}
+
 
 .popup-footer {
     display: grid;

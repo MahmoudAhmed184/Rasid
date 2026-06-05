@@ -41,7 +41,7 @@ test.describe('Firefox generated extension pages', () => {
         const popupErrors = await openGeneratedExtensionPage(page, 'popup.html');
 
         await expect(page.locator('body')).toBeVisible();
-        await expect(page.getByText('Rasid').first()).toBeVisible();
+        await expect(page.getByText('Frelancia').first()).toBeVisible();
         await expect(page.getByText('فتح لوحة التحكم')).toBeVisible();
         expect(popupErrors).toEqual([]);
 

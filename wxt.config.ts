@@ -11,15 +11,68 @@ const hostPermissions = [
     'https://mostaql.com/*',
     'https://khamsat.com/*',
     'https://nafezly.com/*',
+    'https://rasid.runasp.net/*',
+    'http://localhost/*',
+] as const;
+
+const chatBridgeHostPermissions = [
     'https://chatgpt.com/*',
     'https://chat.openai.com/*',
-    'https://rasid.runasp.net/*',
+] as const;
+
+const unsafeDirectAiHostPermissions = [
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
 ] as const;
 
-const sharedPermissions = ['alarms', 'downloads', 'notifications', 'storage'] as const;
+const sharedPermissions = ['alarms', 'downloads', 'notifications', 'scripting', 'storage'] as const;
+
+function isUnsafeDirectAiEnabled(): boolean {
+    return process.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true';
+}
+
+export function createRasidManifest(browser: string) {
+    const isChrome = browser === 'chrome';
+
+    return {
+        name: 'Frelancia | فريلانسيا',
+        short_name: 'Frelancia',
+        version: '1.0.0',
+        description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
+        action: {
+            default_title: 'Frelancia | فريلانسيا',
+            default_popup: 'popup/index.html',
+            default_icon: icons,
+        },
+        options_ui: {
+            page: 'dashboard.html',
+            open_in_tab: true,
+        },
+        icons,
+        permissions: isChrome ? [...sharedPermissions, 'offscreen'] : [...sharedPermissions],
+        host_permissions: [...hostPermissions],
+        optional_host_permissions: [
+            ...chatBridgeHostPermissions,
+            ...(isUnsafeDirectAiEnabled() ? unsafeDirectAiHostPermissions : []),
+        ],
+        minimum_chrome_version: isChrome ? '120' : undefined,
+        browser_specific_settings: isChrome
+            ? undefined
+            : {
+                  gecko: {
+                      id: 'frelancia@mostaql-notifier',
+                      strict_min_version: '140.0',
+                      data_collection_permissions: {
+                          required: ['websiteContent'],
+                      },
+                  },
+                  gecko_android: {
+                      strict_min_version: '142.0',
+                  },
+              },
+    };
+}
 
 function stripSignalRInvalidPureAnnotations(): Plugin {
     return {
@@ -70,41 +123,5 @@ export default defineConfig({
             paths.push('/offscreen.html');
         },
     },
-    manifest: ({ browser }) => {
-        const isChrome = browser === 'chrome';
-
-        return {
-            name: 'Rasid | راصد',
-            short_name: 'Rasid',
-            version: '1.0.0',
-            description: 'تنبيهات فرص العمل الحر مع توليد عروض بالذكاء الاصطناعي',
-            action: {
-                default_title: 'Rasid | راصد',
-                default_popup: 'popup/index.html',
-                default_icon: icons,
-            },
-            options_ui: {
-                page: 'dashboard.html',
-                open_in_tab: true,
-            },
-            icons,
-            permissions: isChrome ? [...sharedPermissions, 'offscreen'] : [...sharedPermissions],
-            host_permissions: [...hostPermissions],
-            minimum_chrome_version: isChrome ? '120' : undefined,
-            browser_specific_settings: isChrome
-                ? undefined
-                : {
-                      gecko: {
-                          id: 'rasid@mostaql-notifier',
-                          strict_min_version: '140.0',
-                          data_collection_permissions: {
-                              required: ['websiteContent'],
-                          },
-                      },
-                      gecko_android: {
-                          strict_min_version: '142.0',
-                      },
-                  },
-        };
-    },
+    manifest: ({ browser }) => createRasidManifest(browser),
 });

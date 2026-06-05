@@ -73,6 +73,7 @@ export function normalizeJob(value: unknown): JobRecord | null {
         poster: normalizeOptionalText(value.poster),
         time: normalizeOptionalText(value.time),
         postedAt: normalizeOptionalText(value.postedAt),
+        lastInteractionAt: normalizeOptionalText(value.lastInteractionAt),
         bidsText: normalizeOptionalText(value.bidsText),
         category: normalizeOptionalText(value.category),
         clientName: normalizeOptionalText(value.clientName),

@@ -9,11 +9,13 @@ import type {
 
 const backgroundMessages = vi.hoisted(() => ({
     requestGenerateProposal: vi.fn(),
+    requestOpenChatBridgePrompt: vi.fn(),
     requestDownloadZip: vi.fn(),
 }));
 
 vi.mock('../../../../src/app/background/background-messages', () => ({
     requestGenerateProposal: backgroundMessages.requestGenerateProposal,
+    requestOpenChatBridgePrompt: backgroundMessages.requestOpenChatBridgePrompt,
     requestDownloadZip: backgroundMessages.requestDownloadZip,
 }));
 
@@ -39,7 +41,6 @@ function createDependencies() {
         proposalRepository: {
             getQuickTemplate: vi.fn(async () => 'Quick proposal'),
             queueAutofill: vi.fn(async (_draft: PlatformAutofillDraft) => undefined),
-            setPendingBridgePrompt: vi.fn(async (_prompt: string, _chatUrl?: string) => undefined),
         },
         trackingRepository: {
             list: vi.fn(async () => tracked),
@@ -127,7 +128,7 @@ describe('platform content services', () => {
         });
     });
 
-    it('queues autofill, stores bridge prompts, downloads ZIP files, and reports ZIP failures', async () => {
+    it('queues autofill, opens bridge prompts, downloads ZIP files, and reports ZIP failures', async () => {
         const deps = createDependencies();
         const services = createPlatformContentServices(deps);
         const draft: PlatformAutofillDraft = {
@@ -140,11 +141,25 @@ describe('platform content services', () => {
         };
 
         await services.proposals.queueAutofill(draft);
-        await services.proposals.setPendingBridgePrompt('Prompt', 'https://chatgpt.com/');
+        backgroundMessages.requestOpenChatBridgePrompt.mockResolvedValueOnce({
+            success: true,
+            tabId: 1,
+            tabStatus: 'created',
+            injected: true,
+        });
+        await services.proposals.openBridgePrompt('Prompt', 'https://chatgpt.com/');
         expect(deps.proposalRepository.queueAutofill).toHaveBeenCalledWith(draft);
-        expect(deps.proposalRepository.setPendingBridgePrompt).toHaveBeenCalledWith(
+        expect(backgroundMessages.requestOpenChatBridgePrompt).toHaveBeenCalledWith(
             'Prompt',
             'https://chatgpt.com/'
+        );
+
+        backgroundMessages.requestOpenChatBridgePrompt.mockResolvedValueOnce({
+            success: false,
+            reason: 'permission-denied',
+        });
+        await expect(services.proposals.openBridgePrompt('Prompt')).rejects.toThrow(
+            'لم تُمنح صلاحية فتح ChatGPT'
         );
 
         backgroundMessages.requestDownloadZip.mockResolvedValueOnce({ success: true });

@@ -4,7 +4,6 @@ import { runPollingCycle } from '../../features/monitoring/run-polling-cycle';
 import { createProposalGenerator } from '../../features/proposals/generate-proposal';
 import { createProposalTemplateCatalog } from '../../features/proposals/proposal-template-catalog';
 import { createBackgroundRuntimeHandlers } from './background-runtime-handlers';
-import { createAiProviderRegistry } from '../../entities/ai/provider-registry';
 import { createDownloadCleanupService } from '../../features/downloads/download-cleanup-service';
 import { createAudioService } from '../../features/notifications/audio-service';
 import { createOffscreenManager } from '../../features/offscreen/manager';
@@ -13,6 +12,11 @@ import { createSignalRManager } from '../../features/realtime/signalr-manager';
 import { createExtensionStorage } from '../../shared/storage/extension-storage';
 import { createPlatformMonitoringHtmlParser } from '../../platforms/monitoring-html-parser';
 import { createPlatformMonitoringAdapters } from '../../platforms/registry';
+import { createProposalRepository } from '../../features/proposals/proposal-repository';
+import {
+    createBrowserSessionStorageClient,
+    createBrowserStorageClient,
+} from '../../shared/browser/storage-client';
 
 export interface BackgroundApp {
     readonly notifications: ReturnType<typeof createNotificationService>;
@@ -23,7 +27,10 @@ export interface BackgroundApp {
 }
 
 export function createBackgroundApp(): BackgroundApp {
-    const storage = createExtensionStorage();
+    const storageClient = createBrowserStorageClient();
+    const secretClient = createBrowserSessionStorageClient();
+    const storage = createExtensionStorage(storageClient, secretClient);
+    const proposalRepository = createProposalRepository(storage, storageClient);
     const notifications = createNotificationService(storage);
     const offscreen = createOffscreenManager({
         mode: import.meta.env.CHROME ? 'document' : 'local',
@@ -48,12 +55,21 @@ export function createBackgroundApp(): BackgroundApp {
     const downloads = createDownloadCleanupService(storage, offscreen);
     const monitoringHtmlParser = createPlatformMonitoringHtmlParser(offscreen);
     const platformMonitoring = createPlatformMonitoringAdapters(monitoringHtmlParser);
-    const aiProviders = createAiProviderRegistry();
     const proposalTemplates = createProposalTemplateCatalog(storage);
     const proposalGenerator = createProposalGenerator({
         settings: storage,
         templates: proposalTemplates,
-        providers: aiProviders,
+        ...(import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true'
+            ? {
+                  loadProviders: async () => {
+                      const { createAiProviderRegistry } = await import(
+                          '../../entities/ai/provider-registry'
+                      );
+
+                      return createAiProviderRegistry();
+                  },
+              }
+            : {}),
     });
     let ingestionQueue: Promise<void> = Promise.resolve();
 
@@ -93,6 +109,23 @@ export function createBackgroundApp(): BackgroundApp {
         onPollingFallback: async (reason) => {
             await runPolling(reason);
         },
+        onAdminMessageReceived: async (payload) => {
+            const msg = {
+                id: payload.id,
+                message: payload.message,
+                url: payload.url ?? null,
+                receivedAt: payload.createdAt,
+                read: false,
+            };
+
+            await storage.storeAdminMessage(msg);
+
+            try {
+                await notifications.showAdminMessageNotification(msg);
+            } catch (error) {
+                console.warn('[background] admin message notification failed:', error);
+            }
+        },
     });
 
     const runtimeMessageHandlers = createBackgroundRuntimeHandlers({
@@ -104,6 +137,7 @@ export function createBackgroundApp(): BackgroundApp {
         signalr,
         monitoring: platformMonitoring,
         proposals: proposalGenerator,
+        proposalRepository,
         runPolling,
     });
 

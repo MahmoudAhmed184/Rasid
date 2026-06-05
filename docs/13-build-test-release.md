@@ -49,6 +49,9 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
 ```
 
 `npm run lint` runs:
@@ -68,6 +71,8 @@ npm run lint:firefox
 
 The test suite uses Vitest with WXT's official test plugin. Tests live under `tests/src/**` and `tests/entrypoints/**`, mirroring source ownership where practical.
 
+The optional backend solution targets `net10.0` and is pinned by the root `global.json` to SDK `10.0.300` with `latestFeature` roll-forward. Backend CI uses tracked `packages.lock.json` files, central package versions in `server/Directory.Packages.props`, and build policy from `server/Directory.Build.props`, so local backend validation should use the locked restore/build/test sequence above.
+
 Additional test commands:
 
 - `npm run test:coverage` writes Vitest V8 coverage under `coverage/vitest`.
@@ -84,8 +89,10 @@ After `npm run build`, inspect:
 Confirm:
 
 - supported platform hosts only for marketplace content scripts
-- ChatGPT bridge hosts present
-- direct AI provider hosts present
+- `scripting` permission is present for on-demand bridge injection
+- ChatGPT bridge hosts are optional host permissions, not static content-script hosts
+- direct AI provider hosts are absent from normal builds and present only in unsafe side builds
+- required hosts include supported marketplaces, `https://rasid.runasp.net/*`, and `http://localhost/*`
 - Chrome includes `offscreen`
 - Firefox omits `offscreen`
 - browser-specific settings match `wxt.config.ts`
@@ -102,6 +109,7 @@ Chrome:
 6. Save settings.
 7. Test notification and sound.
 8. Visit supported platform pages and verify panels/autofill behavior where safe.
+9. Trigger bridge mode and verify the ChatGPT permission/open/injection path.
 
 Firefox:
 
@@ -114,6 +122,8 @@ Firefox:
 - `npm ci`
 - validation commands pass
 - generated manifests inspected
+- backend locked restore/build/test sequence run when backend contracts changed
+- `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` run when backend release behavior changed
 - README and privacy docs match generated permissions
 - store-review notes updated for any permission/privacy/platform changes
 - source package excludes generated and private local artifacts

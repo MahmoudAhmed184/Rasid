@@ -55,7 +55,9 @@ function normalizeTimeOfDay(value: unknown, fallback: string): string {
 }
 
 function normalizeAiExecutionMode(value: unknown): AiExecutionMode {
-    return value === 'direct' ? 'direct' : 'bridge';
+    return import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true' && value === 'direct'
+        ? 'direct'
+        : 'bridge';
 }
 
 function normalizeAiProvider(value: unknown): AiProviderId {
@@ -111,7 +113,6 @@ export function normalizeSettings(value: unknown): ExtensionSettings {
             DEFAULT_SETTINGS.aiSystemPrompt,
         interval: clampPollingInterval(value.interval),
         notificationMode: normalizeNotificationMode(value.notificationMode),
-        signalrServerUrl: '',
         aiChatUrl: normalizeAiChatUrl(value.aiChatUrl),
         minBudget: normalizeNonNegativeNumber(value.minBudget, DEFAULT_SETTINGS.minBudget),
         minHiringRate: normalizePercentage(value.minHiringRate, DEFAULT_SETTINGS.minHiringRate),

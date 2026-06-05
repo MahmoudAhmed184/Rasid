@@ -3,7 +3,7 @@ import { browser } from 'wxt/browser';
 import { applyNafezlyProposalAutofill } from './content/autofill';
 import { extractNafezlyProposalSource } from './content/data';
 import { mountNafezlyProjectPanel } from './content/project-panel';
-import { extractNafezlyProjectId, NAFEZLY_SELECTORS } from './selectors';
+import { extractNafezlyProjectId, NAFEZLY_SELECTORS, queryAll } from './selectors';
 import type {
     PlatformAdapter,
     PlatformContributionMountResult,
@@ -76,6 +76,11 @@ export const nafezlyAdapter = {
     isContextValid,
     matchPage({ url }) {
         return matchPage(url);
+    },
+    getObservationTargets({ document }) {
+        return NAFEZLY_SELECTORS.observation.targets.flatMap((selector) =>
+            queryAll<Element>(document, selector)
+        );
     },
     extractProposalSource(input) {
         return extractNafezlyProposalSource(input);

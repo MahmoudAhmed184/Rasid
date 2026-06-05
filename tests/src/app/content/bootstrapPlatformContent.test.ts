@@ -9,15 +9,24 @@ import type {
 import { installTestDom } from '../../../support/html';
 
 let triggerObservedMutation: (() => void) | null = null;
+let observedTargets: Element[] = [];
+let observerDisconnects: Array<ReturnType<typeof vi.fn>> = [];
 
 function installDomRuntimeShims(url = 'https://mostaql.com/project/1'): void {
+    observedTargets = [];
+    observerDisconnects = [];
+
     class TestMutationObserver {
+        disconnect = vi.fn();
+
         constructor(callback: MutationCallback) {
             triggerObservedMutation = () => callback([], this as unknown as MutationObserver);
+            observerDisconnects.push(this.disconnect);
         }
 
-        disconnect = vi.fn();
-        observe = vi.fn();
+        observe = vi.fn((target: Element) => {
+            observedTargets.push(target);
+        });
     }
 
     Object.defineProperty(globalThis, 'MutationObserver', {
@@ -77,7 +86,7 @@ function createServices(): PlatformContentServices {
             getQuickTemplate: async () => '',
             generate: async () => ({ kind: 'error', message: 'not used' }),
             queueAutofill: async () => undefined,
-            setPendingBridgePrompt: async () => undefined,
+            openBridgePrompt: async () => undefined,
         },
         downloads: {
             downloadZip: async () => undefined,
@@ -214,5 +223,156 @@ describe('platform content bootstrap', () => {
         expect(mount).toHaveBeenCalledTimes(2);
         document.defaultView?.dispatchEvent(new Event('unload'));
         expect(dispose).toHaveBeenCalledOnce();
+    });
+
+    it('observes adapter-provided stable targets and falls back when none are available', () => {
+        const document = installTestDom('<main id="stable"></main>');
+        installDomRuntimeShims();
+        const stableTarget = document.getElementById('stable')!;
+        const adapter = {
+            id: 'mostaql',
+            displayName: 'Mostaql',
+            matches: ['https://mostaql.com/*'],
+            isContextValid: () => true,
+            matchPage: () => ({ kind: 'project', key: 'project:1', projectId: '1' }) as const,
+            getObservationTargets: () => [stableTarget],
+            extractProposalSource: () => null,
+            ui: [],
+            applyProposalAutofill: async () => ({ kind: 'applied' as const }),
+        } satisfies PlatformAdapter;
+
+        bootstrapPlatformContent({
+            adapter,
+            document,
+            routePollIntervalMs: 25,
+            services: createServices(),
+        });
+
+        expect(observedTargets.at(-1)).toBe(stableTarget);
+
+        const fallbackDocument = installTestDom('<main></main>');
+        installDomRuntimeShims();
+        bootstrapPlatformContent({
+            adapter: {
+                ...adapter,
+                getObservationTargets: () => [],
+            },
+            document: fallbackDocument,
+            routePollIntervalMs: 25,
+            services: createServices(),
+        });
+
+        expect(observedTargets.at(-1)).toBe(fallbackDocument.documentElement);
+    });
+
+    it('stops broad fallback observation after the discovery window', async () => {
+        vi.useFakeTimers();
+        const document = installTestDom('<main></main>');
+        installDomRuntimeShims();
+        const adapter = {
+            id: 'khamsat',
+            displayName: 'Khamsat',
+            matches: ['https://khamsat.com/*'],
+            isContextValid: () => true,
+            matchPage: () => ({ kind: 'project', key: 'project:1', projectId: '1' }) as const,
+            getObservationTargets: () => [],
+            extractProposalSource: () => null,
+            ui: [],
+            applyProposalAutofill: async () => ({ kind: 'applied' as const }),
+        } satisfies PlatformAdapter;
+
+        bootstrapPlatformContent({
+            adapter,
+            document,
+            observationDiscoveryWindowMs: 50,
+            routePollIntervalMs: 25,
+            services: createServices(),
+        });
+
+        expect(observedTargets.at(-1)).toBe(document.documentElement);
+        const disconnect = observerDisconnects.at(-1);
+        if (!disconnect) {
+            throw new Error('Expected observer disconnect spy.');
+        }
+        expect(disconnect).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(50);
+
+        expect(disconnect).toHaveBeenCalledTimes(2);
+    });
+
+    it('switches from fallback observation to late adapter targets', async () => {
+        vi.useFakeTimers();
+        const document = installTestDom('<main></main>');
+        installDomRuntimeShims();
+        const adapter = {
+            id: 'mostaql',
+            displayName: 'Mostaql',
+            matches: ['https://mostaql.com/*'],
+            isContextValid: () => true,
+            matchPage: () => ({ kind: 'project', key: 'project:1', projectId: '1' }) as const,
+            getObservationTargets: ({ document }) =>
+                [...document.querySelectorAll<Element>('[data-observe-target]')],
+            extractProposalSource: () => null,
+            ui: [],
+            applyProposalAutofill: async () => ({ kind: 'applied' as const }),
+        } satisfies PlatformAdapter;
+
+        bootstrapPlatformContent({
+            adapter,
+            document,
+            observationDiscoveryWindowMs: 1_000,
+            routePollIntervalMs: 25,
+            services: createServices(),
+        });
+
+        expect(observedTargets.at(-1)).toBe(document.documentElement);
+
+        const lateTarget = document.createElement('section');
+        lateTarget.dataset.observeTarget = 'true';
+        document.body.append(lateTarget);
+        triggerObservedMutation?.();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(observedTargets.at(-1)).toBe(lateTarget);
+    });
+
+    it('retries deferred contributions with bounded backoff', async () => {
+        vi.useFakeTimers();
+        const document = installTestDom('<main></main>');
+        installDomRuntimeShims('https://nafezly.com/project/77');
+        const mount = vi.fn(() => ({ kind: 'deferred' as const }));
+        const adapter = {
+            id: 'nafezly',
+            displayName: 'Nafezly',
+            matches: ['https://nafezly.com/*'],
+            isContextValid: () => true,
+            matchPage: () => ({ kind: 'project', key: 'project:77', projectId: '77' }) as const,
+            extractProposalSource: () => null,
+            ui: [{ id: 'project-tools', pages: ['project'], mount }],
+            applyProposalAutofill: async () => ({ kind: 'applied' as const }),
+        } satisfies PlatformAdapter;
+
+        bootstrapPlatformContent({
+            adapter,
+            document,
+            deferredRetryDelaysMs: [10, 20],
+            observationDiscoveryWindowMs: 1_000,
+            routePollIntervalMs: 1_000,
+            services: createServices(),
+        });
+
+        expect(mount).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(10);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(mount).toHaveBeenCalledTimes(2);
+
+        await vi.advanceTimersByTimeAsync(20);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(mount).toHaveBeenCalledTimes(3);
+
+        await vi.advanceTimersByTimeAsync(100);
+        expect(mount).toHaveBeenCalledTimes(3);
     });
 });

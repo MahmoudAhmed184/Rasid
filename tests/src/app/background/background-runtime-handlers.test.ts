@@ -40,6 +40,9 @@ function createDeps(overrides: Record<string, unknown> = {}) {
         proposals: {
             generate: vi.fn(async () => ({ success: false, error: 'not used' })),
         },
+        proposalRepository: {
+            setPendingBridgePrompt: vi.fn(async () => undefined),
+        },
         runPolling: vi.fn(async (): Promise<JobBatchResult> => {
             return {
                 kind: 'noop',
@@ -83,6 +86,22 @@ describe('background runtime handlers', () => {
         expect(deps.audio.playNotification).toHaveBeenCalledOnce();
         expect(deps.signalr.reconnect).toHaveBeenCalledOnce();
         expect(deps.signalr.disconnect).toHaveBeenCalledOnce();
+    });
+
+    it('propagates rejected test notification errors', async () => {
+        const deps = createDeps({
+            notifications: {
+                showTestNotification: vi.fn(async () => {
+                    throw new Error('Property "buttons" is unsupported by Firefox');
+                }),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await expect(handlers.testNotification({ action: 'testNotification' })).rejects.toThrow(
+            'Property "buttons" is unsupported by Firefox'
+        );
+        expect(deps.notifications.showTestNotification).toHaveBeenCalledOnce();
     });
 
     it('returns a deterministic debug fetch failure when all monitoring feeds are disabled', async () => {
@@ -139,6 +158,107 @@ describe('background runtime handlers', () => {
             title: 'مشروع اختبار',
             description: 'وصف المشروع',
         });
+    });
+
+    it('returns an actionable bridge failure when ChatGPT host permission is denied', async () => {
+        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
+        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(false);
+        const create = vi.spyOn(fakeBrowser.tabs, 'create');
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await expect(
+            handlers.openChatBridgePrompt({
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft proposal',
+                chatUrl: 'https://chatgpt.com/',
+            })
+        ).resolves.toEqual({
+            success: false,
+            reason: 'permission-denied',
+        });
+        expect(fakeBrowser.permissions.request).toHaveBeenCalledWith({
+            origins: ['https://chatgpt.com/*'],
+        });
+        expect(deps.proposalRepository.setPendingBridgePrompt).not.toHaveBeenCalled();
+        expect(create).not.toHaveBeenCalled();
+    });
+
+    it('focuses existing ChatGPT tabs, stores the prompt, and injects the bridge script once', async () => {
+        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([
+            {
+                id: 17,
+                url: 'https://chatgpt.com/',
+            } as Browser.tabs.Tab,
+        ]);
+        const update = vi.spyOn(fakeBrowser.tabs, 'update').mockResolvedValue({
+            id: 17,
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const create = vi.spyOn(fakeBrowser.tabs, 'create');
+        const executeScript = vi.spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await expect(
+            handlers.openChatBridgePrompt({
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft proposal',
+                chatUrl: 'https://chatgpt.com/',
+            })
+        ).resolves.toEqual({
+            success: true,
+            tabId: 17,
+            tabStatus: 'focused',
+            injected: true,
+        });
+        expect(fakeBrowser.permissions.request).not.toHaveBeenCalled();
+        expect(update).toHaveBeenCalledWith(17, { active: true });
+        expect(create).not.toHaveBeenCalled();
+        expect(deps.proposalRepository.setPendingBridgePrompt).toHaveBeenCalledWith(
+            'Draft proposal',
+            'https://chatgpt.com/'
+        );
+        expect(executeScript).toHaveBeenCalledTimes(1);
+        expect(executeScript).toHaveBeenCalledWith({
+            target: {
+                tabId: 17,
+            },
+            files: ['/chatgpt-bridge.js'],
+        });
+    });
+
+    it('reports injection failures after opening ChatGPT and storing the prompt', async () => {
+        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
+        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        vi.spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 23,
+            url: 'https://chat.openai.com/',
+        } as Browser.tabs.Tab);
+        vi.spyOn(fakeBrowser.scripting, 'executeScript').mockRejectedValue(
+            new Error('Cannot access tab')
+        );
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await expect(
+            handlers.openChatBridgePrompt({
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft proposal',
+                chatUrl: 'https://chat.openai.com/',
+            })
+        ).resolves.toEqual({
+            success: false,
+            reason: 'injection-failed',
+            error: 'Cannot access tab',
+        });
+        expect(deps.proposalRepository.setPendingBridgePrompt).toHaveBeenCalledWith(
+            'Draft proposal',
+            'https://chat.openai.com/'
+        );
     });
 
     it('updates settings and reboots SignalR when alarm settings change', async () => {

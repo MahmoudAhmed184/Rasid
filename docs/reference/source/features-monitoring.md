@@ -6,26 +6,36 @@ Runtime context: background monitoring, popup/dashboard repositories, and platfo
 
 Purpose: safe marketplace HTML fetching and platform parser invocation.
 
+Important constant:
+
+- `MONITORING_FETCH_TIMEOUT_MS = 15_000`
+
 Functions:
 
-| Function                                       | Purpose                                                   | Inputs        | Outputs                        | Side effects, errors, security                                                                                          |
-| ---------------------------------------------- | --------------------------------------------------------- | ------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `sanitizeFetchError(error)`                    | Converts fetch errors into bounded messages.              | unknown error | string                         | Hides raw `TypeError` details as `Network request failed.`                                                              |
-| `fetchHtml(url)`                               | Fetches HTML with no credentials and challenge detection. | URL string    | success/error result           | Uses `GET`, `credentials: "omit"`, `cache: "no-store"`, `referrerPolicy: "no-referrer"`, and anti-bot marker detection. |
-| `fetchPlatformFeedJobsResult(monitoring, url)` | Fetches cache-busted feed and parses listing HTML.        | adapter, URL  | success/error result           | Appends `_cb=<timestamp>`; parser may run in offscreen/local task.                                                      |
-| `hydratePlatformJob(monitoring, job)`          | Fetches detail page and merges parsed detail fields.      | adapter, job  | `JobRecord`                    | Returns original job on fetch error.                                                                                    |
-| `debugFetchMonitoringSource(monitoring)`       | Tests one platform probe URL.                             | adapter       | `{ success, length?, error? }` | Used by popup diagnostics.                                                                                              |
-| `debugFetchMonitoringSources(monitoring)`      | Tests enabled platform probes.                            | adapter array | combined diagnostics           | Returns failure when no platforms are enabled.                                                                          |
+| Function                                       | Purpose                                                             | Inputs        | Outputs                        | Side effects, errors, security                                                                                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------- | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `sanitizeFetchError(error)`                    | Converts fetch errors into bounded messages.                        | unknown error | string                         | Hides raw `TypeError` details as `Network request failed.`                                                                           |
+| `createFetchTimeoutSignal()`                   | Creates abort signal for bounded HTML fetches.                      | none          | signal/cleanup                 | Uses `AbortSignal.timeout()` when available or manual `AbortController`.                                                             |
+| `fetchHtml(url)`                               | Fetches HTML with no credentials, timeout, and challenge detection. | URL string    | success/error result           | Uses `GET`, `credentials: "omit"`, `cache: "no-store"`, `referrerPolicy: "no-referrer"`, 15s timeout, and anti-bot marker detection. |
+| `fetchPlatformFeedJobsResult(monitoring, url)` | Fetches cache-busted feed and parses listing HTML.                  | adapter, URL  | success/error result           | Appends `_cb=<timestamp>`; parser may run in offscreen/local task.                                                                   |
+| `hydratePlatformJob(monitoring, job)`          | Fetches detail page and merges parsed detail fields.                | adapter, job  | `JobRecord`                    | Returns original job on fetch error.                                                                                                 |
+| `debugFetchMonitoringSource(monitoring)`       | Tests one platform probe URL.                                       | adapter       | `{ success, length?, error? }` | Used by popup diagnostics.                                                                                                           |
+| `debugFetchMonitoringSources(monitoring)`      | Tests enabled platform probes.                                      | adapter array | combined diagnostics           | Returns failure when no platforms are enabled.                                                                                       |
 
 ## `src/features/monitoring/run-polling-cycle.ts`
 
 Purpose: orchestrates one background polling cycle.
 
+Important constants:
+
+- `KHAMSAT_PUBLISH_FRESHNESS_HOURS = 48`
+
 Functions:
 
-| Function                   | Purpose                                                                                         | Inputs                                                       | Outputs                   | Side effects, errors, security                                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `runPollingCycle(options)` | Fetches feeds, parses jobs, hydrates new records, filters, stores, and publishes notifications. | storage, notifier, reason, adapters, optional audio callback | `Promise<JobBatchResult>` | Writes runtime state, seen/recent jobs, stats; respects disabled/no-platform states; records monitoring errors by adapter ID. |
+| Function                             | Purpose                                                                                         | Inputs                                                       | Outputs                   | Side effects, errors, security                                                                                                |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `classifyKhamsatFreshness(job, now)` | Classifies hydrated Khamsat request as fresh, stale, or retry.                                  | job, date                                                    | freshness label           | Uses `parseJobPostedAt()` and the 48-hour freshness window.                                                                   |
+| `runPollingCycle(options)`           | Fetches feeds, parses jobs, hydrates new records, filters, stores, and publishes notifications. | storage, notifier, reason, adapters, optional audio callback | `Promise<JobBatchResult>` | Writes runtime state, seen/recent jobs, stats; respects disabled/no-platform states; records monitoring errors by adapter ID. |
 
 ## `src/features/monitoring/process-realtime-job-batch.ts`
 
@@ -45,15 +55,17 @@ Types:
 
 - `JobBatchSource`
 - `JobBatchNoopReason`
+- `JobBatchFailedReason`
 - `JobNotifier`
 - `JobBatchResult`
 
 Functions:
 
-| Function                                                 | Purpose                              | Inputs                                                                      | Outputs                   | Side effects, errors, security                                                      |
-| -------------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------- |
-| `createNoopJobBatchResult(source, totalChecked, reason)` | Builds no-op batch result.           | source, count, reason                                                       | `JobBatchResult`          | Pure.                                                                               |
-| `publishJobBatch(options)`                               | Publishes or suppresses a job batch. | source, jobs, count, settings, notification state, notifier, optional audio | `Promise<JobBatchResult>` | Suppresses during quiet hours, calls notifier and optional audio only when enabled. |
+| Function                                                                     | Purpose                              | Inputs                                                                      | Outputs                   | Side effects, errors, security                                                      |
+| ---------------------------------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------- |
+| `createNoopJobBatchResult(source, totalChecked, reason)`                     | Builds no-op batch result.           | source, count, reason                                                       | `JobBatchResult`          | Pure.                                                                               |
+| `createFailedJobBatchResult(source, totalChecked, reason, monitoringErrors)` | Builds failed fetch batch result.    | source, count, reason, errors                                               | `JobBatchResult`          | Pure; carries per-platform errors.                                                  |
+| `publishJobBatch(options)`                                                   | Publishes or suppresses a job batch. | source, jobs, count, settings, notification state, notifier, optional audio | `Promise<JobBatchResult>` | Suppresses during quiet hours, calls notifier and optional audio only when enabled. |
 
 ## `src/features/monitoring/job-filters.ts`
 

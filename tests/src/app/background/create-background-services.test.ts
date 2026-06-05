@@ -41,6 +41,11 @@ const factoryMocks = vi.hoisted(() => {
     const aiProviders = { providers: [] };
     const proposalTemplates = { templates: [] };
     const proposalGenerator = { generate: vi.fn(async () => ({ success: false })) };
+    const storageClient = { id: 'storageClient' };
+    const secretClient = { id: 'secretClient' };
+    const proposalRepository = { setPendingBridgePrompt: vi.fn(async () => undefined) };
+    const createBrowserStorageClient = vi.fn(() => storageClient);
+    const createBrowserSessionStorageClient = vi.fn(() => secretClient);
     const createExtensionStorage = vi.fn(() => storage);
     const createNotificationService = vi.fn(() => notifications);
     const createOffscreenManager = vi.fn(() => offscreen);
@@ -50,6 +55,7 @@ const factoryMocks = vi.hoisted(() => {
     const createPlatformMonitoringAdapters = vi.fn(() => monitoring);
     const createAiProviderRegistry = vi.fn(() => aiProviders);
     const createProposalTemplateCatalog = vi.fn(() => proposalTemplates);
+    const createProposalRepository = vi.fn(() => proposalRepository);
     const createProposalGenerator = vi.fn(() => proposalGenerator);
     const runPollingCycle = vi.fn(async () => noopBatchResult);
     const processRealtimeJobBatch = vi.fn(async () => ({
@@ -83,6 +89,11 @@ const factoryMocks = vi.hoisted(() => {
         aiProviders,
         proposalTemplates,
         proposalGenerator,
+        storageClient,
+        secretClient,
+        proposalRepository,
+        createBrowserStorageClient,
+        createBrowserSessionStorageClient,
         createExtensionStorage,
         createNotificationService,
         createOffscreenManager,
@@ -92,6 +103,7 @@ const factoryMocks = vi.hoisted(() => {
         createPlatformMonitoringAdapters,
         createAiProviderRegistry,
         createProposalTemplateCatalog,
+        createProposalRepository,
         createProposalGenerator,
         runPollingCycle,
         processRealtimeJobBatch,
@@ -122,6 +134,9 @@ const factoryMocks = vi.hoisted(() => {
             signalr.reconnect.mockReset().mockResolvedValue(undefined);
             signalr.disconnect.mockReset().mockResolvedValue(undefined);
             runtimeHandlers.testNotification.mockReset().mockResolvedValue({ success: true });
+            proposalRepository.setPendingBridgePrompt.mockReset().mockResolvedValue(undefined);
+            createBrowserStorageClient.mockReset().mockReturnValue(storageClient);
+            createBrowserSessionStorageClient.mockReset().mockReturnValue(secretClient);
             createExtensionStorage.mockReset().mockReturnValue(storage);
             createNotificationService.mockReset().mockReturnValue(notifications);
             createOffscreenManager.mockReset().mockReturnValue(offscreen);
@@ -131,6 +146,7 @@ const factoryMocks = vi.hoisted(() => {
             createPlatformMonitoringAdapters.mockReset().mockReturnValue(monitoring);
             createAiProviderRegistry.mockReset().mockReturnValue(aiProviders);
             createProposalTemplateCatalog.mockReset().mockReturnValue(proposalTemplates);
+            createProposalRepository.mockReset().mockReturnValue(proposalRepository);
             createProposalGenerator.mockReset().mockReturnValue(proposalGenerator);
             runPollingCycle.mockReset().mockResolvedValue(noopBatchResult);
             processRealtimeJobBatch.mockReset().mockResolvedValue({
@@ -153,6 +169,11 @@ const factoryMocks = vi.hoisted(() => {
 
 vi.mock('../../../../src/shared/storage/extension-storage', () => ({
     createExtensionStorage: factoryMocks.state.createExtensionStorage,
+}));
+
+vi.mock('../../../../src/shared/browser/storage-client', () => ({
+    createBrowserStorageClient: factoryMocks.state.createBrowserStorageClient,
+    createBrowserSessionStorageClient: factoryMocks.state.createBrowserSessionStorageClient,
 }));
 
 vi.mock('../../../../src/features/notifications/service', () => ({
@@ -185,6 +206,10 @@ vi.mock('../../../../src/entities/ai/provider-registry', () => ({
 
 vi.mock('../../../../src/features/proposals/proposal-template-catalog', () => ({
     createProposalTemplateCatalog: factoryMocks.state.createProposalTemplateCatalog,
+}));
+
+vi.mock('../../../../src/features/proposals/proposal-repository', () => ({
+    createProposalRepository: factoryMocks.state.createProposalRepository,
 }));
 
 vi.mock('../../../../src/features/proposals/generate-proposal', () => ({
@@ -252,7 +277,16 @@ describe('background app factory', () => {
         ]);
         await app.ensureReady('alarm:poll');
 
-        expect(factoryMocks.state.createExtensionStorage).toHaveBeenCalledOnce();
+        expect(factoryMocks.state.createBrowserStorageClient).toHaveBeenCalledOnce();
+        expect(factoryMocks.state.createBrowserSessionStorageClient).toHaveBeenCalledOnce();
+        expect(factoryMocks.state.createExtensionStorage).toHaveBeenCalledWith(
+            factoryMocks.state.storageClient,
+            factoryMocks.state.secretClient
+        );
+        expect(factoryMocks.state.createProposalRepository).toHaveBeenCalledWith(
+            factoryMocks.state.storage,
+            factoryMocks.state.storageClient
+        );
         expect(factoryMocks.state.createNotificationService).toHaveBeenCalledWith(
             factoryMocks.state.storage
         );
@@ -279,8 +313,10 @@ describe('background app factory', () => {
                 signalr: factoryMocks.state.signalr,
                 monitoring: factoryMocks.state.monitoring,
                 proposals: factoryMocks.state.proposalGenerator,
+                proposalRepository: factoryMocks.state.proposalRepository,
             })
         );
+        expect(factoryMocks.state.createAiProviderRegistry).not.toHaveBeenCalled();
         expect(factoryMocks.state.storage.ensureDefaults).toHaveBeenCalledOnce();
         expect(factoryMocks.state.offscreen.bootstrap).toHaveBeenCalledOnce();
         expect(factoryMocks.state.downloads.reconcilePendingCleanups).toHaveBeenCalledOnce();

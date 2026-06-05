@@ -6,6 +6,7 @@ import {
     normalizeSignalRState,
 } from '../../../../src/shared/storage/modules/runtime-storage';
 import type { SignalRState } from '../../../../src/entities/runtime/model';
+import { DEFAULT_SIGNALR_URL } from '../../../../src/entities/runtime/signalr';
 import { DEFAULT_RUNTIME_STATE } from '../../../../src/shared/storage/schema';
 import { createMemoryStorage } from '../../../support/fake-storage';
 
@@ -20,7 +21,7 @@ describe('runtime storage normalization', () => {
             })
         ).toMatchObject({
             status: 'polling',
-            serverUrl: DEFAULT_RUNTIME_STATE.signalr.serverUrl,
+            serverUrl: DEFAULT_SIGNALR_URL,
             reconnectAttempt: 0,
         });
     });
@@ -41,7 +42,7 @@ describe('runtime storage normalization', () => {
                 status: 'connected',
                 instanceId: 'worker-1',
                 connectionId: 'connection-1',
-                serverUrl: 'https://rasid.runasp.net/jobNotificationHub',
+                serverUrl: DEFAULT_SIGNALR_URL,
                 reconnectAttempt: 3,
                 lastConnectedAt: '2026-05-22T10:00:00.000Z',
                 lastEventAt: '2026-05-22T10:01:00.000Z',
@@ -50,7 +51,7 @@ describe('runtime storage normalization', () => {
             status: 'connected',
             instanceId: 'worker-1',
             connectionId: 'connection-1',
-            serverUrl: DEFAULT_RUNTIME_STATE.signalr.serverUrl,
+            serverUrl: DEFAULT_SIGNALR_URL,
             reconnectAttempt: 0,
             lastConnectedAt: '2026-05-22T10:00:00.000Z',
             lastDisconnectedAt: null,

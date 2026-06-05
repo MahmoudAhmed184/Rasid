@@ -63,6 +63,72 @@ export default defineConfig(
             curly: ['error', 'all'],
             'no-undef': 'off',
             '@typescript-eslint/require-await': 'off',
+            '@typescript-eslint/no-floating-promises': 'error',
+            '@typescript-eslint/no-misused-promises': [
+                'error',
+                {
+                    checksVoidReturn: {
+                        attributes: false,
+                    },
+                },
+            ],
+        },
+    },
+    {
+        name: 'Rasid source safety boundaries',
+        files: ['src/**/*.ts', 'entrypoints/**/*.ts', 'wxt.config.ts'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        "AssignmentExpression[left.property.name=/^(innerHTML|outerHTML)$/]",
+                    message: 'Avoid assigning HTML strings directly; build DOM nodes instead.',
+                },
+                {
+                    selector: "CallExpression[callee.property.name='insertAdjacentHTML']",
+                    message: 'Avoid insertAdjacentHTML; build DOM nodes instead.',
+                },
+                {
+                    selector: "CallExpression[callee.name='eval']",
+                    message: 'eval is not allowed.',
+                },
+                {
+                    selector: "NewExpression[callee.name='Function']",
+                    message: 'Dynamic Function constructors are not allowed.',
+                },
+                {
+                    selector: "CallExpression[callee.name='Function']",
+                    message: 'Dynamic Function constructors are not allowed.',
+                },
+            ],
+        },
+    },
+    {
+        name: 'Rasid entity import boundaries',
+        files: ['src/entities/**/*.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'wxt/browser',
+                            message: 'Entity modules must not import browser extension APIs.',
+                        },
+                    ],
+                    patterns: [
+                        {
+                            group: ['../app/**', '../../app/**', '../../../app/**'],
+                            message: 'Entity modules must not import the app layer.',
+                        },
+                        {
+                            group: ['../features/**', '../../features/**', '../../../features/**'],
+                            message: 'Entity modules must not import feature modules.',
+                        },
+                    ],
+                },
+            ],
         },
     },
     {

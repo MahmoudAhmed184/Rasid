@@ -80,10 +80,10 @@ describe('proposal generator', () => {
         });
     });
 
-    it('routes direct mode through the selected provider', async () => {
+    it('falls back to bridge for stored direct mode in default builds', async () => {
         const provider: AiProviderAdapter = {
             id: 'gemini',
-            generate: async () => ({ output: 'generated proposal' }),
+            generate: vi.fn(async () => ({ output: 'generated proposal' })),
         };
 
         await expect(
@@ -110,13 +110,11 @@ describe('proposal generator', () => {
                 'default',
                 context
             )
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
             success: true,
-            mode: 'direct',
-            proposal: 'generated proposal',
-            provider: 'gemini',
-            model: 'gemini-model',
+            mode: 'bridge',
         });
+        expect(provider.generate).not.toHaveBeenCalled();
     });
 
     it('passes the configured system prompt to template resolution and exposes reusable generators', async () => {
@@ -148,10 +146,50 @@ describe('proposal generator', () => {
 
         await expect(generator.generate('default', context)).resolves.toMatchObject({
             success: true,
-            mode: 'direct',
-            proposal: 'generated via factory',
+            mode: 'bridge',
         });
         expect(resolve).toHaveBeenCalledWith('default', 'custom trusted prompt');
-        expect(provider.generate).toHaveBeenCalledOnce();
+        expect(provider.generate).not.toHaveBeenCalled();
+    });
+
+    it('blocks unsafe direct generation when provider host permission is denied', async () => {
+        vi.stubEnv('WXT_ENABLE_UNSAFE_DIRECT_AI', 'true');
+        const { browser } = await import('wxt/browser');
+        vi.spyOn(browser.permissions, 'contains').mockImplementation(async () => false);
+        const provider: AiProviderAdapter = {
+            id: 'openai',
+            generate: vi.fn(async () => ({ output: 'should not run' })),
+        };
+
+        await expect(
+            generateProposal(
+                {
+                    settings: {
+                        getSettings: async () => ({
+                            ...DEFAULT_SETTINGS,
+                            aiExecutionMode: 'direct',
+                            aiProvider: 'openai',
+                            aiApiKey: 'secret',
+                            aiModel: 'gpt-test',
+                        }),
+                    },
+                    templates: {
+                        resolve: async () => template,
+                    },
+                    providers: {
+                        openai: provider,
+                        gemini: provider,
+                        claude: provider,
+                    },
+                },
+                'default',
+                context
+            )
+        ).resolves.toEqual({
+            success: false,
+            error: 'Direct AI mode requires the provider host permission. Re-enable Direct mode from settings.',
+        });
+        expect(provider.generate).not.toHaveBeenCalled();
+        vi.unstubAllEnvs();
     });
 });

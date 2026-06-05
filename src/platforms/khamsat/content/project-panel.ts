@@ -28,7 +28,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
     const root = createPanelRoot(input.document);
     const title = input.document.createElement('h3');
     title.className = 'rasid-khamsat-panel__title';
-    title.textContent = 'Rasid | راصد';
+    title.textContent = 'Frelancia | فريلانسيا';
 
     const subtitle = input.document.createElement('p');
     subtitle.className = 'rasid-khamsat-panel__subtitle';
@@ -194,11 +194,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
             }
 
             if (result.kind === 'bridge') {
-                await input.services.proposals.setPendingBridgePrompt(
-                    result.prompt,
-                    result.chatUrl
-                );
-                window.open(result.chatUrl || 'https://chatgpt.com/', 'rasid_ai_chat');
+                await input.services.proposals.openBridgePrompt(result.prompt, result.chatUrl);
                 setStatus('تم فتح نافذة الذكاء الاصطناعي بالمطالبة الجاهزة.', 'success');
                 return;
             }

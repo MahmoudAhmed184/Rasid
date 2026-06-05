@@ -58,7 +58,8 @@ function installFormControlShims(): void {
 function installSettingsDom(): Document {
     const document = installTestDom(`
         <div id="saveStatus"></div>
-        <div id="aiDirectSettings"></div>
+        <p id="aiExecutionModeHelp"></p>
+        <div id="aiDirectSettingsMount"></div>
         <div id="aiBridgeSettings"></div>
         <input id="platform-mostaql" class="form-control" type="checkbox" />
         <input id="platform-khamsat" class="form-control" type="checkbox" />
@@ -72,10 +73,6 @@ function installSettingsDom(): Document {
         <input id="cat-ai" class="form-control" type="checkbox" />
         <input id="cat-all" class="form-control" type="checkbox" />
         <select id="aiExecutionMode" class="form-control"></select>
-        <select id="aiProvider" class="form-control"></select>
-        <input id="aiModel" class="form-control" />
-        <input id="aiApiKey" class="form-control" />
-        <textarea id="aiSystemPrompt" class="form-control"></textarea>
         <input id="aiChatUrl" class="form-control" />
         <input id="quietHoursEnabled" class="form-control" type="checkbox" />
         <input id="quietHoursStart" class="form-control" />
@@ -83,7 +80,6 @@ function installSettingsDom(): Document {
         <input id="checkInterval" class="form-control" />
         <input id="systemToggle" class="form-control" type="checkbox" />
         <select id="notificationMode" class="form-control"></select>
-        <input id="signalrServerUrl" class="form-control" />
         <textarea id="proposalTemplate" class="form-control"></textarea>
         <button id="saveAllBtn" type="button"></button>
         <button id="testNotificationBtn" type="button"></button>
@@ -204,7 +200,7 @@ function chooseBackupFile(document: Document, file: File): void {
 }
 
 describe('dashboard settings form', () => {
-    it('applies settings, validates bridge/direct AI fields, and saves background runtime changes', async () => {
+    it('applies settings, validates bridge AI fields, and saves background runtime changes', async () => {
         const document = installSettingsDom();
         const repositories = createRepositories({
             ...DEFAULT_SETTINGS,
@@ -224,7 +220,8 @@ describe('dashboard settings form', () => {
         expect((document.getElementById('platform-khamsat') as HTMLInputElement).checked).toBe(
             false
         );
-        expect((document.getElementById('aiModel') as HTMLInputElement).disabled).toBe(true);
+        expect(document.getElementById('aiDirectSettings')).toBeNull();
+        expect(document.getElementById('aiModel')).toBeNull();
         expect((document.getElementById('aiChatUrl') as HTMLInputElement).required).toBe(true);
 
         form.bind();
@@ -263,8 +260,8 @@ describe('dashboard settings form', () => {
 
         (document.getElementById('aiExecutionMode') as HTMLSelectElement).value = 'direct';
         document.getElementById('aiExecutionMode')?.dispatchEvent(new Event('change'));
-        expect((document.getElementById('aiModel') as HTMLInputElement).disabled).toBe(false);
-        expect((document.getElementById('aiApiKey') as HTMLInputElement).required).toBe(true);
+        expect(document.getElementById('aiDirectSettings')).toBeNull();
+        expect((document.getElementById('aiChatUrl') as HTMLInputElement).disabled).toBe(false);
     });
 
     it('handles monitoring toggles and notification/sound test buttons', async () => {
@@ -337,7 +334,7 @@ describe('dashboard settings form', () => {
 
         await vi.waitFor(() =>
             expect(document.getElementById('saveStatus')?.textContent).toBe(
-                'تعذر إرسال الإشعار التجريبي.'
+                'تعذر إرسال الإشعار التجريبي: blocked'
             )
         );
         expect(backgroundMessages.requestTestNotification).toHaveBeenCalledOnce();
@@ -345,7 +342,7 @@ describe('dashboard settings form', () => {
         expect(button.getAttribute('aria-busy')).toBe('false');
     });
 
-    it('requires direct AI credentials and reconnects realtime for non-polling notification modes', async () => {
+    it('normalizes disabled direct AI settings to bridge and reconnects realtime for non-polling notification modes', async () => {
         const document = installSettingsDom();
         const repositories = createRepositories({
             ...DEFAULT_SETTINGS,
@@ -359,36 +356,79 @@ describe('dashboard settings form', () => {
         form.apply(await repositories.settingsRepository.get());
         form.bind();
 
-        document.getElementById('saveAllBtn')?.click();
-
-        await vi.waitFor(() =>
-            expect(document.getElementById('saveStatus')?.textContent).toBe(
-                'راجع الحقل المحدد قبل حفظ الإعدادات.'
-            )
-        );
-        expect(repositories.settingsRepository.save).not.toHaveBeenCalled();
-        expect(
-            (document.getElementById('aiModel') as HTMLInputElement).getAttribute('aria-invalid')
-        ).toBe('true');
-
-        setFieldValue(document, 'aiModel', 'gpt-test');
-        setFieldValue(document, 'aiApiKey', 'sk-test');
-        setFieldValue(document, 'proposalTemplate', 'Direct template');
+        setFieldValue(document, 'proposalTemplate', 'Bridge template');
         (document.getElementById('notificationMode') as HTMLSelectElement).value = 'auto';
         document.getElementById('saveAllBtn')?.click();
 
         await vi.waitFor(() =>
             expect(repositories.settingsRepository.save).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    aiExecutionMode: 'direct',
-                    aiModel: 'gpt-test',
-                    aiApiKey: 'sk-test',
+                    aiExecutionMode: 'bridge',
                     notificationMode: 'auto',
                 })
             )
         );
+        expect(repositories.proposalRepository.setQuickTemplate).toHaveBeenCalledWith(
+            'Bridge template'
+        );
         expect(backgroundMessages.requestReconnectSignalR).toHaveBeenCalledOnce();
         expect(backgroundMessages.requestDisconnectSignalR).not.toHaveBeenCalled();
+    });
+
+    it('renders unsafe direct AI controls and requests provider permission before saving direct mode', async () => {
+        vi.stubEnv('WXT_ENABLE_UNSAFE_DIRECT_AI', 'true');
+        const { browser } = await import('wxt/browser');
+        const originalRequest = browser.permissions.request;
+
+        try {
+            const permissionsRequest = vi.fn(async () => true);
+
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: permissionsRequest,
+            });
+
+            const document = installSettingsDom();
+            const repositories = createRepositories({
+                ...DEFAULT_SETTINGS,
+                aiExecutionMode: 'direct',
+                aiModel: '',
+                aiApiKey: '',
+                notificationMode: 'auto',
+            });
+            const form = createSettingsForm(document, { repositories });
+
+            form.bind();
+            form.apply(await repositories.settingsRepository.get());
+
+            expect(document.getElementById('aiDirectSettings')).toBeInstanceOf(HTMLElement);
+
+            setFieldValue(document, 'aiProvider', 'gemini');
+            setFieldValue(document, 'aiModel', 'gemini-test');
+            setFieldValue(document, 'aiApiKey', 'sk-test');
+            setFieldValue(document, 'proposalTemplate', 'Direct template');
+            document.getElementById('saveAllBtn')?.click();
+
+            await vi.waitFor(() =>
+                expect(permissionsRequest).toHaveBeenCalledWith({
+                    origins: ['https://generativelanguage.googleapis.com/*'],
+                })
+            );
+            expect(repositories.settingsRepository.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    aiExecutionMode: 'direct',
+                    aiProvider: 'gemini',
+                    aiModel: 'gemini-test',
+                    aiApiKey: 'sk-test',
+                })
+            );
+        } finally {
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: originalRequest,
+            });
+            vi.unstubAllEnvs();
+        }
     });
 
     it('reverts the monitoring toggle when storage update fails', async () => {

@@ -13,6 +13,51 @@ const ARABIC_MONTHS: Record<string, number> = {
     ديسمبر: 11,
 };
 
+const KHAMSAT_GMT_DATE_PATTERN =
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s+GMT$/i;
+
+function parseKhamsatGmtDate(value: string): Date | null {
+    const match = value.match(KHAMSAT_GMT_DATE_PATTERN);
+
+    if (!match) {
+        return null;
+    }
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const hour = Number(match[4] ?? 0);
+    const minute = Number(match[5] ?? 0);
+    const second = Number(match[6] ?? 0);
+
+    if (
+        !Number.isInteger(day) ||
+        !Number.isInteger(month) ||
+        !Number.isInteger(year) ||
+        !Number.isInteger(hour) ||
+        !Number.isInteger(minute) ||
+        !Number.isInteger(second)
+    ) {
+        return null;
+    }
+
+    const timestamp = Date.UTC(year, month - 1, day, hour, minute, second);
+    const parsed = new Date(timestamp);
+
+    if (
+        parsed.getUTCFullYear() !== year ||
+        parsed.getUTCMonth() !== month - 1 ||
+        parsed.getUTCDate() !== day ||
+        parsed.getUTCHours() !== hour ||
+        parsed.getUTCMinutes() !== minute ||
+        parsed.getUTCSeconds() !== second
+    ) {
+        return null;
+    }
+
+    return parsed;
+}
+
 export function parseArabicDate(value: string | null | undefined): Date | null {
     if (!value) {
         return null;
@@ -33,6 +78,29 @@ export function parseArabicDate(value: string | null | undefined): Date | null {
     }
 
     return new Date(year, month, day);
+}
+
+export function parseJobPostedAt(value: string | null | undefined): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const khamsatGmtDate = parseKhamsatGmtDate(trimmed);
+    if (khamsatGmtDate) {
+        return khamsatGmtDate;
+    }
+
+    const timestamp = Date.parse(trimmed);
+    if (Number.isFinite(timestamp)) {
+        return new Date(timestamp);
+    }
+
+    return parseArabicDate(trimmed);
 }
 
 export function calculateArabicDateAgeDays(

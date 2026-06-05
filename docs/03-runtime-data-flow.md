@@ -11,8 +11,10 @@ alarm/manual check
   -> platform adapter resolveFeeds()
   -> fetchPlatformFeedJobsResult()
   -> offscreen/local parseListingHtml()
+  -> collect per-platform fetch failures
+  -> hydrate unseen Khamsat requests for publish-date freshness
   -> storage.ingestJobs()
-  -> hydratePlatformJob()
+  -> hydrate newly ingested non-Khamsat jobs where possible
   -> applyJobFilters()
   -> storage.mergeRecentJobs()
   -> publishJobBatch()
@@ -28,7 +30,7 @@ Important files:
 - `src/platforms/*/html-parser.ts`
 - `src/features/monitoring/job-filters.ts`
 
-Polling fetches use `GET`, `credentials: "omit"`, `cache: "no-store"`, and `referrerPolicy: "no-referrer"`.
+Polling fetches use `GET`, `credentials: "omit"`, `cache: "no-store"`, `referrerPolicy: "no-referrer"`, and a 15-second timeout. If all enabled platforms fail, the batch result is `kind: "failed"` with per-platform `monitoringErrors`.
 
 ## SignalR Flow
 
@@ -42,6 +44,16 @@ background bootstrap
   -> storage.ingestJobs()
   -> publishJobBatch()
   -> notification service + optional audio
+```
+
+Admin broadcasts use the same SignalR connection:
+
+```text
+AdminMessageReceived
+  -> validate id/message/createdAt payload
+  -> storage.storeAdminMessage()
+  -> notification service showAdminMessageNotification()
+  -> popup reads adminMessages and renders unread banner
 ```
 
 SignalR alarms:
@@ -98,10 +110,12 @@ content/dashboard action
 
 Direct provider requests require:
 
+- an unsafe side build with `WXT_ENABLE_UNSAFE_DIRECT_AI=true`
 - `settings.aiExecutionMode === "direct"`
 - non-empty `settings.aiApiKey`
 - non-empty `settings.aiModel`
 - supported `settings.aiProvider`
+- granted optional provider host permission
 
 ## ChatGPT Bridge Flow
 
@@ -109,13 +123,16 @@ Direct provider requests require:
 generateProposal()
   -> generateBridgeProposal()
   -> setPendingBridgePrompt()
-  -> open normalized ChatGPT URL
-  -> ChatGPT bridge content script reads pending prompt
-  -> writes input value and dispatches input/change events
+  -> request openChatBridgePrompt
+  -> background requests ChatGPT host permission if needed
+  -> focus/create ChatGPT tab
+  -> browser.scripting.executeScript("/chatgpt-bridge.js")
+  -> injected bridge script reads pending prompt
+  -> writes input value and dispatches a bubbling input event
   -> clears matching prompt
 ```
 
-The bridge stores the prompt in `browser.storage.local` because the ChatGPT content script must be able to read it. The stored record has an ID, target host, creation time, expiry time, and maximum text length.
+The bridge stores the prompt in `browser.storage.local` because the injected ChatGPT bridge script must be able to read it. The stored record has an ID, target host, creation time, expiry time, and maximum text length.
 
 ## Platform Adapter Flow
 
@@ -156,6 +173,8 @@ dashboard import
   -> clear pending bridge prompt and invalid autofill drafts
   -> clear current session AI key
 ```
+
+`adminMessages` is intentionally outside the backup snapshot.
 
 Related docs:
 

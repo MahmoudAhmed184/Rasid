@@ -18,7 +18,7 @@ For every meaningful change, ask whether it affects:
 - permissions or host permissions
 - storage keys or backup/import behavior
 - AI prompt/provider behavior
-- SignalR or polling behavior
+- SignalR, admin broadcast, or polling behavior
 - notification/download behavior
 - popup/dashboard/content UI
 - generated manifests
@@ -48,6 +48,10 @@ Provider endpoints and response shapes are owned by:
 
 Keep provider errors redacted and categorized. Do not log prompts or API keys.
 
+Normal builds must remain bridge-first. Direct provider behavior, provider host permissions, and dashboard direct controls must stay gated behind `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
+
+ChatGPT bridge maintenance must cover both the background `openChatBridgePrompt` handler and the unlisted `entrypoints/chatgpt-bridge.ts` script.
+
 ## Storage Maintenance
 
 When adding state:
@@ -64,6 +68,8 @@ When adding state:
 Before release:
 
 - run the validation suite in [`13-build-test-release.md`](13-build-test-release.md)
+- run `dotnet restore server/src/Rasid.Server.sln --locked-mode`, `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`, and `dotnet test server/src/Rasid.Server.sln -c Release --no-build` when backend/admin-broadcast/freshness contracts changed
+- run `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` when backend release behavior changed
 - inspect generated manifests
 - verify only the intended supported platforms appear in source, UI, permissions, and generated manifests
 - keep README, privacy text, store-review notes, and generated manifest claims aligned

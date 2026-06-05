@@ -3,13 +3,13 @@ import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 import type { AiProviderAdapter } from '../../entities/ai/provider-adapter';
 import type { GenerateProposalResponse } from './proposal-contract';
 import { generateBridgeProposal } from './generate-bridge-proposal';
-import { generateDirectProposal } from './generate-direct-proposal';
 import type { ProposalTemplateCatalog } from './proposal-template-catalog';
 
 interface ProposalGeneratorDependencies {
     readonly settings: Pick<ExtensionStorage, 'getSettings'>;
     readonly templates: ProposalTemplateCatalog;
     readonly providers?: Record<AiProviderId, AiProviderAdapter>;
+    readonly loadProviders?: () => Promise<Record<AiProviderId, AiProviderAdapter>>;
 }
 
 export interface ProposalGenerator {
@@ -39,9 +39,29 @@ export async function generateProposal(
         });
     }
 
+    if (import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI !== 'true') {
+        return generateBridgeProposal({
+            settings,
+            template: selectedTemplate,
+            context,
+        });
+    }
+
+    const { hasAiProviderHostPermission } = await import('./ai-provider-host-permissions');
+
+    if (!(await hasAiProviderHostPermission(settings.aiProvider))) {
+        return {
+            success: false,
+            error: 'Direct AI mode requires the provider host permission. Re-enable Direct mode from settings.',
+        };
+    }
+
+    const providers = deps.providers ?? (await deps.loadProviders?.());
+    const { generateDirectProposal } = await import('./generate-direct-proposal');
+
     return generateDirectProposal(
         {
-            providers: deps.providers,
+            providers,
         },
         {
             settings,

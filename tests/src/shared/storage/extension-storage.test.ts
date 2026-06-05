@@ -93,7 +93,7 @@ describe('extension storage facade', () => {
         const storage = createExtensionStorage(local, session);
 
         await expect(storage.getSettings()).resolves.toMatchObject({
-            aiExecutionMode: 'direct',
+            aiExecutionMode: 'bridge',
             aiApiKey: 'sk-session',
         });
         await expect(storage.updateSettings({ aiApiKey: 'sk-next' })).resolves.toMatchObject({

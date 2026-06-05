@@ -58,10 +58,11 @@ Purpose: parse Arabic month dates and compute age in days.
 
 Functions:
 
-| Function                                  | Purpose                                 | Inputs                  | Outputs     | Side effects                        |
-| ----------------------------------------- | --------------------------------------- | ----------------------- | ----------- | ----------------------------------- |
-| `parseArabicDate(value)`                  | Parses Arabic date text.                | string/null/undefined   | `Date`/null | Uses Arabic month map.              |
-| `calculateArabicDateAgeDays(value, now?)` | Computes days since parsed Arabic date. | date text, optional now | number      | Returns `-1` for unparseable input. |
+| Function                                  | Purpose                                                   | Inputs                  | Outputs     | Side effects                         |
+| ----------------------------------------- | --------------------------------------------------------- | ----------------------- | ----------- | ------------------------------------ |
+| `parseArabicDate(value)`                  | Parses Arabic date text.                                  | string/null/undefined   | `Date`/null | Uses Arabic month map.               |
+| `parseJobPostedAt(value)`                 | Parses Khamsat GMT, generic, or Arabic publish date text. | string/null/undefined   | `Date`/null | Used by Khamsat freshness filtering. |
+| `calculateArabicDateAgeDays(value, now?)` | Computes days since parsed Arabic date.                   | date text, optional now | number      | Returns `-1` for unparseable input.  |
 
 ### `src/shared/parsing/duration.ts`
 
@@ -184,6 +185,18 @@ Dev dependencies:
 - web-ext
 - WXT
 
+### `global.json`
+
+Purpose: .NET SDK selection for the optional backend.
+
+Key settings:
+
+- SDK version `10.0.300`
+- `rollForward: latestFeature`
+- `allowPrerelease: false`
+
+Release relevance: used by local backend commands and `.github/workflows/server-dotnet.yml`.
+
 ### `wxt.config.ts`
 
 Purpose: WXT config and manifest generation.
@@ -192,14 +205,18 @@ Constants:
 
 - `icons`
 - `hostPermissions`
+- `chatBridgeHostPermissions`
+- `unsafeDirectAiHostPermissions`
 - `sharedPermissions`
 
 Functions:
 
-| Function                               | Purpose                                                                          | Inputs             | Outputs         | Side effects, errors, security                                                                      |
-| -------------------------------------- | -------------------------------------------------------------------------------- | ------------------ | --------------- | --------------------------------------------------------------------------------------------------- |
-| `stripSignalRInvalidPureAnnotations()` | Vite plugin that removes invalid pure annotations from SignalR ESM utility file. | none               | Vite plugin     | Transform applies only to `node_modules/@microsoft/signalr/dist/esm/Utils.js`.                      |
-| `manifest({ browser })`                | Generates browser-specific manifest fields.                                      | WXT browser target | manifest object | Chrome gets `offscreen` and minimum Chrome version; Firefox gets Gecko settings and no `offscreen`. |
+| Function                               | Purpose                                                                          | Inputs             | Outputs         | Side effects, errors, security                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------- | ------------------ | --------------- | --------------------------------------------------------------------------------------------------------- |
+| `isUnsafeDirectAiEnabled()`            | Checks build-time unsafe direct-AI flag.                                         | none               | boolean         | Reads `WXT_ENABLE_UNSAFE_DIRECT_AI`.                                                                      |
+| `createRasidManifest(browser)`         | Generates browser-specific manifest fields.                                      | browser target     | manifest object | Emits Frelancia names, required hosts, optional ChatGPT hosts, and unsafe provider hosts only when gated. |
+| `stripSignalRInvalidPureAnnotations()` | Vite plugin that removes invalid pure annotations from SignalR ESM utility file. | none               | Vite plugin     | Transform applies only to `node_modules/@microsoft/signalr/dist/esm/Utils.js`.                            |
+| `manifest({ browser })`                | Delegates manifest generation.                                                   | WXT browser target | manifest object | Chrome gets `offscreen` and minimum Chrome version; Firefox gets Gecko settings and no `offscreen`.       |
 
 Host permissions are exactly listed in [`../../12-browser-permissions-and-privacy.md`](../../12-browser-permissions-and-privacy.md).
 
@@ -241,14 +258,80 @@ Functions:
 
 Purpose: ignore generated and out-of-scope local artifacts.
 
-Important ignored paths:
+Important `.gitignore` paths:
+
+- `.wxt/`
+- `.output/`
+- `dist/`
+- `node_modules/`
+- `.test-dist/`
+- `coverage/`
+- `test-results/`
+- `playwright-report/`
+- OS/editor artifacts
+
+Important `.prettierignore` paths:
 
 - `.wxt/`
 - `dist/`
 - `node_modules/`
 - `.test-dist/`
-- backend generated/private files
-- `server/` for Prettier
+- `coverage/`
+- `test-results/`
+- `playwright-report/`
+- `public/vendor/`
+- `package-lock.json`
+- `*.min.js`
+
+`server/` is not ignored wholesale by Prettier. Explicit documentation checks can include `server/**/*.md`.
+
+### `server/Directory.Build.props`
+
+Purpose: backend MSBuild policy.
+
+Key settings:
+
+- `AnalysisLevel=latest`
+- `EnableNETAnalyzers=true`
+- `EnforceCodeStyleInBuild=true`
+- `TreatWarningsAsErrors=true`
+- `Deterministic=true`
+- `ContinuousIntegrationBuild=true` when `CI=true`
+- `RestorePackagesWithLockFile=true`
+- `RestoreLockedMode=true` when `CI=true`
+
+### `server/Directory.Packages.props`
+
+Purpose: central package management for backend app and test projects.
+
+Key settings:
+
+- `ManagePackageVersionsCentrally=true`
+- central versions for HtmlAgilityPack, Swashbuckle, Microsoft.AspNetCore.Mvc.Testing, Microsoft.NET.Test.Sdk, xUnit runner, and xUnit v3
+
+Related lock files:
+
+- `server/src/packages.lock.json`
+- `server/tests/Rasid.Server.Tests/packages.lock.json`
+
+### `.github/workflows/server-dotnet.yml`
+
+Purpose: dedicated backend CI workflow.
+
+Triggers:
+
+- `global.json`
+- `server/**`
+- `.github/workflows/server-dotnet.yml`
+
+Steps:
+
+- checkout
+- setup .NET from `global.json`
+- `dotnet restore server/src/Rasid.Server.sln --locked-mode`
+- `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`
+- `dotnet test server/src/Rasid.Server.sln -c Release --no-build`
+- `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore`
 
 ### `.github/`
 
@@ -258,6 +341,7 @@ Files:
 
 - `.github/CONTRIBUTING.md`
 - `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/workflows/server-dotnet.yml`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/config.yml`
@@ -274,6 +358,16 @@ Files:
 - `public/icons/icon16.png`
 - `public/icons/icon48.png`
 - `public/icons/icon128.png`
+
+### `public/platforms/`
+
+Purpose: per-platform notification icon assets.
+
+Files:
+
+- `public/platforms/Mostql.png`
+- `public/platforms/Khamsat.png`
+- `public/platforms/Nafezly.png`
 
 Related docs:
 

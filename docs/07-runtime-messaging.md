@@ -1,22 +1,23 @@
 # Runtime Messaging
 
-Rasid uses validated message contracts for popup/dashboard/content/background/offscreen communication.
+Frelancia uses validated message contracts for popup/dashboard/content/background/offscreen communication.
 
 ## Background Messages
 
 Defined in `src/app/background/background-messages.ts`.
 
-| Action              | Request fields          | Response                       |
-| ------------------- | ----------------------- | ------------------------------ |
-| `checkNow`          | action only             | `JobBatchResult`               |
-| `testNotification`  | action only             | `{ success: true }`            |
-| `testSound`         | action only             | `{ success: true }`            |
-| `updateAlarm`       | optional `interval`     | `{ success: true }`            |
-| `reconnectSignalR`  | action only             | `{ success: true }`            |
-| `disconnectSignalR` | action only             | `{ success: true }`            |
-| `debugFetch`        | action only             | `{ success, length?, error? }` |
-| `generateProposal`  | `templateId`, `context` | `GenerateProposalResponse`     |
-| `downloadZip`       | `filename`, `files`     | `ZipDownloadResult`            |
+| Action                 | Request fields               | Response                       |
+| ---------------------- | ---------------------------- | ------------------------------ |
+| `checkNow`             | action only                  | `JobBatchResult`               |
+| `testNotification`     | action only                  | `{ success: true }`            |
+| `testSound`            | action only                  | `{ success: true }`            |
+| `updateAlarm`          | optional `interval`          | `{ success: true }`            |
+| `reconnectSignalR`     | action only                  | `{ success: true }`            |
+| `disconnectSignalR`    | action only                  | `{ success: true }`            |
+| `debugFetch`           | action only                  | `{ success, length?, error? }` |
+| `generateProposal`     | `templateId`, `context`      | `GenerateProposalResponse`     |
+| `openChatBridgePrompt` | `prompt`, optional `chatUrl` | `OpenChatBridgePromptResponse` |
+| `downloadZip`          | `filename`, `files`          | `ZipDownloadResult`            |
 
 ## Background Message Security
 
@@ -49,17 +50,26 @@ Trusted content-script hosts are:
 
 Allowed AI context URL hosts are `khamsat.com`, `mostaql.com`, and `nafezly.com`.
 
+## ChatGPT Bridge Message Constraints
+
+`openChatBridgePrompt` payload validation enforces:
+
+- prompt length from 1 to 20,000 characters
+- optional `chatUrl` must already normalize to an allowed ChatGPT URL
+
+Successful responses include `tabId`, `tabStatus` as `created` or `focused`, and `injected: true`. Failure responses include one of `permission-denied`, `unsupported`, `tab-open-failed`, or `injection-failed`.
+
 ## Offscreen Messages
 
 Defined in `src/features/offscreen/manager.ts`.
 
 | Task                            | Payload                    | Result                                       |
-| ------------------------------- | -------------------------- | -------------------------------------------- | ----- |
+| ------------------------------- | -------------------------- | -------------------------------------------- |
 | `audio.play-notification`       | empty object               | `{ success: true }`                          |
 | `downloads.create-zip-url`      | `filename`, up to 80 files | `{ success, filename?, objectUrl?, error? }` |
 | `downloads.revoke-object-url`   | `objectUrl`                | `{ success: true }`                          |
 | `monitoring.parse-listing-html` | `platformId`, `html`       | `JobRecord[]`                                |
-| `monitoring.parse-project-html` | `platformId`, `html`       | `Partial<JobRecord>                          | null` |
+| `monitoring.parse-project-html` | `platformId`, `html`       | `Partial<JobRecord> \| null`                 |
 
 Offscreen envelopes include:
 

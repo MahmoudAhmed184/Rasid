@@ -18,9 +18,11 @@ Required updates:
 - provider adapter implementation
 - `createAiProviderRegistry()`
 - settings normalization and dashboard UI if user-selectable
-- host permissions in `wxt.config.ts`
+- unsafe-direct optional host permissions in `wxt.config.ts`
 - privacy docs and store-review notes
 - direct-mode tests or provider mock tests where practical
+
+Normal builds must not emit provider host permissions or expose dashboard direct controls. Direct providers are loaded only when `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
 
 ## Provider Error Requirements
 
@@ -54,7 +56,8 @@ If bridge hosts change:
 
 - update `AI_CHAT_HOSTS`
 - update `wxt.config.ts` host permissions
-- update `entrypoints/chatgpt-bridge.content.ts`
+- update `entrypoints/chatgpt-bridge.ts`
+- update the background `openChatBridgePrompt` permission/injection path
 - update validation tests
 - update privacy and store-review docs
 - rebuild and inspect generated manifests

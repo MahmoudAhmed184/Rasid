@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" type="image/png" sizes="16x16" href="../icons/icon16.png" />
         <link rel="icon" type="image/png" sizes="48x48" href="../icons/icon48.png" />
-        <title>Rasid | راصد | لوحة التحكم</title>
+        <title>Frelancia | فريلانسيا | لوحة التحكم</title>
         <script type="module" src="./main.ts"></script>
     </head>
     <body>
@@ -14,7 +14,7 @@
                 <div class="logo-section">
                     <img src="../icons/icon128.png" alt="" class="logo-img" aria-hidden="true" />
                     <div class="logo-text">
-                        <h1>Rasid</h1>
+                        <h1>Frelancia</h1>
                         <span>راصد فرص العمل الحر</span>
                     </div>
                 </div>
@@ -551,60 +551,13 @@
                                     aria-describedby="aiExecutionModeHelp"
                                 >
                                     <option value="bridge">Bridge عبر موقع الشات</option>
-                                    <option value="direct">Direct عبر API</option>
                                 </select>
                                 <p class="help-text" id="aiExecutionModeHelp">
                                     <strong>Bridge:</strong> يرسل القالب إلى صفحة الشات التي تختارها
-                                    أنت.<br />
-                                    <strong>Direct:</strong> يولد النص داخل الإضافة مباشرة باستخدام
-                                    مفتاح API مخزن محلياً.
+                                    أنت.
                                 </p>
                             </div>
-                            <div id="aiDirectSettings" class="hidden">
-                                <div class="form-group">
-                                    <label for="aiProvider">المزود</label>
-                                    <select id="aiProvider" class="form-control">
-                                        <option value="openai">OpenAI</option>
-                                        <option value="gemini">Gemini</option>
-                                        <option value="claude">Claude</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="aiModel">اسم النموذج</label>
-                                    <input
-                                        type="text"
-                                        id="aiModel"
-                                        class="form-control"
-                                        placeholder="اكتب اسم النموذج الذي تريد استخدامه"
-                                        dir="ltr"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="aiApiKey">مفتاح API</label>
-                                    <input
-                                        type="password"
-                                        id="aiApiKey"
-                                        class="form-control"
-                                        placeholder="أدخل مفتاح الـ API"
-                                        dir="ltr"
-                                        autocomplete="off"
-                                        aria-describedby="aiApiKeyHelp"
-                                    />
-                                    <p class="help-text" id="aiApiKeyHelp">
-                                        يُحفظ المفتاح مؤقتاً في مساحة جلسة الإضافة ولا يدخل في النسخ
-                                        الاحتياطية. قد تحتاج لإدخاله مجدداً بعد إعادة تشغيل المتصفح.
-                                    </p>
-                                </div>
-                                <div class="form-group">
-                                    <label for="aiSystemPrompt">تعليمات النظام المشتركة</label>
-                                    <textarea
-                                        id="aiSystemPrompt"
-                                        rows="6"
-                                        class="form-control"
-                                        placeholder="تعليمات إضافية تُحقن قبل القالب المختار عند التوليد المباشر."
-                                    ></textarea>
-                                </div>
-                            </div>
+                            <div id="aiDirectSettingsMount"></div>
                             <div id="aiBridgeSettings">
                                 <div class="form-group">
                                     <label for="aiChatUrl">رابط الشات المفضل</label>
@@ -664,23 +617,6 @@
                                     <strong>اتصال مباشر:</strong> إشعارات فورية عبر السيرفر (بدون
                                     طلبات HTTP).<br />
                                     <strong>استعلام دوري:</strong> يفحص الموقع كل فترة زمنية محددة.
-                                </p>
-                            </div>
-                            <div class="form-group">
-                                <label for="signalrServerUrl">رابط سيرفر SignalR</label>
-                                <input
-                                    type="url"
-                                    id="signalrServerUrl"
-                                    class="form-control"
-                                    placeholder="https://rasid.runasp.net/jobNotificationHub"
-                                    dir="ltr"
-                                    disabled
-                                    inputmode="url"
-                                    aria-describedby="signalrServerUrlHelp"
-                                />
-                                <p class="help-text" id="signalrServerUrlHelp">
-                                    يستخدم إصدار المتجر الخادم الافتراضي فقط. يتطلب تغيير الأصل بناء
-                                    مخصصاً مع صلاحية مضيف مطابقة.
                                 </p>
                             </div>
                         </div>

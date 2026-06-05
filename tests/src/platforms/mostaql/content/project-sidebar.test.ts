@@ -97,7 +97,7 @@ function createServices(options: { readonly generation?: ProposalGenerationResul
     const getQuickTemplate = vi.fn(async () => 'عرض سريع');
     const generate = vi.fn(async (_templateId: string, _context: AiRequestContext) => generation);
     const queueAutofill = vi.fn(async (_draft: PlatformAutofillDraft) => undefined);
-    const setPendingBridgePrompt = vi.fn(async (_prompt: string, _chatUrl?: string) => undefined);
+    const openBridgePrompt = vi.fn(async (_prompt: string, _chatUrl?: string) => undefined);
     const downloadZip = vi.fn(async () => undefined);
     const toast = vi.fn();
     const services: PlatformContentServices = {
@@ -114,7 +114,7 @@ function createServices(options: { readonly generation?: ProposalGenerationResul
             getQuickTemplate,
             generate,
             queueAutofill,
-            setPendingBridgePrompt,
+            openBridgePrompt,
         },
         downloads: {
             downloadZip,
@@ -131,7 +131,7 @@ function createServices(options: { readonly generation?: ProposalGenerationResul
         getQuickTemplate,
         generate,
         queueAutofill,
-        setPendingBridgePrompt,
+        openBridgePrompt,
     };
 }
 
@@ -219,7 +219,7 @@ describe('Mostaql project sidebar injection', () => {
         expect(document.getElementById('mostaql-ext-btn-container')).toBeNull();
     });
 
-    it('opens bridge prompts through the pending ChatGPT handoff', async () => {
+    it('opens bridge prompts through the background ChatGPT handoff', async () => {
         const document = installProjectPage();
         const mocks = createServices({
             generation: {
@@ -237,12 +237,12 @@ describe('Mostaql project sidebar injection', () => {
         document.getElementById('chatgpt-main-btn')?.click();
 
         await vi.waitFor(() => {
-            expect(mocks.setPendingBridgePrompt).toHaveBeenCalledWith(
+            expect(mocks.openBridgePrompt).toHaveBeenCalledWith(
                 'اكتب عرضا',
                 'https://chatgpt.com/'
             );
         });
-        expect(window.open).toHaveBeenCalledWith('https://chatgpt.com/', 'mostaql_ai_chat');
+        expect(window.open).not.toHaveBeenCalled();
     });
 
     it('alerts when project description is missing before AI generation', async () => {

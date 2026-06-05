@@ -22,6 +22,7 @@ export interface JobRecord {
     poster?: string;
     time?: string;
     postedAt?: string;
+    lastInteractionAt?: string;
     bidsText?: string;
     category?: string;
     tags?: string[];

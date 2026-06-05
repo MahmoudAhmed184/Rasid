@@ -1,5 +1,6 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
+import { KHAMSAT_SELECTORS, queryAll, queryFirst } from './selectors';
 
 const KHAMSAT_HOSTS = ['khamsat.com'] as const;
 const KHAMSAT_BASE_URL = 'https://khamsat.com/';
@@ -33,15 +34,32 @@ function extractKhamsatRequestId(url: string): string | null {
     return new URL(url).pathname.match(KHAMSAT_REQUEST_ID_PATTERN)?.[1] ?? null;
 }
 
+function findKhamsatSidebarPublishDate(doc: Document): string {
+    for (const sidebar of queryAll<HTMLElement>(doc, KHAMSAT_SELECTORS.project.sidebarContainers)) {
+        for (const titledValue of sidebar.querySelectorAll<HTMLElement>('span[title]')) {
+            const metadataRow =
+                titledValue.closest('li, tr, .media, .d-flex, .row, p, div') ??
+                titledValue.parentElement;
+            const rowText = normalizeText(metadataRow?.textContent);
+
+            if (!rowText.includes('تاريخ النشر')) {
+                continue;
+            }
+
+            return normalizeText(titledValue.getAttribute('title')) || normalizeText(titledValue.textContent);
+        }
+    }
+
+    return '';
+}
+
 export function parseKhamsatListingHtml(html: string): JobRecord[] {
     const doc = parseDocument(html);
     const jobs: JobRecord[] = [];
     const seenIds = new Set<string>();
 
-    doc.querySelectorAll('tr.forum_post').forEach((row) => {
-        const link = row.querySelector<HTMLAnchorElement>(
-            '.details-head a[href*="/community/requests/"]'
-        );
+    doc.querySelectorAll(KHAMSAT_SELECTORS.listing.rows).forEach((row) => {
+        const link = queryFirst<HTMLAnchorElement>(row, KHAMSAT_SELECTORS.listing.requestLinks);
 
         if (!link) {
             return;
@@ -54,10 +72,14 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
             return;
         }
 
-        const detailsCell = row.querySelector('.details-td');
-        const ownerLink = detailsCell?.querySelector<HTMLAnchorElement>('.details-list a.user');
+        const detailsCell = row.querySelector(KHAMSAT_SELECTORS.listing.detailsCell);
+        const ownerLink = detailsCell?.querySelector<HTMLAnchorElement>(
+            KHAMSAT_SELECTORS.listing.ownerLink
+        );
         const publishTime =
-            detailsCell?.querySelector<HTMLSpanElement>('.details-list span[title]') ?? null;
+            detailsCell?.querySelector<HTMLSpanElement>(
+                KHAMSAT_SELECTORS.listing.lastInteractionTime
+            ) ?? null;
 
         seenIds.add(id);
 
@@ -68,7 +90,7 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
             url,
             poster: normalizeText(ownerLink?.textContent),
             time: normalizeText(publishTime?.textContent),
-            postedAt: normalizeText(publishTime?.getAttribute('title')),
+            lastInteractionAt: normalizeText(publishTime?.getAttribute('title')),
         });
     });
 
@@ -77,46 +99,32 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
 
 export function parseKhamsatProjectHtml(html: string): Partial<JobRecord> | null {
     const doc = parseDocument(html);
-    const descriptionSelectors = [
-        '.card-body > article.replace_urls',
-        '.card-body .replace_urls',
-        'article.replace_urls',
-        '[itemprop="articleBody"]',
-        '.topic-body',
-        '.post-body',
-        '.content-body',
-        '.comment-body',
-        'article',
-        'main article',
-        'main .content',
-    ];
     const description =
-        descriptionSelectors.flatMap((selector) => {
-            const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
-                .map((element) => normalizeText(element.textContent))
-                .filter(Boolean);
+        KHAMSAT_SELECTORS.project.descriptionCandidates
+            .flatMap((selector) => {
+                const texts = [...doc.querySelectorAll<HTMLElement>(selector)]
+                    .map((element) => normalizeText(element.textContent))
+                    .filter(Boolean);
 
-            const detailedCandidate = texts.find((text) => text.length >= 80);
-            return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
-        })[0] ?? '';
+                const detailedCandidate = texts.find((text) => text.length >= 80);
+                return detailedCandidate ? [detailedCandidate] : texts.slice(0, 1);
+            })[0] ?? '';
     const clientName = normalizeText(
-        doc.querySelector<HTMLElement>(
-            '.user-info .username, .post-author .username, .comment-user a, .user-name, .username, a[href*="/user/"], a[href*="/users/"]'
-        )?.textContent
+        queryFirst<HTMLElement>(doc, KHAMSAT_SELECTORS.project.sidebarOwnerLinks)?.textContent ??
+            queryFirst<HTMLElement>(doc, KHAMSAT_SELECTORS.project.authorCandidates)?.textContent
     );
-    const publishDate = normalizeText(
-        doc
-            .querySelector<HTMLElement>('time[datetime], time, .meta time, .comment-time')
-            ?.getAttribute('datetime') ??
-            doc.querySelector<HTMLElement>('time[datetime], time, .meta time, .comment-time')
-                ?.textContent
+    const publishDateEl = queryFirst<HTMLElement>(
+        doc,
+        KHAMSAT_SELECTORS.project.publishDateCandidates
     );
+    const publishDate =
+        findKhamsatSidebarPublishDate(doc) ||
+        normalizeText(publishDateEl?.getAttribute('datetime') ?? publishDateEl?.textContent);
 
-    const attachments = [
-        ...doc.querySelectorAll<HTMLAnchorElement>(
-            'a[download], .attachments a[href], .uploaded-files a[href]'
-        ),
-    ]
+    const attachments = queryAll<HTMLAnchorElement>(
+        doc,
+        KHAMSAT_SELECTORS.project.attachmentLinks
+    )
         .map((link) => {
             const url = resolveKhamsatUrl(link.getAttribute('href'));
             const name = normalizeText(link.textContent) || normalizeText(url?.split('/').at(-1));

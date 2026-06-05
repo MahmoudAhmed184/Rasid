@@ -1,6 +1,6 @@
 # AI Proposals And ChatGPT Bridge
 
-Rasid supports two AI proposal paths: direct provider mode and bridge mode.
+Frelancia supports bridge mode in normal builds. Direct provider mode exists only in unsafe side builds built with `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
 
 ## Prompt Templates
 
@@ -39,13 +39,14 @@ Each variable value is wrapped with `[[BEGIN_UNTRUSTED_<FIELD>]]` and `[[END_UNT
 
 ## Direct Mode
 
-Direct mode runs when `settings.aiExecutionMode === "direct"`.
+Direct mode runs only when `settings.aiExecutionMode === "direct"` and the extension was built with `WXT_ENABLE_UNSAFE_DIRECT_AI=true`. Normal builds normalize direct mode back to bridge mode.
 
 Requirements:
 
 - `settings.aiApiKey`
 - `settings.aiModel`
 - supported `settings.aiProvider`
+- granted optional provider host permission
 
 Provider endpoints:
 
@@ -73,10 +74,15 @@ Behavior:
 2. Combine trusted instructions, system prompt, and user/project data.
 3. Normalize the ChatGPT URL to `https://chatgpt.com/` or `https://chat.openai.com/`.
 4. Store a pending bridge prompt in `browser.storage.local`.
-5. Open the ChatGPT URL.
-6. The bridge content script writes the prompt into the ChatGPT input and clears the matching record.
+5. Send `openChatBridgePrompt` to the background.
+6. Request the optional ChatGPT host permission if needed.
+7. Focus or create the ChatGPT tab.
+8. Inject `/chatgpt-bridge.js` with `browser.scripting.executeScript`.
+9. The bridge script writes the prompt into the ChatGPT input and clears the matching record.
 
 The bridge does not send the prompt to a provider API itself and does not click submit.
+
+Bridge failures are reported as `permission-denied`, `unsupported`, `tab-open-failed`, or `injection-failed`.
 
 ## API Key Storage
 
@@ -92,9 +98,9 @@ Current behavior:
 
 ## Privacy Notes
 
-Direct mode sends prompt content to the selected provider. Prompt content may include project title, description, URL, tags, client metadata, budget, duration, status, category, and attachment names.
+Unsafe direct mode sends prompt content to the selected provider. Prompt content may include project title, description, URL, tags, client metadata, budget, duration, status, category, and attachment names.
 
-Bridge mode stores prompt content locally for short-lived delivery to the ChatGPT content script, then writes it into the ChatGPT page for user review.
+Bridge mode stores prompt content locally for short-lived delivery to the injected ChatGPT bridge script, then writes it into the ChatGPT page for user review.
 
 Related docs:
 

@@ -12,6 +12,7 @@ import {
     requestDisconnectSignalR,
     requestDownloadZip,
     requestGenerateProposal,
+    requestOpenChatBridgePrompt,
     requestReconnectSignalR,
     requestTestNotification,
     requestTestSound,
@@ -57,6 +58,30 @@ describe('background message contracts', () => {
                     ...validContext,
                     url: 'https://evil.example/projects/123',
                 },
+            })
+        ).toBe(false);
+
+        expect(
+            isBackgroundRuntimeMessage({
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft proposal',
+                chatUrl: 'https://chatgpt.com/',
+            })
+        ).toBe(true);
+
+        expect(
+            isBackgroundRuntimeMessage({
+                action: 'openChatBridgePrompt',
+                prompt: '',
+                chatUrl: 'https://chatgpt.com/',
+            })
+        ).toBe(false);
+
+        expect(
+            isBackgroundRuntimeMessage({
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft proposal',
+                chatUrl: 'https://evil.example/',
             })
         ).toBe(false);
 
@@ -303,6 +328,28 @@ describe('background message contracts', () => {
                     ok: true,
                     action: 'checkNow',
                     data: {
+                        kind: 'failed',
+                        source: 'polling',
+                        totalChecked: 10,
+                        reason: 'fetch-failed',
+                        monitoringErrors: {
+                            mostaql: {
+                                message: 'مستقل: Request failed with HTTP 403.',
+                                failedAt: '2026-05-22T12:00:00.000Z',
+                            },
+                        },
+                    },
+                },
+                'checkNow'
+            )
+        ).toBe(true);
+
+        expect(
+            isBackgroundTransportResponseForAction(
+                {
+                    ok: true,
+                    action: 'checkNow',
+                    data: {
                         kind: 'suppressed',
                         source: 'polling',
                         totalChecked: 10,
@@ -358,6 +405,50 @@ describe('background message contracts', () => {
                     },
                 },
                 'generateProposal'
+            )
+        ).toBe(false);
+
+        expect(
+            isBackgroundTransportResponseForAction(
+                {
+                    ok: true,
+                    action: 'openChatBridgePrompt',
+                    data: {
+                        success: true,
+                        tabId: 7,
+                        tabStatus: 'created',
+                        injected: true,
+                    },
+                },
+                'openChatBridgePrompt'
+            )
+        ).toBe(true);
+
+        expect(
+            isBackgroundTransportResponseForAction(
+                {
+                    ok: true,
+                    action: 'openChatBridgePrompt',
+                    data: {
+                        success: false,
+                        reason: 'permission-denied',
+                    },
+                },
+                'openChatBridgePrompt'
+            )
+        ).toBe(true);
+
+        expect(
+            isBackgroundTransportResponseForAction(
+                {
+                    ok: true,
+                    action: 'openChatBridgePrompt',
+                    data: {
+                        success: false,
+                        reason: 'unknown',
+                    },
+                },
+                'openChatBridgePrompt'
             )
         ).toBe(false);
 
@@ -470,6 +561,12 @@ describe('background message contracts', () => {
             disconnectSignalR: () => ({ success: true }),
             debugFetch: () => ({ success: true, length: 10 }),
             generateProposal: () => ({ success: false, error: 'not needed' }),
+            openChatBridgePrompt: () => ({
+                success: true,
+                tabId: 3,
+                tabStatus: 'focused',
+                injected: true,
+            }),
             downloadZip: () => ({ success: true, downloadId: 1 }),
         };
 
@@ -511,6 +608,18 @@ describe('background message contracts', () => {
                 files: [{ name: 'readme.txt', content: 'hello' }],
             })
         ).toEqual({ success: true, downloadId: 1 });
+        expect(
+            dispatchBackgroundMessage(handlers, {
+                action: 'openChatBridgePrompt',
+                prompt: 'Draft',
+                chatUrl: 'https://chatgpt.com/',
+            })
+        ).toEqual({
+            success: true,
+            tabId: 3,
+            tabStatus: 'focused',
+            injected: true,
+        });
     });
 
     it('sends request wrappers through browser.runtime and rejects malformed transports', async () => {
@@ -546,6 +655,13 @@ describe('background message contracts', () => {
                         success: false,
                         error: 'provider unavailable',
                     });
+                case 'openChatBridgePrompt':
+                    return createBackgroundTransportSuccess('openChatBridgePrompt', {
+                        success: true,
+                        tabId: 11,
+                        tabStatus: 'created',
+                        injected: true,
+                    });
                 case 'downloadZip':
                     return createBackgroundTransportSuccess('downloadZip', {
                         success: true,
@@ -568,10 +684,23 @@ describe('background message contracts', () => {
             })
         ).resolves.toEqual({ success: false, error: 'provider unavailable' });
         await expect(
+            requestOpenChatBridgePrompt('Draft', 'https://chatgpt.com')
+        ).resolves.toEqual({
+            success: true,
+            tabId: 11,
+            tabStatus: 'created',
+            injected: true,
+        });
+        await expect(
             requestDownloadZip('export.zip', [{ name: 'readme.txt', content: 'hello' }])
         ).resolves.toEqual({ success: true, downloadId: 42 });
 
         expect(sendMessage).toHaveBeenCalledWith({ action: 'updateAlarm', interval: 7 });
+        expect(sendMessage).toHaveBeenCalledWith({
+            action: 'openChatBridgePrompt',
+            prompt: 'Draft',
+            chatUrl: 'https://chatgpt.com/',
+        });
         expect(sendMessage).toHaveBeenCalledWith({
             action: 'downloadZip',
             filename: 'export.zip',

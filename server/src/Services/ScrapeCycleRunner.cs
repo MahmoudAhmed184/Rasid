@@ -104,15 +104,57 @@ public sealed class ScrapeCycleRunner : IScrapeCycleRunner
                 .Where(job => unseenKeys.Contains(job.Key))
                 .ToArray();
 
-            await _seenJobCache.RememberAsync(newJobs.Select(job => job.Key).ToArray(), cancellationToken);
-
             _logger.LogInformation(
                 "Found {JobCount} new job(s) on {PlatformId}.",
                 newJobs.Length,
                 scraper.Platform.Id);
 
             var enrichedJobs = await EnrichAsync(scraper, newJobs, cancellationToken);
-            newJobsAcrossPlatforms.AddRange(enrichedJobs);
+            var jobsToBroadcast = new List<JobListing>();
+            var jobsToRememberOnly = new List<JobListing>();
+
+            foreach (var job in enrichedJobs)
+            {
+                if (!IsKhamsat(job))
+                {
+                    jobsToBroadcast.Add(job);
+                    continue;
+                }
+
+                switch (KhamsatFreshnessPolicy.Classify(job, DateTimeOffset.UtcNow, _options))
+                {
+                    case KhamsatFreshness.Fresh:
+                        jobsToBroadcast.Add(job);
+                        break;
+                    case KhamsatFreshness.Stale:
+                        jobsToRememberOnly.Add(job);
+                        break;
+                    case KhamsatFreshness.Retry:
+                        _logger.LogWarning(
+                            "Khamsat job {JobId} is missing PostedAt after enrichment; it will remain retryable.",
+                            job.Id);
+                        break;
+                }
+            }
+
+            var rememberedKeys = jobsToBroadcast
+                .Concat(jobsToRememberOnly)
+                .Select(job => job.Key)
+                .ToArray();
+
+            if (rememberedKeys.Length > 0)
+            {
+                await _seenJobCache.RememberAsync(rememberedKeys, cancellationToken);
+            }
+
+            if (jobsToRememberOnly.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Suppressed {JobCount} stale Khamsat job(s) after enrichment.",
+                    jobsToRememberOnly.Count);
+            }
+
+            newJobsAcrossPlatforms.AddRange(jobsToBroadcast);
         }
 
         if (!_isPrimed && seededBaseline)
@@ -155,6 +197,9 @@ public sealed class ScrapeCycleRunner : IScrapeCycleRunner
                 ScrapeErrorKind.Unknown);
         }
     }
+
+    private static bool IsKhamsat(JobListing job) =>
+        string.Equals(job.PlatformId, "khamsat", StringComparison.Ordinal);
 
     private async Task<IReadOnlyList<JobListing>> EnrichAsync(
         IJobPlatformScraper scraper,

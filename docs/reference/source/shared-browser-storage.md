@@ -73,6 +73,8 @@ Functions:
 | `mergeRecentJobs(jobs)` inner                    | Merges recent jobs.                             | jobs                                         | job array            | Writes recent jobs.                                                                      |
 | `touchLastCheck(reason)` inner                   | Updates last-check stats/runtime.               | reason                                       | stats                | Writes monitoring/runtime fields.                                                        |
 
+Additional facade methods delegate to notification payload, download cleanup, and admin-message modules, including `getAdminMessages()`, `storeAdminMessage()`, `markAdminMessagesRead()`, and `clearAdminMessages()`.
+
 ## Storage Modules
 
 ### `modules/ai-secret-storage.ts`
@@ -102,11 +104,11 @@ Functions:
 | `normalizeNonNegativeNumber()`                                                     | Converts to non-negative number.       | unknown, fallback                   | number              | Pure helper.                                                                                    |
 | `normalizePercentage()`                                                            | Converts to 0-100 percentage.          | unknown, fallback                   | number              | Pure helper.                                                                                    |
 | `normalizeTimeOfDay()`                                                             | Validates `HH:mm` time.                | unknown, fallback                   | string              | Pure helper.                                                                                    |
-| `normalizeAiExecutionMode(value)`                                                  | Normalizes bridge/direct.              | unknown                             | mode                | Defaults to bridge.                                                                             |
+| `normalizeAiExecutionMode(value)`                                                  | Normalizes bridge/direct.              | unknown                             | mode                | Defaults to bridge unless `WXT_ENABLE_UNSAFE_DIRECT_AI=true` and value is `direct`.             |
 | `normalizeAiProvider(value)`                                                       | Normalizes provider.                   | unknown                             | provider            | Defaults to OpenAI.                                                                             |
 | `normalizeNotificationMode(value)`                                                 | Normalizes notification mode.          | unknown                             | mode                | Defaults to auto.                                                                               |
 | `normalizeMonitoredPlatforms(value)`                                               | Normalizes supported platform toggles. | unknown                             | platform record     | Preserves only Mostaql, Khamsat, Nafezly booleans.                                              |
-| `normalizeSettings(value)`                                                         | Normalizes full settings object.       | unknown                             | `ExtensionSettings` | Forces packaged SignalR URL storage to empty and normalizes AI chat URL.                        |
+| `normalizeSettings(value)`                                                         | Normalizes full settings object.       | unknown                             | `ExtensionSettings` | Normalizes AI chat URL, supported platforms, notification mode, and unsafe direct mode.         |
 | `getLegacySettingsApiKey(value)`                                                   | Extracts legacy persistent API key.    | unknown                             | string              | Used for migration.                                                                             |
 | `sanitizeSettingsForPersistentStorage(settings)`                                   | Clears persistent `aiApiKey`.          | settings                            | settings            | Privacy guard.                                                                                  |
 | `normalizeProposalTemplate(value)`                                                 | Normalizes quick proposal template.    | unknown                             | string              | Defaults to template from schema.                                                               |
@@ -213,6 +215,29 @@ Functions:
 | `normalizeStoredNotificationPayload(value)` | Validates notification payload. | unknown            | payload/null | Requires URL and valid createdAt.                                  |
 | `isExpired(payload, nowMs)`                 | Checks 24-hour payload TTL.     | payload, timestamp | boolean      | Pure helper.                                                       |
 | `createNotificationPayloadStorage(client)`  | Creates payload storage module. | storage client     | module       | Stores/removes/consumes/prunes payloads under `notification:<id>`. |
+
+### `modules/admin-message-storage.ts`
+
+Purpose: backend admin broadcast storage.
+
+Constants:
+
+- `ADMIN_MESSAGES_KEY = "adminMessages"`
+- `MAX_ADMIN_MESSAGES = 20`
+
+Functions:
+
+| Function                            | Purpose                         | Inputs         | Outputs    | Side effects                                                   |
+| ----------------------------------- | ------------------------------- | -------------- | ---------- | -------------------------------------------------------------- |
+| `isAdminMessage(value)`             | Validates stored admin message. | unknown        | type guard | Requires ID, non-empty message, received timestamp, read flag. |
+| `createAdminMessageStorage(client)` | Creates admin-message module.   | storage client | module     | Reads, deduplicates, caps, marks read, and clears messages.    |
+
+Repository methods:
+
+- `getAdminMessages()`
+- `storeAdminMessage(msg)`
+- `markAdminMessagesRead()`
+- `clearAdminMessages()`
 
 ### `modules/prompt-storage.ts`
 

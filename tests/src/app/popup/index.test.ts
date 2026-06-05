@@ -33,6 +33,13 @@ function createOverview(overrides: Partial<MonitoringOverview> = {}): Monitoring
     };
 }
 
+function stubAdminMessages() {
+    return {
+        getAdminMessages: vi.fn(async () => []),
+        markAdminMessagesRead: vi.fn(async () => undefined),
+    };
+}
+
 describe('popup controller', () => {
     it('loads stats, opens dashboard, checks now, toggles notifications, and runs diagnostics', async () => {
         vi.useFakeTimers();
@@ -61,7 +68,7 @@ describe('popup controller', () => {
         const { requestCheckNow, requestDebugFetch } =
             await import('../../../../src/app/background/background-messages');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() => expect(root.getElementById('todayCount')?.textContent).toBe('4'));
         expect(root.getElementById('totalSeen')?.textContent).toBe('12');
@@ -127,6 +134,7 @@ describe('popup controller', () => {
                 getNotificationsEnabled: async () => true,
                 setNotificationsEnabled: async (enabled: boolean) => enabled,
             },
+            adminMessages: stubAdminMessages(),
         });
 
         root.getElementById('checkConnectionBtn')?.click();
@@ -176,7 +184,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toBe('آخر فحص: الآن')
@@ -235,7 +243,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toBe('لم يتم الفحص بعد')
@@ -262,6 +270,51 @@ describe('popup controller', () => {
         expect(toggleButton.disabled).toBe(false);
         expect(toggleButton.getAttribute('aria-busy')).toBe('false');
         expect(toggleButton.textContent).toContain('الإشعارات: مفعلة');
+    });
+
+    it('shows resolved manual-check failures as popup errors', async () => {
+        vi.useFakeTimers();
+        const root = installTestDom(`
+            <button id="open-dashboard-btn"></button>
+            <button id="checkNowBtn"></button>
+            <button id="toggleNotificationsBtn"></button>
+            <button id="checkConnectionBtn"></button>
+            <div id="connectionReport" class="hidden"></div>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+        `);
+        const { requestCheckNow } =
+            await import('../../../../src/app/background/background-messages');
+        vi.mocked(requestCheckNow).mockResolvedValueOnce({
+            kind: 'failed',
+            source: 'polling',
+            reason: 'fetch-failed',
+            totalChecked: 0,
+            monitoringErrors: {
+                mostaql: {
+                    message: 'مستقل: Request failed with HTTP 403.',
+                    failedAt: '2026-05-22T12:00:00.000Z',
+                },
+            },
+        });
+        const monitoringRepository = {
+            getOverview: vi.fn(async () => createOverview()),
+            getNotificationsEnabled: vi.fn(async () => true),
+            setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+        };
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
+
+        root.getElementById('checkNowBtn')?.click();
+
+        await vi.waitFor(() =>
+            expect(root.getElementById('connectionReport')?.textContent).toBe(
+                'تعذر تنفيذ الفحص: مستقل: Request failed with HTTP 403.'
+            )
+        );
+        expect(root.getElementById('connectionReport')?.className).toBe('connection-report error');
     });
 
     it('handles thrown diagnostics errors and stops periodic refresh on unload', async () => {
@@ -295,7 +348,7 @@ describe('popup controller', () => {
         };
         const { bootstrapPopup } = await import('../../../../src/app/popup');
 
-        bootstrapPopup(root, { monitoringRepository });
+        bootstrapPopup(root, { monitoringRepository, adminMessages: stubAdminMessages() });
 
         await vi.waitFor(() =>
             expect(root.getElementById('lastCheck')?.textContent).toContain('آخر فحص:')

@@ -6,7 +6,7 @@ import {
 } from '@microsoft/signalr';
 
 import { ALARM_NAMES, SIGNALR_LEASE_WINDOW_MS, SIGNALR_RECONNECT_DELAY_MINUTES } from './constants';
-import { redactSignalRUrl, resolveSignalRServerUrl } from '../../entities/runtime/signalr';
+import { DEFAULT_SIGNALR_URL, redactSignalRUrl } from '../../entities/runtime/signalr';
 import { createRecurringSignalREffects, executeSignalREffects } from './signalr-effects';
 import {
     computeReconnectDelayMinutes,
@@ -27,10 +27,33 @@ interface SignalRJobEnvelope {
     jobs?: unknown[];
 }
 
+interface AdminMessagePayload {
+    id: string;
+    message: string;
+    createdAt: string;
+    url?: string | null;
+}
+
+function isAdminMessagePayload(value: unknown): value is AdminMessagePayload {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const v = value as Record<string, unknown>;
+
+    return (
+        typeof v.id === 'string' &&
+        typeof v.message === 'string' &&
+        v.message.length > 0 &&
+        typeof v.createdAt === 'string'
+    );
+}
+
 interface SignalRManagerOptions {
     storage: ExtensionStorage;
     onJobsReceived: (jobs: JobRecord[]) => Promise<void>;
     onPollingFallback: (reason: string) => Promise<void>;
+    onAdminMessageReceived?: (payload: AdminMessagePayload) => Promise<void>;
     logger?: Pick<Console, 'info' | 'warn' | 'error'>;
     now?: () => Date;
 }
@@ -151,7 +174,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason,
             attempt,
             nextReconnectAt,
-            serverUrl: resolveSignalRServerUrl(runtime.signalr.serverUrl),
+            serverUrl: DEFAULT_SIGNALR_URL,
             status: config.status ?? 'backoff',
         });
     }
@@ -181,7 +204,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             reason: disconnectReason,
             nextReconnectAt: signalr.nextReconnectAt,
             reconnectAttempt: signalr.reconnectAttempt,
-            serverUrl: resolveSignalRServerUrl(signalr.serverUrl),
+            serverUrl: DEFAULT_SIGNALR_URL,
         });
 
         return disconnectReason;
@@ -244,6 +267,21 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             void handleInboundJobs(boundConnection, serverUrl, payload);
         });
 
+        boundConnection.on('AdminMessageReceived', (payload: unknown) => {
+            if (!isAdminMessagePayload(payload)) {
+                logger.warn('[signalr] received invalid AdminMessageReceived payload', payload);
+                return;
+            }
+
+            void (async () => {
+                try {
+                    await options.onAdminMessageReceived?.(payload);
+                } catch (error) {
+                    logger.error('[signalr] AdminMessageReceived handler failed:', error);
+                }
+            })();
+        });
+
         boundConnection.onclose((error) => {
             if (intentionallyClosing.has(boundConnection)) {
                 return;
@@ -278,7 +316,7 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
             return connectPromise;
         }
 
-        const serverUrl = resolveSignalRServerUrl(settings.signalrServerUrl);
+        const serverUrl = DEFAULT_SIGNALR_URL;
         const safeServerUrl = redactSignalRUrl(serverUrl);
         const revision = connectionRevision + 1;
 

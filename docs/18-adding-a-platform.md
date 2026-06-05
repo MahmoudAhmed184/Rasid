@@ -11,7 +11,7 @@ Adding a platform is a release-surface change, not only a parser change.
 5. Add adapter, selectors, content extraction, feeds, monitoring adapter, and HTML parser.
 6. Register the platform in `src/platforms/registry.ts`.
 7. Add a WXT content entrypoint if content UI ships.
-8. Add host permission in `wxt.config.ts`.
+8. Add required or optional host permission in `wxt.config.ts` only when the new behavior needs it.
 9. Add popup/dashboard UI where relevant.
 10. Update `PRIVACY.md`, README, and docs.
 11. Build and inspect generated manifests.
@@ -53,6 +53,7 @@ Do not claim a platform is supported until all of these are true:
 - source module exists
 - registry includes it
 - manifest host permission exists
+- required vs optional host permission category is justified
 - content script exists if content features are claimed
 - settings/UI expose it if monitoring is claimed
 - privacy docs disclose it

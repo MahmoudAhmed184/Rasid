@@ -103,7 +103,7 @@ function sanitizeDownloadFilename(filename: string): string {
         .replace(/\s+/g, ' ')
         .trim();
 
-    return safeName || 'rasid-export.zip';
+    return safeName || 'frelancia-export.zip';
 }
 
 function getDosDateTime(date: Date): { readonly time: number; readonly date: number } {

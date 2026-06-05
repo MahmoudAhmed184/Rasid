@@ -1,21 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    DEFAULT_SIGNALR_URL,
-    redactSignalRUrl,
-    resolveSignalRServerUrl,
-} from '../../../../src/entities/runtime/signalr';
+import { DEFAULT_SIGNALR_URL, redactSignalRUrl } from '../../../../src/entities/runtime/signalr';
 
 describe('SignalR runtime URL helpers', () => {
-    it('allows only the packaged default backend URL', () => {
-        expect(resolveSignalRServerUrl(DEFAULT_SIGNALR_URL)).toBe(DEFAULT_SIGNALR_URL);
-        expect(resolveSignalRServerUrl('https://evil.example/hub')).toBe(DEFAULT_SIGNALR_URL);
-        expect(resolveSignalRServerUrl(null)).toBe(DEFAULT_SIGNALR_URL);
-    });
-
     it('redacts query strings and credentials from displayable URLs', () => {
+        expect(redactSignalRUrl()).toBe(DEFAULT_SIGNALR_URL);
         expect(redactSignalRUrl(`${DEFAULT_SIGNALR_URL}?access_token=secret`)).toBe(
-            'https://rasid.runasp.net/jobNotificationHub'
+            DEFAULT_SIGNALR_URL
         );
+        expect(redactSignalRUrl('not a url')).toBe(DEFAULT_SIGNALR_URL);
     });
 });

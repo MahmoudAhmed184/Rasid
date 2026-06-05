@@ -11,7 +11,7 @@ import type {
 } from '../contracts';
 import { mountKhamsatProjectPanel } from './content/project-panel';
 import { extractKhamsatProposalSource } from './content/data';
-import { extractKhamsatProjectId, KHAMSAT_SELECTORS, queryFirst } from './selectors';
+import { extractKhamsatProjectId, KHAMSAT_SELECTORS, queryAll, queryFirst } from './selectors';
 
 const KHAMSAT_MATCHES = ['https://khamsat.com/*'] as const;
 const KHAMSAT_AUTOFILLED_CLASS = 'rasid-autofilled';
@@ -118,6 +118,9 @@ export const khamsatAdapter = {
     isContextValid,
     matchPage({ url }) {
         return matchPage(url);
+    },
+    getObservationTargets({ document }) {
+        return queryAll<Element>(document, KHAMSAT_SELECTORS.observation.targets);
     },
     extractProposalSource(input) {
         return extractKhamsatProposalSource(input);

@@ -5,7 +5,7 @@ Runtime contexts: WXT background, content scripts, extension pages, and Chrome o
 Automated coverage:
 
 - `tests/e2e/chrome/extension-smoke.spec.ts` loads the built Chrome extension with Playwright and smokes service worker, popup, dashboard, and a fixture-routed content page.
-- `tests/e2e/firefox/manifest-smoke.test.ts` keeps Firefox coverage to build/lint/generated-manifest smoke unless full Firefox extension E2E becomes practical.
+- `tests/e2e/firefox/manifest-smoke.test.ts` and `tests/e2e/firefox/generated-pages.spec.ts` cover Firefox generated manifest and page rendering behavior.
 
 ## `entrypoints/background.ts`
 
@@ -30,29 +30,25 @@ Functions:
 
 Browser APIs touched: `runtime.onInstalled`, `runtime.onStartup`, `alarms.onAlarm`.
 
-## `entrypoints/chatgpt-bridge.content.ts`
+## `entrypoints/chatgpt-bridge.ts`
 
-Purpose: WXT content script for ChatGPT bridge prompt insertion.
+Purpose: WXT unlisted script for ChatGPT bridge prompt insertion.
 
 Key imports:
 
-- `defineContentScript`
+- `defineUnlistedScript`
 - `createChatGptBridgeRepositories`
 - `initChatgptBridge`
 
-Key export: default WXT content script definition.
+Key export: default WXT unlisted script definition.
 
-Runtime configuration:
-
-- matches `https://chatgpt.com/*`
-- matches `https://chat.openai.com/*`
-- `runAt: "document_idle"`
+Runtime configuration: no static manifest matches. The background runtime injects packaged `/chatgpt-bridge.js` into `chatgpt.com` or `chat.openai.com` with `browser.scripting.executeScript` after optional host permission approval.
 
 Functions:
 
-| Function                              | Purpose                                                      | Inputs | Output | Side effects, errors, security                                                         |
-| ------------------------------------- | ------------------------------------------------------------ | ------ | ------ | -------------------------------------------------------------------------------------- |
-| `main()` inside `defineContentScript` | Creates bridge-only repositories and initializes bridge app. | none   | `void` | Gives bridge code only `proposalRepository`; no backup/settings repository is exposed. |
+| Function                               | Purpose                                                      | Inputs | Output | Side effects, errors, security                                                         |
+| -------------------------------------- | ------------------------------------------------------------ | ------ | ------ | -------------------------------------------------------------------------------------- |
+| `main()` inside `defineUnlistedScript` | Creates bridge-only repositories and initializes bridge app. | none   | `void` | Gives bridge code only `proposalRepository`; no backup/settings repository is exposed. |
 
 ## Platform Content Entrypoints
 
@@ -110,6 +106,10 @@ Important elements:
 - `toggleNotificationsBtn`
 - `checkConnectionBtn`
 - `connectionReport`
+- `adminMessagesBanner`
+- `adminMessageText`
+- `adminMessageLink`
+- `dismissAdminMessageBtn`
 
 No functions. It loads `./main.ts`.
 

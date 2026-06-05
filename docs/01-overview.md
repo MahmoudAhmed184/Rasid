@@ -1,16 +1,16 @@
 # Overview
 
-Rasid is a cross-browser Manifest V3 WebExtension for monitoring Arabic freelancing opportunities and preparing user-reviewed proposals.
+Frelancia is a cross-browser Manifest V3 WebExtension for monitoring Arabic freelancing opportunities and preparing user-reviewed proposals.
 
 ## Product Purpose
 
-Rasid helps users:
+Frelancia helps users:
 
 - monitor supported marketplace feeds
 - receive browser notifications for new filtered opportunities
 - track projects from supported platform pages
 - draft proposals using reusable prompts
-- use either direct AI-provider calls or a ChatGPT bridge workflow
+- use a ChatGPT bridge workflow in normal builds, with direct AI-provider calls only in unsafe side builds
 - export selected Mostaql project/message data into bounded ZIP downloads
 
 The extension does not submit marketplace proposals automatically.
@@ -20,12 +20,14 @@ The extension does not submit marketplace proposals automatically.
 | Area                          | Current state                                                                              |
 | ----------------------------- | ------------------------------------------------------------------------------------------ |
 | Version                       | `1.0.0`                                                                                    |
+| Package name                  | `frelancia`                                                                                |
+| Manifest name                 | `Frelancia \| فريلانسيا`                                                                   |
 | Build system                  | WXT MV3                                                                                    |
 | Browser targets               | Chrome MV3 and Firefox MV3                                                                 |
 | Supported extension platforms | Mostaql, Khamsat, Nafezly                                                                  |
 | Bridge hosts                  | `chatgpt.com`, `chat.openai.com`                                                           |
-| Direct AI providers           | OpenAI, Gemini, Claude                                                                     |
-| Default realtime backend      | `https://rasid.runasp.net/jobNotificationHub`                                         |
+| Direct AI providers           | OpenAI, Gemini, Claude only when `WXT_ENABLE_UNSAFE_DIRECT_AI=true`                        |
+| Default realtime backend      | `https://rasid.runasp.net/jobNotificationHub`                                              |
 | Optional backend tree         | `server/`, out of the WebExtension release scope unless explicitly included by maintainers |
 
 ## Supported Platforms
@@ -38,11 +40,11 @@ The extension does not submit marketplace proposals automatically.
 
 ## Browser Targets
 
-| Browser             | Output             | Current generated behavior                                                             |
-| ------------------- | ------------------ | -------------------------------------------------------------------------------------- |
-| Chrome / Chromium   | `dist/chrome-mv3`  | Service worker background, `offscreen` permission, offscreen HTML page included.       |
-| Firefox             | `dist/firefox-mv3` | WXT Firefox MV3 output, no offscreen permission, Gecko strict minimum version `140.0`. |
-| Firefox for Android | `dist/firefox-mv3` | Gecko Android strict minimum version `142.0`.                                          |
+| Browser             | Output             | Current generated behavior                                                                                              |
+| ------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Chrome / Chromium   | `dist/chrome-mv3`  | Service worker background, `offscreen` permission, offscreen HTML page included.                                        |
+| Firefox             | `dist/firefox-mv3` | WXT Firefox MV3 output, no offscreen permission, Gecko ID `frelancia@mostaql-notifier`, strict minimum version `140.0`. |
+| Firefox for Android | `dist/firefox-mv3` | Gecko Android strict minimum version `142.0`.                                                                           |
 
 ## Repository Scope
 

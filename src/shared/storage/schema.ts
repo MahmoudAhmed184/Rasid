@@ -82,7 +82,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     aiSystemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
     interval: 1,
     notificationMode: 'auto',
-    signalrServerUrl: '',
     aiChatUrl: DEFAULT_AI_CHAT_URL,
     minBudget: 0,
     minHiringRate: 0,

@@ -1,4 +1,4 @@
-# Rasid Optional SignalR Backend
+# Frelancia Optional SignalR Backend
 
 This folder contains the ASP.NET Core backend used for realtime job notifications. The project builds and runs as `Rasid.Server`.
 
@@ -10,6 +10,7 @@ The backend:
 - enriches newly discovered jobs where detail pages are accessible
 - deduplicates items in memory by `platform:id`
 - broadcasts batches to connected clients through SignalR
+- broadcasts admin messages to connected clients through SignalR
 
 Registered server-side scrapers:
 
@@ -21,7 +22,37 @@ Endpoints:
 
 - `GET /health`
 - `GET /api/providers`
+- `POST /api/admin/broadcast`
+- `GET /broadcast-tool`
 - SignalR hub at `/jobNotificationHub`
+
+## .NET 10 Toolchain
+
+The backend app and test projects both target `net10.0`. The repository root [../global.json](../global.json) pins the SDK used by local development and CI:
+
+- SDK: `10.0.300`
+- roll-forward: `latestFeature`
+- prerelease SDKs: disabled
+
+On CachyOS/Arch-style systems, install the current .NET 10 SDK package:
+
+```bash
+sudo pacman -Syu dotnet-sdk-bin
+```
+
+If older SDK/runtime packages conflict with the current SDK package, remove the conflicting packages with your package manager. Keep `dotnet-host`; it is required by the installed runtimes.
+
+Build policy lives in [Directory.Build.props](Directory.Build.props):
+
+- .NET analyzers and code-style analysis run in builds.
+- Warnings are treated as errors.
+- Builds are deterministic.
+- CI builds set `ContinuousIntegrationBuild=true`.
+- Package lock files are generated and CI restore runs in locked mode.
+
+Package versions live in [Directory.Packages.props](Directory.Packages.props) through central package management. App and test lock files are tracked at [src/packages.lock.json](src/packages.lock.json) and [tests/Rasid.Server.Tests/packages.lock.json](tests/Rasid.Server.Tests/packages.lock.json); use `dotnet restore --locked-mode` to verify that project files and lock files agree.
+
+The dedicated server workflow [.github/workflows/server-dotnet.yml](../.github/workflows/server-dotnet.yml) restores, builds, tests, and runs a publish smoke check whenever `global.json`, `server/**`, or the workflow changes.
 
 ## Run Locally
 
@@ -37,6 +68,8 @@ Default local URLs:
 
 - `http://localhost:5000/health`
 - `http://localhost:5000/api/providers`
+- `http://localhost:5000/broadcast-tool`
+- `http://localhost:5000/api/admin/broadcast`
 - `http://localhost:5000/jobNotificationHub`
 
 ## Configuration
@@ -53,26 +86,65 @@ Relevant sections:
   "InitialDelaySeconds": 5,
   "CheckIntervalSeconds": 60,
   "MaxSeenJobs": 500,
-  "MaxConcurrentEnrichmentsPerPlatform": 4
+  "MaxConcurrentEnrichmentsPerPlatform": 4,
+  "KhamsatPublishFreshnessHours": 48
 },
 "Cors": {
   "Mode": "AllowAll",
   "AllowedOrigins": []
-}
+},
+"AdminToken": "change-me-in-production"
+```
+
+`Cors:Mode=AllowAll` is intended for local extension development. In `Production`, startup fails when credentials are enabled with `AllowAll`; use `AllowConfiguredOrigins` and list the exact extension/backend origins in `Cors:AllowedOrigins`.
+
+`AdminToken` protects `POST /api/admin/broadcast`. In `Production`, startup fails when the token is missing or still set to `change-me-in-production`.
+
+## Validation
+
+From the repository root:
+
+```bash
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
+```
+
+Dependency maintenance commands:
+
+```bash
+dotnet restore server/src/Rasid.Server.sln
+dotnet list server/src/Rasid.Server.sln package --outdated
+dotnet list server/src/Rasid.Server.sln package --vulnerable --include-transitive
+```
+
+Publish smoke command for backend release changes:
+
+```bash
+dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
 ```
 
 ## Important Integration Notes
 
-- The extension manifest currently whitelists only `https://rasid.runasp.net/*` as a backend origin. If you want the extension to talk to another backend host, update `hostPermissions` in the repo-root `wxt.config.ts` and rebuild the extension.
+- The packaged extension manifest whitelists `https://rasid.runasp.net/*` as the backend origin and current extension settings do not persist another SignalR URL.
+- Admin broadcasts require the `X-Admin-Token` header and a JSON body with `Message` plus optional `Url`. The current endpoint rejects invalid tokens, blank messages, messages longer than 1000 characters, and non-absolute HTTP(S) URLs, then broadcasts `AdminMessageReceived` with `id`, `message`, `createdAt`, and `url`.
+- Token comparison uses SHA-256 hashes and fixed-time comparison. The broadcast endpoint is rate limited to five accepted requests per minute.
+- `/broadcast-tool` is a local HTML helper for manually posting to `/api/admin/broadcast`; it includes the example token value in the form for convenience and must not be treated as a secure admin console without deployment hardening.
 
 ## Main Files
 
 - [`src/Program.cs`](src/Program.cs): application bootstrap, CORS, endpoints, and SignalR hub registration
+- [`src/Models/AdminMessageRequest.cs`](src/Models/AdminMessageRequest.cs): admin broadcast request body
+- [`src/Options/AdminOptions.cs`](src/Options/AdminOptions.cs): admin token option defaults
+- [`src/Options/OptionsValidation.cs`](src/Options/OptionsValidation.cs): startup validators for scraper, CORS, and admin options
+- [`src/Services/AdminTokenComparer.cs`](src/Services/AdminTokenComparer.cs): fixed-time admin token comparison helper
+- [`src/Services/KhamsatFreshnessPolicy.cs`](src/Services/KhamsatFreshnessPolicy.cs): Khamsat publish-date freshness classification
 - [`src/Services/JobPollingWorker.cs`](src/Services/JobPollingWorker.cs): hosted polling scheduler
 - [`src/Services/ScrapeCycleRunner.cs`](src/Services/ScrapeCycleRunner.cs): listing fetch, deduplication, enrichment, and broadcast orchestration
 - [`src/Services/InMemorySeenJobCache.cs`](src/Services/InMemorySeenJobCache.cs): in-memory seen-job cache
 - [`src/Services/SignalRJobBroadcaster.cs`](src/Services/SignalRJobBroadcaster.cs): SignalR broadcaster
 - [`src/Platforms/`](src/Platforms): per-platform scraper implementations
+- [`tests/Rasid.Server.Tests`](tests/Rasid.Server.Tests): xUnit v3 tests run through Microsoft Testing Platform for endpoints, admin broadcasts, startup validation, Khamsat freshness, and scraping behavior
 
 ## Further Reading
 

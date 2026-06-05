@@ -8,6 +8,8 @@ Purpose: background composition root.
 
 Key imports: monitoring polling/realtime processors, proposal generator/catalog, AI provider registry, download/audio/notification/offscreen/SignalR services, storage, platform monitoring registry.
 
+The direct AI provider registry is imported lazily only in unsafe side builds where `WXT_ENABLE_UNSAFE_DIRECT_AI=true`.
+
 Exports:
 
 - `BackgroundApp`
@@ -15,15 +17,16 @@ Exports:
 
 Functions and nested functions:
 
-| Function                             | Purpose                                                                    | Inputs        | Outputs                   | Side effects, errors, security                                                                                                                                         |
-| ------------------------------------ | -------------------------------------------------------------------------- | ------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createBackgroundApp()`              | Composes all background services and returns the background app API.       | none          | `BackgroundApp`           | Creates storage clients, services, adapters, provider registry, SignalR manager, and handlers. Uses Chrome offscreen document mode only when `import.meta.env.CHROME`. |
-| `enqueueIngestion(task)`             | Serializes polling and realtime ingestion tasks.                           | async task    | task result               | Maintains a promise chain so storage ingestion is not concurrent.                                                                                                      |
-| `runPolling(reason)`                 | Runs a polling cycle through the ingestion queue.                          | reason string | `Promise<JobBatchResult>` | Fetches marketplace HTML, stores jobs, may notify and play audio.                                                                                                      |
-| `signalr.onJobsReceived` callback    | Processes realtime jobs through the ingestion queue.                       | jobs          | `Promise<void>`           | Normalizes, stores, filters, and publishes SignalR job batches.                                                                                                        |
-| `signalr.onPollingFallback` callback | Runs polling fallback.                                                     | reason        | `Promise<void>`           | Delegates to `runPolling()`.                                                                                                                                           |
-| `bootstrap(reason)`                  | Initializes storage, offscreen/local tasks, download cleanup, and SignalR. | reason string | `Promise<void>`           | Writes defaults, creates offscreen document in Chrome, reconciles downloads, schedules/connects SignalR.                                                               |
-| `ensureReady(reason)`                | Runs bootstrap once and shares in-flight bootstrap work.                   | reason string | `Promise<void>`           | Prevents duplicate bootstrap; subsequent calls return after `isBootstrapped`.                                                                                          |
+| Function                                  | Purpose                                                                    | Inputs        | Outputs                   | Side effects, errors, security                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------- | ------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createBackgroundApp()`                   | Composes all background services and returns the background app API.       | none          | `BackgroundApp`           | Creates storage clients, services, adapters, provider registry, SignalR manager, and handlers. Uses Chrome offscreen document mode only when `import.meta.env.CHROME`. |
+| `enqueueIngestion(task)`                  | Serializes polling and realtime ingestion tasks.                           | async task    | task result               | Maintains a promise chain so storage ingestion is not concurrent.                                                                                                      |
+| `runPolling(reason)`                      | Runs a polling cycle through the ingestion queue.                          | reason string | `Promise<JobBatchResult>` | Fetches marketplace HTML, stores jobs, may notify and play audio.                                                                                                      |
+| `signalr.onJobsReceived` callback         | Processes realtime jobs through the ingestion queue.                       | jobs          | `Promise<void>`           | Normalizes, stores, filters, and publishes SignalR job batches.                                                                                                        |
+| `signalr.onPollingFallback` callback      | Runs polling fallback.                                                     | reason        | `Promise<void>`           | Delegates to `runPolling()`.                                                                                                                                           |
+| `signalr.onAdminMessageReceived` callback | Stores backend admin broadcasts and notifies the user.                     | admin payload | `Promise<void>`           | Writes `adminMessages`, marks messages unread, and calls `showAdminMessageNotification()`.                                                                             |
+| `bootstrap(reason)`                       | Initializes storage, offscreen/local tasks, download cleanup, and SignalR. | reason string | `Promise<void>`           | Writes defaults, creates offscreen document in Chrome, reconciles downloads, schedules/connects SignalR.                                                               |
+| `ensureReady(reason)`                     | Runs bootstrap once and shares in-flight bootstrap work.                   | reason string | `Promise<void>`           | Prevents duplicate bootstrap; subsequent calls return after `isBootstrapped`.                                                                                          |
 
 ## `src/app/background/background-messages.ts`
 
@@ -57,6 +60,7 @@ Important constants:
 | `BACKGROUND_ACTIONS`                | Allowed background actions.                  |
 | `MAX_ZIP_MESSAGE_FILES`             | 80 ZIP entries per message.                  |
 | `MAX_GENERATE_TEMPLATE_ID_LENGTH`   | 120 characters.                              |
+| `MAX_BRIDGE_PROMPT_LENGTH`          | 20,000 characters.                           |
 | `MAX_AI_CONTEXT_TITLE_LENGTH`       | 300 characters.                              |
 | `MAX_AI_CONTEXT_DESCRIPTION_LENGTH` | 8000 characters.                             |
 | `MAX_AI_CONTEXT_FIELD_LENGTH`       | 1000 characters.                             |
@@ -67,42 +71,45 @@ Important constants:
 
 Functions:
 
-| Function                                   | Purpose                                            | Inputs            | Outputs                | Side effects, errors, security                                |
-| ------------------------------------------ | -------------------------------------------------- | ----------------- | ---------------------- | ------------------------------------------------------------- |
-| `isRecord()`                               | Checks for a non-array object.                     | unknown           | type guard             | Used by validators.                                           |
-| `hasOnlyAction()`                          | Verifies message action.                           | record, action    | boolean                | Prevents action mismatch.                                     |
-| `isFiniteNumber()`                         | Checks finite number.                              | unknown           | type guard             | Numeric validation.                                           |
-| `isBoundedString()`                        | Checks non-empty string within limit.              | value, max        | type guard             | Used for AI context bounds.                                   |
-| `isOptionalBoundedString()`                | Checks optional bounded string.                    | value, max        | type guard             | Allows absent optional fields.                                |
-| `isAllowedAiContextUrl()`                  | Validates HTTPS platform URL for proposal context. | unknown           | type guard             | Enforces host allowlist and URL length.                       |
-| `isStringArray()`                          | Validates tags array.                              | unknown           | type guard             | Caps count and item length.                                   |
-| `isProjectAttachment()`                    | Validates attachment shape.                        | unknown           | boolean                | Requires bounded name and allowed URL.                        |
-| `isAiRequestContext()`                     | Validates proposal generation context.             | unknown           | type guard             | Rejects oversized/untrusted payloads before prompt rendering. |
-| `isZipEntryInput()`                        | Validates ZIP entry input.                         | unknown           | type guard             | Requires name and content or URL.                             |
-| `isJobBatchResult()`                       | Validates polling/SignalR batch result.            | unknown           | type guard             | Ensures transport response shape.                             |
-| `isSuccessResult()`                        | Validates `{ success: true }`.                     | unknown           | type guard             | Used by simple actions.                                       |
-| `isDebugFetchResult()`                     | Validates diagnostics response.                    | unknown           | type guard             | Accepts success, length, error.                               |
-| `isGenerateProposalResponse()`             | Validates proposal response.                       | unknown           | type guard             | Bridge URL must normalize to itself.                          |
-| `isZipDownloadResult()`                    | Validates ZIP download response.                   | unknown           | type guard             | Ensures optional download ID/error types.                     |
-| `isUpdateAlarmMessage()`                   | Validates `updateAlarm`.                           | record            | type guard             | Optional interval must be finite.                             |
-| `isGenerateProposalMessage()`              | Validates `generateProposal`.                      | record            | type guard             | Enforces template/context constraints.                        |
-| `isDownloadZipMessage()`                   | Validates `downloadZip`.                           | record            | type guard             | Caps file count and validates entries.                        |
-| `getBackgroundMessageAction()`             | Extracts known action.                             | unknown           | action or `null`       | Unknown actions are ignored by bus.                           |
-| `isBackgroundRuntimeMessage()`             | Validates any background request.                  | unknown           | type guard             | Dispatch gate.                                                |
-| `isBackgroundTransportResponseForAction()` | Validates response for action.                     | value, action     | type guard             | Caller-side response guard.                                   |
-| `createBackgroundTransportSuccess()`       | Builds success envelope.                           | action, data      | transport response     | No side effects.                                              |
-| `createBackgroundTransportFailure()`       | Builds failure envelope.                           | action, error     | transport response     | No side effects.                                              |
-| `dispatchBackgroundMessage()`              | Routes message to matching handler.                | handlers, message | handler result         | Exhaustive switch over known actions.                         |
-| `sendBackgroundMessage()`                  | Sends and validates a runtime message.             | typed request     | typed response promise | Throws on invalid response or transport failure.              |
-| `requestCheckNow()`                        | Sends `checkNow`.                                  | none              | `JobBatchResult`       | Triggers polling via background.                              |
-| `requestTestNotification()`                | Sends `testNotification`.                          | none              | success                | Creates test notification.                                    |
-| `requestTestSound()`                       | Sends `testSound`.                                 | none              | success                | Plays audio through background/offscreen.                     |
-| `requestUpdateAlarm()`                     | Sends `updateAlarm`.                               | optional interval | success                | Updates settings and SignalR bootstrap.                       |
-| `requestReconnectSignalR()`                | Sends `reconnectSignalR`.                          | none              | success                | Reconnects SignalR.                                           |
-| `requestDisconnectSignalR()`               | Sends `disconnectSignalR`.                         | none              | success                | Enters polling mode.                                          |
-| `requestDebugFetch()`                      | Sends `debugFetch`.                                | none              | diagnostics            | Fetches enabled source probes.                                |
-| `requestGenerateProposal()`                | Sends `generateProposal`.                          | request           | proposal response      | Subject to payload validation and sender checks.              |
-| `requestDownloadZip()`                     | Sends `downloadZip`.                               | filename, files   | download result        | Subject to ZIP validators and host limits downstream.         |
+| Function                                   | Purpose                                            | Inputs            | Outputs                | Side effects, errors, security                                    |
+| ------------------------------------------ | -------------------------------------------------- | ----------------- | ---------------------- | ----------------------------------------------------------------- |
+| `isRecord()`                               | Checks for a non-array object.                     | unknown           | type guard             | Used by validators.                                               |
+| `hasOnlyAction()`                          | Verifies message action.                           | record, action    | boolean                | Prevents action mismatch.                                         |
+| `isFiniteNumber()`                         | Checks finite number.                              | unknown           | type guard             | Numeric validation.                                               |
+| `isBoundedString()`                        | Checks non-empty string within limit.              | value, max        | type guard             | Used for AI context bounds.                                       |
+| `isOptionalBoundedString()`                | Checks optional bounded string.                    | value, max        | type guard             | Allows absent optional fields.                                    |
+| `isAllowedAiContextUrl()`                  | Validates HTTPS platform URL for proposal context. | unknown           | type guard             | Enforces host allowlist and URL length.                           |
+| `isStringArray()`                          | Validates tags array.                              | unknown           | type guard             | Caps count and item length.                                       |
+| `isProjectAttachment()`                    | Validates attachment shape.                        | unknown           | boolean                | Requires bounded name and allowed URL.                            |
+| `isAiRequestContext()`                     | Validates proposal generation context.             | unknown           | type guard             | Rejects oversized/untrusted payloads before prompt rendering.     |
+| `isZipEntryInput()`                        | Validates ZIP entry input.                         | unknown           | type guard             | Requires name and content or URL.                                 |
+| `isJobBatchResult()`                       | Validates polling/SignalR batch result.            | unknown           | type guard             | Ensures transport response shape.                                 |
+| `isSuccessResult()`                        | Validates `{ success: true }`.                     | unknown           | type guard             | Used by simple actions.                                           |
+| `isDebugFetchResult()`                     | Validates diagnostics response.                    | unknown           | type guard             | Accepts success, length, error.                                   |
+| `isGenerateProposalResponse()`             | Validates proposal response.                       | unknown           | type guard             | Bridge URL must normalize to itself.                              |
+| `isOpenChatBridgePromptResponse()`         | Validates bridge-open response.                    | unknown           | type guard             | Checks created/focused success shape or known failure reason.     |
+| `isZipDownloadResult()`                    | Validates ZIP download response.                   | unknown           | type guard             | Ensures optional download ID/error types.                         |
+| `isUpdateAlarmMessage()`                   | Validates `updateAlarm`.                           | record            | type guard             | Optional interval must be finite.                                 |
+| `isGenerateProposalMessage()`              | Validates `generateProposal`.                      | record            | type guard             | Enforces template/context constraints.                            |
+| `isOpenChatBridgePromptMessage()`          | Validates `openChatBridgePrompt`.                  | record            | type guard             | Enforces prompt length and normalized ChatGPT URL.                |
+| `isDownloadZipMessage()`                   | Validates `downloadZip`.                           | record            | type guard             | Caps file count and validates entries.                            |
+| `getBackgroundMessageAction()`             | Extracts known action.                             | unknown           | action or `null`       | Unknown actions are ignored by bus.                               |
+| `isBackgroundRuntimeMessage()`             | Validates any background request.                  | unknown           | type guard             | Dispatch gate.                                                    |
+| `isBackgroundTransportResponseForAction()` | Validates response for action.                     | value, action     | type guard             | Caller-side response guard.                                       |
+| `createBackgroundTransportSuccess()`       | Builds success envelope.                           | action, data      | transport response     | No side effects.                                                  |
+| `createBackgroundTransportFailure()`       | Builds failure envelope.                           | action, error     | transport response     | No side effects.                                                  |
+| `dispatchBackgroundMessage()`              | Routes message to matching handler.                | handlers, message | handler result         | Exhaustive switch over known actions.                             |
+| `sendBackgroundMessage()`                  | Sends and validates a runtime message.             | typed request     | typed response promise | Throws on invalid response or transport failure.                  |
+| `requestCheckNow()`                        | Sends `checkNow`.                                  | none              | `JobBatchResult`       | Triggers polling via background.                                  |
+| `requestTestNotification()`                | Sends `testNotification`.                          | none              | success                | Creates test notification.                                        |
+| `requestTestSound()`                       | Sends `testSound`.                                 | none              | success                | Plays audio through background/offscreen.                         |
+| `requestUpdateAlarm()`                     | Sends `updateAlarm`.                               | optional interval | success                | Updates settings and SignalR bootstrap.                           |
+| `requestReconnectSignalR()`                | Sends `reconnectSignalR`.                          | none              | success                | Reconnects SignalR.                                               |
+| `requestDisconnectSignalR()`               | Sends `disconnectSignalR`.                         | none              | success                | Enters polling mode.                                              |
+| `requestDebugFetch()`                      | Sends `debugFetch`.                                | none              | diagnostics            | Fetches enabled source probes.                                    |
+| `requestGenerateProposal()`                | Sends `generateProposal`.                          | request           | proposal response      | Subject to payload validation and sender checks.                  |
+| `requestOpenChatBridgePrompt()`            | Sends `openChatBridgePrompt`.                      | prompt, chat URL  | bridge-open response   | Background requests permission, resolves tab, and injects script. |
+| `requestDownloadZip()`                     | Sends `downloadZip`.                               | filename, files   | download result        | Subject to ZIP validators and host limits downstream.             |
 
 ## `src/app/background/background-message-bus.ts`
 
@@ -131,12 +138,20 @@ Exports:
 
 - `createBackgroundRuntimeHandlers()`
 
+Important constants:
+
+- `CHATGPT_BRIDGE_SCRIPT_FILE = "/chatgpt-bridge.js"`
+
 Functions:
 
-| Function                                | Purpose                                                                            | Inputs                                                                                            | Outputs                       | Side effects, errors, security                                                                                                       |
-| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `downloadZip(deps, message)`            | Creates ZIP object URL through offscreen/local task and starts a browser download. | background deps, download message                                                                 | `ZipDownloadResult`           | Uses `browser.downloads.download`; revokes object URL on immediate download failure; persists cleanup record after successful start. |
-| `createBackgroundRuntimeHandlers(deps)` | Builds action handlers.                                                            | storage, notifications, downloads, audio, offscreen, SignalR, monitoring, proposals, `runPolling` | `BackgroundMessageHandlerMap` | Maps runtime actions to background services. `debugFetch` only probes enabled platform adapters.                                     |
+| Function                                | Purpose                                                                            | Inputs                                                                                            | Outputs                        | Side effects, errors, security                                                                                                       |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `ensureChatBridgePermission(chatUrl)`   | Requests optional ChatGPT host permission if needed.                               | normalized ChatGPT URL                                                                            | boolean/unsupported            | Uses `browser.permissions.contains/request`.                                                                                         |
+| `resolveChatBridgeTab(chatUrl)`         | Finds existing ChatGPT tab or creates one.                                         | normalized ChatGPT URL                                                                            | tab ID/status                  | Uses `browser.tabs.query/update/create`.                                                                                             |
+| `injectChatBridge(tabId)`               | Injects packaged bridge script into target tab.                                    | tab ID                                                                                            | `Promise<void>`                | Uses `browser.scripting.executeScript`.                                                                                              |
+| `openChatBridgePrompt(deps, message)`   | Stores pending prompt and injects bridge script.                                   | background deps, bridge message                                                                   | `OpenChatBridgePromptResponse` | Returns known failure reasons for permission, unsupported APIs, tab open, or injection failures.                                     |
+| `downloadZip(deps, message)`            | Creates ZIP object URL through offscreen/local task and starts a browser download. | background deps, download message                                                                 | `ZipDownloadResult`            | Uses `browser.downloads.download`; revokes object URL on immediate download failure; persists cleanup record after successful start. |
+| `createBackgroundRuntimeHandlers(deps)` | Builds action handlers.                                                            | storage, notifications, downloads, audio, offscreen, SignalR, monitoring, proposals, `runPolling` | `BackgroundMessageHandlerMap`  | Maps runtime actions to background services. `debugFetch` only probes enabled platform adapters.                                     |
 
 Action behavior:
 
@@ -148,6 +163,7 @@ Action behavior:
 - `disconnectSignalR`: disconnects into polling
 - `debugFetch`: fetches enabled monitoring source probes
 - `generateProposal`: delegates to proposal generator
+- `openChatBridgePrompt`: requests ChatGPT host permission, focuses/creates tab, stores pending prompt, and injects `/chatgpt-bridge.js`
 - `downloadZip`: delegates to `downloadZip()`
 
 Related docs:

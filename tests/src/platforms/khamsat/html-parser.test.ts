@@ -17,7 +17,9 @@ describe('Khamsat HTML parser', () => {
             title: 'مطلوب مراجعة SEO لمتجر عربي',
             poster: 'عميل خمسات',
             url: 'https://khamsat.com/community/requests/777-seo-audit',
+            lastInteractionAt: '2026-05-22T07:00:00+03:00',
         });
+        expect(jobs[0]?.postedAt).toBeUndefined();
     });
 
     it('deduplicates request listings and ignores malformed request rows', () => {
@@ -57,7 +59,7 @@ describe('Khamsat HTML parser', () => {
                 id: '100',
                 title: 'طلب أول',
                 poster: 'عميل',
-                postedAt: '2026-05-22T10:00:00+03:00',
+                lastInteractionAt: '2026-05-22T10:00:00+03:00',
             }),
         ]);
     });
@@ -68,12 +70,44 @@ describe('Khamsat HTML parser', () => {
         expect(project?.platformId).toBe('khamsat');
         expect(project?.description).toContain('وصفا تفصيليا');
         expect(project?.clientName).toBe('عميل خمسات');
+        expect(project?.postedAt).toBe('2026-05-21T21:00:00+03:00');
         expect(project?.attachments).toEqual([
             {
                 name: 'spec.pdf',
                 url: 'https://khamsat.com/uploads/spec.pdf',
             },
         ]);
+    });
+
+    it('prioritizes live sidebar owner and publish metadata over comments', () => {
+        const project = parseKhamsatProjectHtml(`
+            <main>
+                <article class="replace_urls">
+                    أحتاج إلى تطوير واجهة عربية مفصلة مع تحسينات تجربة المستخدم وتوثيق واضح لكل حالة.
+                    هذا الوصف طويل بما يكفي لاختبار اختيار الوصف الصحيح من صفحة الطلب.
+                </article>
+                <section class="comments">
+                    <a class="username" href="/user/commenter">معلق لا يجب اختياره</a>
+                    <time datetime="2026-01-01T00:00:00+03:00"></time>
+                </section>
+            </main>
+            <aside id="community_sidebar">
+                <div id="sidebar">
+                    <a class="sidebar_user" href="/user/request-owner">صاحب الطلب</a>
+                    <div class="meta-row">
+                        <span>تاريخ النشر</span>
+                        <span title="05/06/2026 08:30 GMT">منذ ساعتين</span>
+                    </div>
+                    <a href="/user/bidder">مزايد لا يجب اختياره</a>
+                </div>
+            </aside>
+        `);
+
+        expect(project).toMatchObject({
+            platformId: 'khamsat',
+            clientName: 'صاحب الطلب',
+            postedAt: '05/06/2026 08:30 GMT',
+        });
     });
 
     it('keeps partial project fields and filters unsafe attachment URLs', () => {

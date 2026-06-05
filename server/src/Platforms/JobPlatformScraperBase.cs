@@ -163,7 +163,7 @@ public abstract class JobPlatformScraperBase : IJobPlatformScraper
     }
 
     protected static string? GetAttribute(HtmlNode? node, string attributeName) =>
-        node?.GetAttributeValue(attributeName, null as string);
+        node?.Attributes[attributeName]?.Value;
 
     protected static string CleanText(string? value)
     {

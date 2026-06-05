@@ -68,6 +68,7 @@ Functions:
 | Function                                                       | Purpose                                                                                            | Inputs                                | Outputs                 | Side effects, errors, security                                                                   |
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
 | `safeErrorLabel(error)`                                        | Reduces error to safe label.                                                                       | unknown                               | string                  | Avoids logging full error detail in some paths.                                                  |
+| `isAdminMessagePayload(value)`                                 | Validates backend admin broadcast payload.                                                         | unknown                               | type guard              | Requires `id`, non-empty `message`, and `createdAt`.                                             |
 | `isDue(dateText, nowValue)`                                    | Checks scheduled time.                                                                             | ISO/null, date                        | boolean                 | Treats missing/invalid as due.                                                                   |
 | `createSignalRManager(options)`                                | Creates SignalR manager.                                                                           | storage, job callbacks, logger, clock | `SignalRManager`        | Owns `HubConnection`, alarms, state transitions, fallback calls.                                 |
 | `applySignalRTransition(current, event)` inner                 | Reduces state, executes alarm effects, persists state.                                             | state, event                          | `Promise<SignalRState>` | Writes runtime storage.                                                                          |
@@ -79,7 +80,7 @@ Functions:
 | `normalizeEnvelope(payload)` inner                             | Normalizes SignalR payload to jobs.                                                                | unknown                               | job array               | Drops invalid/unsupported jobs.                                                                  |
 | `handleInboundJobs(boundConnection, serverUrl, payload)` inner | Processes `NewJobsDetected`.                                                                       | connection, URL, payload              | `Promise<void>`         | Ignores stale connections; refreshes lease; calls job callback.                                  |
 | `handleUnexpectedClose(serverUrl, error)` inner                | Handles unintentional close.                                                                       | URL, error                            | `Promise<void>`         | Schedules reconnect, runs polling fallback, logs redacted URL.                                   |
-| `bindHandlers(boundConnection, serverUrl)` inner               | Attaches hub event handlers.                                                                       | connection, URL                       | `void`                  | Listens for `NewJobsDetected` and close events.                                                  |
+| `bindHandlers(boundConnection, serverUrl)` inner               | Attaches hub event handlers.                                                                       | connection, URL                       | `void`                  | Listens for `NewJobsDetected`, `AdminMessageReceived`, and close events.                         |
 | `connectLiveTransport(reason)` inner                           | Connects SignalR when due.                                                                         | reason                                | `Promise<void>`         | Builds hub connection with WebSockets, SSE, Long Polling; applies connected/backoff transitions. |
 | `ensureDisabledState(reason)` inner                            | Enters idle disabled state.                                                                        | reason                                | `Promise<void>`         | Stops connection.                                                                                |
 | `ensurePollingMode(reason)` inner                              | Enters polling mode.                                                                               | reason                                | `Promise<void>`         | Stops connection and clears reconnect state.                                                     |
@@ -100,17 +101,22 @@ Purpose: browser notification service and click payload lifecycle.
 Constants:
 
 - `NOTIFICATION_ALLOWED_HOSTS = ["mostaql.com", "khamsat.com", "nafezly.com"]`
+- job notification IDs start with `frelancia-`
+- admin notification IDs start with `frelancia-admin-`
 
 Functions:
 
-| Function                             | Purpose                                  | Inputs            | Outputs               | Side effects, errors, security                                       |
-| ------------------------------------ | ---------------------------------------- | ----------------- | --------------------- | -------------------------------------------------------------------- |
-| `normalizeNotificationUrl(value)`    | Validates notification target URL.       | URL string        | URL string or `null`  | Requires HTTPS and supported platform host; strips credentials/hash. |
-| `buildNotificationBody(jobs)`        | Creates Arabic notification title/body.  | jobs              | title/message/primary | Uses primary job and platform labels.                                |
-| `createNotificationService(storage)` | Creates notification service.            | extension storage | `NotificationService` | Registers click/close handlers; stores and prunes click payloads.    |
-| `registerHandlers()` inner           | Registers notification listeners once.   | none              | `void`                | Consumes payloads on click and opens tabs for normalized URLs.       |
-| `showJobsNotification(jobs)` inner   | Stores payload and creates notification. | job array         | notification ID       | Removes payload if `browser.notifications.create()` fails.           |
-| `showTestNotification()` inner       | Creates test notification.               | none              | notification ID       | Uses Mostaql projects URL.                                           |
+| Function                                  | Purpose                                                 | Inputs                             | Outputs               | Side effects, errors, security                                       |
+| ----------------------------------------- | ------------------------------------------------------- | ---------------------------------- | --------------------- | -------------------------------------------------------------------- |
+| `normalizeNotificationUrl(value)`         | Validates notification target URL.                      | URL string                         | URL string or `null`  | Requires HTTPS and supported platform host; strips credentials/hash. |
+| `getNotificationIcon(platformId)`         | Resolves notification icon asset.                       | platform ID/undefined              | URL string            | Uses platform icons or fallback extension icon.                      |
+| `buildNotificationOptions(options)`       | Builds cross-browser notification options.              | icon/title/message/context/buttons | notification options  | Omits context message and buttons in Firefox.                        |
+| `buildNotificationBody(jobs)`             | Creates Arabic notification title/body.                 | jobs                               | title/message/primary | Uses primary job and platform labels.                                |
+| `createNotificationService(storage)`      | Creates notification service.                           | extension storage                  | `NotificationService` | Registers click/close handlers; stores and prunes click payloads.    |
+| `registerHandlers()` inner                | Registers notification listeners once.                  | none                               | `void`                | Consumes payloads on click and opens tabs for normalized URLs.       |
+| `showJobsNotification(jobs)` inner        | Stores payload and creates notification.                | job array                          | notification ID       | Removes payload if `browser.notifications.create()` fails.           |
+| `showAdminMessageNotification(msg)` inner | Stores optional payload and creates admin notification. | admin message                      | notification ID       | Uses fallback icon and optional normalized URL payload.              |
+| `showTestNotification()` inner            | Creates test notification.                              | none                               | notification ID       | Uses Mostaql projects URL.                                           |
 
 ### `src/features/notifications/audio-service.ts`
 
@@ -123,7 +129,7 @@ Functions:
 | `getAudioContextCtor()`                                  | Returns global `AudioContext`.                  | none                             | constructor/undefined | Internal feature detection.                                           |
 | `playTone(audioContext, frequency, startTime, duration)` | Plays one sine tone.                            | audio context, frequency, timing | oscillator            | Creates oscillator/gain nodes.                                        |
 | `playSequence(steps)`                                    | Plays tone sequence and closes context.         | tone steps                       | `Promise<void>`       | Throws if `AudioContext` is unavailable; closes context in `finally`. |
-| `playNotificationAudioDirect()`                          | Plays Rasid notification sound.                 | none                             | `Promise<void>`       | Two-tone generated sound.                                             |
+| `playNotificationAudioDirect()`                          | Plays Frelancia notification sound.             | none                             | `Promise<void>`       | Two-tone generated sound.                                             |
 | `createAudioService(offscreen)`                          | Registers audio task and returns audio service. | offscreen manager                | `AudioService`        | Uses offscreen/local task contract.                                   |
 
 ## Downloads

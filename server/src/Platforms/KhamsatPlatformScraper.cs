@@ -97,13 +97,20 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
 
         var timeNode = documentResult.Value.DocumentNode.SelectSingleNode(
             "//time[@datetime] | //time | //*[contains(@class, 'meta')]//time | //*[contains(@class, 'comment-time')]");
-        var clientNameNode = documentResult.Value.DocumentNode.SelectSingleNode(
-            "//*[contains(@class, 'comment-user')]//a | //*[contains(@class, 'post-author')]//*[contains(@class, 'username')] | //*[contains(@class, 'user-info')]//*[contains(@class, 'username')]");
+        var clientNameNode =
+            documentResult.Value.DocumentNode.SelectSingleNode(
+                "//*[@id='community_sidebar']//*[@id='sidebar']//a[contains(@class, 'sidebar_user')] | //*[@id='sidebar']//a[contains(@class, 'sidebar_user')]") ??
+            documentResult.Value.DocumentNode.SelectSingleNode(
+                "//*[contains(@class, 'comment-user')]//a | //*[contains(@class, 'post-author')]//*[contains(@class, 'username')] | //*[contains(@class, 'user-info')]//*[contains(@class, 'username')]");
+        var sidebarPublishDate = SelectSidebarPublishDate(documentResult.Value);
 
         return ScrapeResult<JobDetails>.Success(
             new JobDetails(
                 Description: NullIfEmpty(description),
-                PostedAt: NullIfEmpty(GetAttribute(timeNode, "datetime") ?? timeNode?.InnerText),
+                PostedAt: NullIfEmpty(
+                    sidebarPublishDate ??
+                    GetAttribute(timeNode, "datetime") ??
+                    timeNode?.InnerText),
                 ClientName: NullIfEmpty(clientNameNode?.InnerText)));
     }
 
@@ -114,4 +121,41 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .OrderByDescending(text => text.Length)
             .FirstOrDefault();
+
+    private static string? SelectSidebarPublishDate(HtmlDocument document)
+    {
+        foreach (var sidebar in SelectNodes(
+                     document.DocumentNode,
+                     "//*[@id='community_sidebar']//*[@id='sidebar'] | //*[@id='sidebar']"))
+        {
+            foreach (var valueNode in SelectNodes(sidebar, ".//span[@title]"))
+            {
+                if (!HasPublishDateLabelNearby(valueNode))
+                {
+                    continue;
+                }
+
+                return NullIfEmpty(GetAttribute(valueNode, "title") ?? valueNode.InnerText);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasPublishDateLabelNearby(HtmlNode valueNode)
+    {
+        var current = valueNode.ParentNode;
+
+        for (var depth = 0; current is not null && depth < 4; depth += 1)
+        {
+            if (CleanText(current.InnerText).Contains("تاريخ النشر", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            current = current.ParentNode;
+        }
+
+        return false;
+    }
 }

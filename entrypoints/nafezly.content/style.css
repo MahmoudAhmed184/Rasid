@@ -5,15 +5,15 @@
     z-index: 2147483646;
     width: min(320px, calc(100vw - 32px));
     padding: 16px;
-    border: 1px solid rgba(1, 114, 184, 0.18);
+    border: 1px solid rgba(27, 168, 240, 0.18);
     border-radius: 18px;
     background:
-        radial-gradient(circle at top right, rgba(1, 148, 254, 0.18), transparent 42%),
-        linear-gradient(180deg, rgba(247, 252, 255, 0.98), rgba(239, 248, 255, 0.98));
-    box-shadow: 0 20px 40px rgba(15, 67, 103, 0.18);
-    color: #163244;
+        radial-gradient(circle at top right, rgba(27, 168, 240, 0.1), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 253, 0.98));
+    box-shadow: 0 20px 40px rgba(15, 98, 140, 0.18);
+    color: #0f172a;
     direction: rtl;
-    font-family: 'Noto Sans Arabic', 'Open Sans', sans-serif;
+    font-family: 'Cairo', 'Noto Sans Arabic', 'Open Sans', sans-serif;
     backdrop-filter: blur(12px);
 }
 
@@ -25,7 +25,7 @@
 
 .rasid-nafezly-panel__subtitle {
     margin: 8px 0 14px;
-    color: #4b6b7e;
+    color: #64748b;
     font-size: 13px;
     line-height: 1.6;
 }
@@ -35,14 +35,14 @@
     margin-bottom: 6px;
     font-size: 12px;
     font-weight: 700;
-    color: #265069;
+    color: #1480b8;
 }
 
 .rasid-nafezly-panel__select {
     width: 100%;
     margin-bottom: 12px;
     padding: 10px 12px;
-    border: 1px solid rgba(1, 114, 184, 0.18);
+    border: 1px solid rgba(27, 168, 240, 0.18);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.95);
     color: inherit;
@@ -79,15 +79,15 @@
 }
 
 .rasid-nafezly-panel__button--primary {
-    background: linear-gradient(135deg, #0194fe, #0172b8);
+    background: linear-gradient(135deg, #1ba8f0, #0284c7);
     color: #fff;
-    box-shadow: 0 12px 22px rgba(1, 148, 254, 0.24);
+    box-shadow: 0 12px 22px rgba(27, 168, 240, 0.24);
 }
 
 .rasid-nafezly-panel__button--ghost {
     background: rgba(255, 255, 255, 0.82);
-    color: #214963;
-    border: 1px solid rgba(1, 114, 184, 0.14);
+    color: #0f628c;
+    border: 1px solid rgba(27, 168, 240, 0.14);
 }
 
 .rasid-nafezly-panel__status {
@@ -101,16 +101,16 @@
 }
 
 .rasid-nafezly-panel__status[data-tone='success'] {
-    color: #0f7c4d;
+    color: #15803d;
 }
 
 .rasid-nafezly-panel__status[data-tone='error'] {
-    color: #b03f35;
+    color: #be123c;
 }
 
 .rasid-nafezly-autofilled {
-    background: #f1fbff !important;
-    box-shadow: 0 0 0 2px rgba(1, 148, 254, 0.22) !important;
+    background: #e0f2fe !important;
+    box-shadow: 0 0 0 2px rgba(27, 168, 240, 0.22) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
