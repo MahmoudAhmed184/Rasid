@@ -116,7 +116,7 @@ function createServices(options: ServiceOptions = {}) {
     const getQuickTemplate = vi.fn(async () => '');
     const generate = vi.fn(async (_templateId: string, _context: AiRequestContext) => generation);
     const queueAutofill = vi.fn(async (_draft: PlatformAutofillDraft) => undefined);
-    const setPendingBridgePrompt = vi.fn(async (_prompt: string, _chatUrl?: string) => undefined);
+    const openBridgePrompt = vi.fn(async (_prompt: string, _chatUrl?: string) => undefined);
     const downloadZip = vi.fn(async () => undefined);
     const toast = vi.fn();
     const services: PlatformContentServices = {
@@ -133,7 +133,7 @@ function createServices(options: ServiceOptions = {}) {
             getQuickTemplate,
             generate,
             queueAutofill,
-            setPendingBridgePrompt,
+            openBridgePrompt,
         },
         downloads: {
             downloadZip,
@@ -148,7 +148,7 @@ function createServices(options: ServiceOptions = {}) {
         trackingToggle,
         generate,
         queueAutofill,
-        setPendingBridgePrompt,
+        openBridgePrompt,
     };
 }
 
@@ -269,12 +269,12 @@ describe('Khamsat project panel', () => {
         getButton(panel, 'ولّد الرد').click();
 
         await vi.waitFor(() => {
-            expect(mocks.setPendingBridgePrompt).toHaveBeenCalledWith(
+            expect(mocks.openBridgePrompt).toHaveBeenCalledWith(
                 'اكتب رد خمسات',
                 'https://chat.openai.com/'
             );
         });
-        expect(window.open).toHaveBeenCalledWith('https://chat.openai.com/', 'rasid_ai_chat');
+        expect(window.open).not.toHaveBeenCalled();
         expect(mocks.queueAutofill).not.toHaveBeenCalled();
     });
 

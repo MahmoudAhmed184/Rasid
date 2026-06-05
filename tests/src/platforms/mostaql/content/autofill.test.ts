@@ -56,12 +56,12 @@ function createProposalServices() {
                 proposal: 'Generated',
             }) satisfies ProposalGenerationResult
     );
-    const setPendingBridgePrompt = vi.fn(async () => undefined);
+    const openBridgePrompt = vi.fn(async () => undefined);
     const proposals: PlatformContentServices['proposals'] = {
         getQuickTemplate,
         generate,
         queueAutofill: queueAutofillMock,
-        setPendingBridgePrompt,
+        openBridgePrompt,
     };
 
     return {
@@ -69,7 +69,7 @@ function createProposalServices() {
         getQuickTemplate,
         queueAutofill: queueAutofillMock,
         generate,
-        setPendingBridgePrompt,
+        openBridgePrompt,
     };
 }
 

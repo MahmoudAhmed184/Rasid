@@ -13,6 +13,11 @@ import { createSignalRManager } from '../../features/realtime/signalr-manager';
 import { createExtensionStorage } from '../../shared/storage/extension-storage';
 import { createPlatformMonitoringHtmlParser } from '../../platforms/monitoring-html-parser';
 import { createPlatformMonitoringAdapters } from '../../platforms/registry';
+import { createProposalRepository } from '../../features/proposals/proposal-repository';
+import {
+    createBrowserSessionStorageClient,
+    createBrowserStorageClient,
+} from '../../shared/browser/storage-client';
 
 export interface BackgroundApp {
     readonly notifications: ReturnType<typeof createNotificationService>;
@@ -23,7 +28,10 @@ export interface BackgroundApp {
 }
 
 export function createBackgroundApp(): BackgroundApp {
-    const storage = createExtensionStorage();
+    const storageClient = createBrowserStorageClient();
+    const secretClient = createBrowserSessionStorageClient();
+    const storage = createExtensionStorage(storageClient, secretClient);
+    const proposalRepository = createProposalRepository(storage, storageClient);
     const notifications = createNotificationService(storage);
     const offscreen = createOffscreenManager({
         mode: import.meta.env.CHROME ? 'document' : 'local',
@@ -121,6 +129,7 @@ export function createBackgroundApp(): BackgroundApp {
         signalr,
         monitoring: platformMonitoring,
         proposals: proposalGenerator,
+        proposalRepository,
         runPolling,
     });
 

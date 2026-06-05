@@ -9,6 +9,25 @@ import type { ZipDownloadResult, ZipEntryInput } from '../../features/downloads/
 import { normalizeAiChatUrl } from '../../entities/ai/chat-url';
 import { isAllowedPlatformHostname } from '../../entities/platform/url';
 
+export type OpenChatBridgePromptFailureReason =
+    | 'permission-denied'
+    | 'unsupported'
+    | 'tab-open-failed'
+    | 'injection-failed';
+
+export type OpenChatBridgePromptResponse =
+    | {
+          readonly success: true;
+          readonly tabId: number;
+          readonly tabStatus: 'created' | 'focused';
+          readonly injected: true;
+      }
+    | {
+          readonly success: false;
+          readonly reason: OpenChatBridgePromptFailureReason;
+          readonly error?: string;
+      };
+
 export interface BackgroundMessageRequestMap {
     checkNow: {
         readonly action: 'checkNow';
@@ -37,6 +56,11 @@ export interface BackgroundMessageRequestMap {
         readonly templateId: GenerateProposalRequest['templateId'];
         readonly context: GenerateProposalRequest['context'];
     };
+    openChatBridgePrompt: {
+        readonly action: 'openChatBridgePrompt';
+        readonly prompt: string;
+        readonly chatUrl?: string;
+    };
     downloadZip: {
         readonly action: 'downloadZip';
         readonly filename: string;
@@ -53,6 +77,7 @@ export interface BackgroundMessageResponseMap {
     disconnectSignalR: { readonly success: true };
     debugFetch: { readonly success: boolean; readonly length?: number; readonly error?: string };
     generateProposal: GenerateProposalResponse;
+    openChatBridgePrompt: OpenChatBridgePromptResponse;
     downloadZip: ZipDownloadResult;
 }
 
@@ -89,10 +114,12 @@ const BACKGROUND_ACTIONS: ReadonlySet<BackgroundMessageAction> = new Set([
     'disconnectSignalR',
     'debugFetch',
     'generateProposal',
+    'openChatBridgePrompt',
     'downloadZip',
 ]);
 const MAX_ZIP_MESSAGE_FILES = 80;
 const MAX_GENERATE_TEMPLATE_ID_LENGTH = 120;
+const MAX_BRIDGE_PROMPT_LENGTH = 20_000;
 const MAX_AI_CONTEXT_TITLE_LENGTH = 300;
 const MAX_AI_CONTEXT_DESCRIPTION_LENGTH = 8_000;
 const MAX_AI_CONTEXT_FIELD_LENGTH = 1_000;
@@ -320,6 +347,28 @@ function isGenerateProposalResponse(value: unknown): value is GenerateProposalRe
     );
 }
 
+function isOpenChatBridgePromptResponse(value: unknown): value is OpenChatBridgePromptResponse {
+    if (!isRecord(value) || typeof value.success !== 'boolean') {
+        return false;
+    }
+
+    if (value.success) {
+        return (
+            isFiniteNumber(value.tabId) &&
+            (value.tabStatus === 'created' || value.tabStatus === 'focused') &&
+            value.injected === true
+        );
+    }
+
+    return (
+        (value.reason === 'permission-denied' ||
+            value.reason === 'unsupported' ||
+            value.reason === 'tab-open-failed' ||
+            value.reason === 'injection-failed') &&
+        (value.error === undefined || typeof value.error === 'string')
+    );
+}
+
 function isZipDownloadResult(value: unknown): value is ZipDownloadResult {
     if (!isRecord(value) || typeof value.success !== 'boolean') {
         return false;
@@ -349,6 +398,16 @@ function isGenerateProposalMessage(
         value.templateId.length > 0 &&
         value.templateId.length <= MAX_GENERATE_TEMPLATE_ID_LENGTH &&
         isAiRequestContext(value.context)
+    );
+}
+
+function isOpenChatBridgePromptMessage(
+    value: Record<string, unknown>
+): value is BackgroundMessageRequestMap['openChatBridgePrompt'] {
+    return (
+        hasOnlyAction(value, 'openChatBridgePrompt') &&
+        isBoundedString(value.prompt, MAX_BRIDGE_PROMPT_LENGTH) &&
+        (value.chatUrl === undefined || value.chatUrl === normalizeAiChatUrl(value.chatUrl))
     );
 }
 
@@ -384,6 +443,10 @@ const BACKGROUND_REQUEST_VALIDATORS: {
         isRecord(value) && hasOnlyAction(value, 'debugFetch'),
     generateProposal: (value): value is BackgroundMessageRequestMap['generateProposal'] =>
         isRecord(value) && isGenerateProposalMessage(value),
+    openChatBridgePrompt: (
+        value
+    ): value is BackgroundMessageRequestMap['openChatBridgePrompt'] =>
+        isRecord(value) && isOpenChatBridgePromptMessage(value),
     downloadZip: (value): value is BackgroundMessageRequestMap['downloadZip'] =>
         isRecord(value) && isDownloadZipMessage(value),
 };
@@ -399,6 +462,7 @@ const BACKGROUND_RESPONSE_VALIDATORS: {
     disconnectSignalR: isSuccessResult,
     debugFetch: isDebugFetchResult,
     generateProposal: isGenerateProposalResponse,
+    openChatBridgePrompt: isOpenChatBridgePromptResponse,
     downloadZip: isZipDownloadResult,
 };
 
@@ -488,6 +552,8 @@ export function dispatchBackgroundMessage(
             return handlers.debugFetch(message);
         case 'generateProposal':
             return handlers.generateProposal(message);
+        case 'openChatBridgePrompt':
+            return handlers.openChatBridgePrompt(message);
         case 'downloadZip':
             return handlers.downloadZip(message);
     }
@@ -554,6 +620,17 @@ export function requestGenerateProposal(
         action: 'generateProposal',
         templateId: request.templateId,
         context: request.context,
+    });
+}
+
+export function requestOpenChatBridgePrompt(
+    prompt: string,
+    chatUrl?: string
+): Promise<BackgroundMessageResponseMap['openChatBridgePrompt']> {
+    return sendBackgroundMessage<'openChatBridgePrompt'>({
+        action: 'openChatBridgePrompt',
+        prompt,
+        chatUrl: chatUrl ? normalizeAiChatUrl(chatUrl) : undefined,
     });
 }
 

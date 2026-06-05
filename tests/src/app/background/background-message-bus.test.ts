@@ -23,6 +23,12 @@ function createHandlers(): BackgroundMessageHandlerMap {
         disconnectSignalR: () => ({ success: true }),
         debugFetch: () => ({ success: true, length: 1 }),
         generateProposal: () => ({ success: false, error: 'not used' }),
+        openChatBridgePrompt: () => ({
+            success: true,
+            tabId: 1,
+            tabStatus: 'created',
+            injected: true,
+        }),
         downloadZip: () => ({ success: true, downloadId: 7 }),
     };
 }

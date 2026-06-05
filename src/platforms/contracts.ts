@@ -98,7 +98,7 @@ export interface PlatformContentServices {
         getQuickTemplate(): Promise<string>;
         generate(templateId: string, context: AiRequestContext): Promise<ProposalGenerationResult>;
         queueAutofill(draft: PlatformAutofillDraft): Promise<void>;
-        setPendingBridgePrompt(prompt: string, chatUrl?: string): Promise<void>;
+        openBridgePrompt(prompt: string, chatUrl?: string): Promise<void>;
     };
     readonly downloads: {
         downloadZip(

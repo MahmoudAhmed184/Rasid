@@ -52,7 +52,7 @@ function createServices(): PlatformContentServices {
                     }) satisfies ProposalGenerationResult
             ),
             queueAutofill: vi.fn(async () => undefined),
-            setPendingBridgePrompt: vi.fn(async () => undefined),
+            openBridgePrompt: vi.fn(async () => undefined),
         },
         downloads: {
             downloadZip: vi.fn(async () => undefined),

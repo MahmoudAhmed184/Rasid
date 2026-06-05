@@ -194,11 +194,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
             }
 
             if (result.kind === 'bridge') {
-                await input.services.proposals.setPendingBridgePrompt(
-                    result.prompt,
-                    result.chatUrl
-                );
-                window.open(result.chatUrl || 'https://chatgpt.com/', 'rasid_ai_chat');
+                await input.services.proposals.openBridgePrompt(result.prompt, result.chatUrl);
                 setStatus('تم فتح نافذة الذكاء الاصطناعي بالمطالبة الجاهزة.', 'success');
                 return;
             }

@@ -396,8 +396,7 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
             }
 
             if (result.kind === 'bridge') {
-                await services.proposals.setPendingBridgePrompt(result.prompt, result.chatUrl);
-                window.open(result.chatUrl || 'https://chatgpt.com/', 'mostaql_ai_chat');
+                await services.proposals.openBridgePrompt(result.prompt, result.chatUrl);
                 return;
             }
 
