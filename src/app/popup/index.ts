@@ -116,7 +116,13 @@ function renderAdminMessageBanner(messages: AdminMessage[]): void {
         return;
     }
 
-    const latest = unread[0]!;
+    const latest = unread[0];
+
+    if (!latest) {
+        banner.classList.add('hidden');
+        return;
+    }
+
     textEl.textContent = latest.message;
 
     if (linkEl) {
