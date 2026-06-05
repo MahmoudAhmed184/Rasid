@@ -1,18 +1,7 @@
 name: Server .NET
 
 on:
-  pull_request:
-    paths:
-      - "global.json"
-      - "server/**"
-      - ".github/workflows/server-dotnet.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "global.json"
-      - "server/**"
-      - ".github/workflows/server-dotnet.yml"
+  workflow_dispatch:
 
 jobs:
   build-test-publish:
