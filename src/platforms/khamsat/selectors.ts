@@ -60,6 +60,9 @@ export const KHAMSAT_SELECTORS = {
     panel: {
         rootId: 'rasid-khamsat-panel',
     },
+    observation: {
+        targets: ['main', '.details-td', 'form'],
+    },
 } as const;
 
 export function extractKhamsatProjectId(pathname: string): string {

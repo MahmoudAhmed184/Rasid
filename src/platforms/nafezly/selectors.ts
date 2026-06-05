@@ -34,6 +34,9 @@ export const NAFEZLY_SELECTORS = {
     panel: {
         rootId: 'rasid-nafezly-panel',
     },
+    observation: {
+        targets: ['#add-offer', '.main-nafez-box-styles', 'main'],
+    },
 } as const;
 
 export function extractNafezlyProjectId(pathname: string): string {

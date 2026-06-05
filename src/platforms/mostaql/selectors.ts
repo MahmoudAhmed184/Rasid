@@ -93,6 +93,17 @@ export const MOSTAQL_SELECTORS = {
     profile: {
         targets: ['.profile_card', '#profile-sidebar'],
     },
+    observation: {
+        targets: [
+            '#project-meta-panel',
+            '#projectDetailsTab',
+            '#project-states',
+            '#chat-root',
+            '#profile-sidebar',
+            '.profile_card',
+            'main',
+        ],
+    },
 } as const;
 
 export function queryFirst<T extends Element>(
@@ -108,4 +119,22 @@ export function queryFirst<T extends Element>(
     }
 
     return null;
+}
+
+export function queryAll<T extends Element>(root: ParentNode, selectors: readonly string[]): T[] {
+    const matches: T[] = [];
+    const seen = new Set<Element>();
+
+    for (const selector of selectors) {
+        for (const element of root.querySelectorAll(selector)) {
+            if (!(element instanceof Element) || seen.has(element)) {
+                continue;
+            }
+
+            seen.add(element);
+            matches.push(element as T);
+        }
+    }
+
+    return matches;
 }

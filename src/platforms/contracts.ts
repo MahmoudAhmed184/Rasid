@@ -149,6 +149,10 @@ export interface PlatformAdapter {
     readonly matches: readonly string[];
     isContextValid(): boolean;
     matchPage(input: { readonly url: URL; readonly document: Document }): PlatformPage;
+    getObservationTargets?(input: {
+        readonly page: PlatformPage;
+        readonly document: Document;
+    }): readonly Element[];
     extractProposalSource(input: {
         readonly page: Extract<PlatformPage, { readonly kind: 'project' }>;
         readonly document: Document;

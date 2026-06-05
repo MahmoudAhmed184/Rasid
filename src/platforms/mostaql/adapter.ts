@@ -17,7 +17,7 @@ import {
     getProjectId as getProjectIdUnsafe,
     isContextValid as isContextValidUnsafe,
 } from './content/runtime';
-import { MOSTAQL_SELECTORS } from './selectors';
+import { MOSTAQL_SELECTORS, queryAll } from './selectors';
 import type { ProjectAttachment } from '../../entities/job/model';
 import { setFormControlValue } from '../../shared/dom/form-events';
 import { parseDurationDays } from '../../shared/parsing/duration';
@@ -419,6 +419,9 @@ export const mostaqlAdapter = {
     isContextValid,
     matchPage({ url }) {
         return matchPage(url);
+    },
+    getObservationTargets({ document }) {
+        return queryAll<Element>(document, MOSTAQL_SELECTORS.observation.targets);
     },
     extractProposalSource,
     ui: mostaqlUi,
