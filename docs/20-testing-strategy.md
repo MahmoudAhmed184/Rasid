@@ -15,7 +15,7 @@ Current automated coverage includes:
 - proposals/AI: prompt rendering with untrusted delimiters, bridge fallback, unsafe direct-provider request settings, OpenAI/Gemini/Claude payload/error behavior
 - UI behavior: dashboard tab ARIA state, unsafe direct-control gating, popup admin banner, and keyboard behavior
 - entrypoint/policy tests: generated manifest permission policy, unlisted ChatGPT bridge entrypoint, and test-policy guards
-- server tests: health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior through `server/src/Rasid.Server.sln`
+- server tests: xUnit v3 tests through the Microsoft Testing Platform runner and ASP.NET Core test host coverage for health/provider endpoints, admin broadcast validation, startup validation, Khamsat freshness policy, and Khamsat scraper behavior through `server/src/Rasid.Server.sln`
 
 ## Validation Commands
 
@@ -32,7 +32,15 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
-dotnet test server/src/Rasid.Server.sln
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
+```
+
+For backend release changes, add a publish smoke check:
+
+```bash
+dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish
 ```
 
 ## Documentation Consistency Checks

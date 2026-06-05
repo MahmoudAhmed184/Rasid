@@ -49,7 +49,9 @@ npm test
 npm run format:check
 npm run build
 npm run lint:firefox
-dotnet test server/src/Rasid.Server.sln
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
 ```
 
 `npm run lint` runs:
@@ -68,6 +70,8 @@ dotnet test server/src/Rasid.Server.sln
 3. `npm run test:integration`
 
 The test suite uses Vitest with WXT's official test plugin. Tests live under `tests/src/**` and `tests/entrypoints/**`, mirroring source ownership where practical.
+
+The optional backend solution targets `net10.0` and is pinned by the root `global.json` to SDK `10.0.300` with `latestFeature` roll-forward. Backend CI uses tracked `packages.lock.json` files, central package versions in `server/Directory.Packages.props`, and build policy from `server/Directory.Build.props`, so local backend validation should use the locked restore/build/test sequence above.
 
 Additional test commands:
 
@@ -118,7 +122,8 @@ Firefox:
 - `npm ci`
 - validation commands pass
 - generated manifests inspected
-- `dotnet test server/src/Rasid.Server.sln` run when backend contracts changed
+- backend locked restore/build/test sequence run when backend contracts changed
+- `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` run when backend release behavior changed
 - README and privacy docs match generated permissions
 - store-review notes updated for any permission/privacy/platform changes
 - source package excludes generated and private local artifacts

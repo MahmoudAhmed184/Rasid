@@ -7,7 +7,7 @@
 | TypeScript cannot find WXT types                 | `.wxt/` missing                      | Run `npm ci` or `npm run postinstall`.                                                 |
 | Firefox lint fails because source dir is missing | `dist/firefox-mv3` not built         | Run `npm run build:firefox`.                                                           |
 | Build emits Firefox offscreen skip warning       | Chrome-only offscreen entrypoint     | Expected because offscreen is Chrome-only in this repo.                                |
-| Prettier checks backend files                    | `.prettierignore` changed or ignored | Confirm `server/` remains ignored unless backend formatting is intentionally in scope. |
+| Prettier reports server Markdown                 | `server/` is not ignored wholesale by current Prettier config | Format or fix the reported Markdown; explicit docs checks may include `server/**/*.md`. |
 
 ## Runtime
 
@@ -56,6 +56,9 @@ npm run lint
 npm test
 npm run build
 npm run lint:firefox
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
 ```
 
 Targeted scans:

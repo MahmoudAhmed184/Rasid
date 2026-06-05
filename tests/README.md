@@ -12,7 +12,9 @@ npm run test:integration
 npm run test:coverage
 npm run test:e2e:chrome
 npm run test:e2e:firefox
-dotnet test server/src/Rasid.Server.sln
+dotnet restore server/src/Rasid.Server.sln --locked-mode
+dotnet build server/src/Rasid.Server.sln -c Release --no-restore
+dotnet test server/src/Rasid.Server.sln -c Release --no-build
 ```
 
 `npm test` runs test TypeScript checking, then the Vitest unit and integration slices.
@@ -35,7 +37,7 @@ npm run test:e2e:firefox
 
 The Firefox gate combines generated-manifest assertions, `web-ext run` temporary add-on installation, and Playwright Firefox rendering checks for generated popup/dashboard pages.
 
-The server command runs .NET tests for the optional backend solution, including endpoint smoke tests, admin broadcast validation, startup validation, Khamsat freshness, and scraper behavior.
+The server commands validate the optional `net10.0` backend solution the same way CI does: locked restore, Release build, then xUnit v3 tests through the Microsoft Testing Platform runner. Server tests use the ASP.NET Core test host for endpoint smoke tests, admin broadcast validation, startup validation, Khamsat freshness, and scraper behavior.
 
 ## Layout
 
@@ -52,4 +54,4 @@ Tests must not call live marketplaces, AI providers, ChatGPT, or external Signal
 
 ## Coverage Notes
 
-Current coverage includes manifest-policy checks, unlisted ChatGPT bridge entrypoint tests, background bridge/admin-message handlers, popup admin banner behavior, monitoring fetch failure/freshness behavior, Firefox generated-page tests, and backend endpoint/admin/startup/Khamsat tests.
+Current coverage includes manifest-policy checks, unlisted ChatGPT bridge entrypoint tests, background bridge/admin-message handlers, popup admin banner behavior, monitoring fetch failure/freshness behavior, Firefox generated-page tests, and backend health/provider/admin-broadcast/startup/Khamsat tests.

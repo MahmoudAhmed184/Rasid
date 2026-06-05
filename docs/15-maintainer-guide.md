@@ -68,7 +68,8 @@ When adding state:
 Before release:
 
 - run the validation suite in [`13-build-test-release.md`](13-build-test-release.md)
-- run `dotnet test server/src/Rasid.Server.sln` when backend/admin-broadcast/freshness contracts changed
+- run `dotnet restore server/src/Rasid.Server.sln --locked-mode`, `dotnet build server/src/Rasid.Server.sln -c Release --no-restore`, and `dotnet test server/src/Rasid.Server.sln -c Release --no-build` when backend/admin-broadcast/freshness contracts changed
+- run `dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/rasid-server-publish` when backend release behavior changed
 - inspect generated manifests
 - verify only the intended supported platforms appear in source, UI, permissions, and generated manifests
 - keep README, privacy text, store-review notes, and generated manifest claims aligned
