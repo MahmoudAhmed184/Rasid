@@ -5,22 +5,54 @@ using Rasid.Server.Options;
 using Rasid.Server.Platforms;
 using Rasid.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.SignalR;
+using System.Threading.RateLimiting;
+
+const string AdminBroadcastRateLimitPolicy = "AdminBroadcast";
+const int MaxAdminBroadcastMessageLength = 1000;
 
 var builder = WebApplication.CreateBuilder(args);
 var corsSettings = builder.Configuration
     .GetSection(BrowserExtensionCorsOptions.SectionName)
     .Get<BrowserExtensionCorsOptions>() ?? new BrowserExtensionCorsOptions();
 
-builder.Services.Configure<JobScraperOptions>(
-    builder.Configuration.GetSection(JobScraperOptions.SectionName));
-builder.Services.Configure<BrowserExtensionCorsOptions>(
-    builder.Configuration.GetSection(BrowserExtensionCorsOptions.SectionName));
+builder.Services
+    .AddOptions<JobScraperOptions>()
+    .Bind(builder.Configuration.GetSection(JobScraperOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<JobScraperOptions>, JobScraperOptionsValidator>();
+
+builder.Services
+    .AddOptions<BrowserExtensionCorsOptions>()
+    .Bind(builder.Configuration.GetSection(BrowserExtensionCorsOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<BrowserExtensionCorsOptions>, BrowserExtensionCorsOptionsValidator>();
+
+builder.Services
+    .AddOptions<AdminOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
+    {
+        options.Token = configuration["AdminToken"] ?? AdminOptions.DefaultToken;
+    })
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<AdminOptions>, AdminOptionsValidator>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter(AdminBroadcastRateLimitPolicy, limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+});
 
 builder.Services.AddCors(options =>
 {
@@ -72,6 +104,7 @@ else if (configuredCors.AllowedOrigins.Length == 0)
 }
 
 app.UseCors(BrowserExtensionCorsOptions.PolicyName);
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -292,37 +325,52 @@ app.MapGet("/broadcast-tool", () => Results.Content(@"
 ", "text/html; charset=utf-8"));
 
 app.MapPost("/api/admin/broadcast", async (
-    [FromHeader(Name = "X-Admin-Token")] string token,
-    [FromBody] AdminMessageRequest request,
-    IConfiguration config,
+    [FromHeader(Name = "X-Admin-Token")] string? token,
+    [FromBody] AdminMessageRequest? request,
+    IOptions<AdminOptions> adminOptions,
     IHubContext<JobNotificationHub> hubContext) =>
 {
-    var expectedToken = config["AdminToken"];
-    if (string.IsNullOrEmpty(expectedToken))
-    {
-        expectedToken = "change-me-in-production";
-    }
-    if (token != expectedToken) 
+    if (!AdminTokenComparer.Matches(token, adminOptions.Value.Token))
     {
         return Results.Unauthorized();
     }
 
-    if (string.IsNullOrWhiteSpace(request.Message))
+    if (request is null || string.IsNullOrWhiteSpace(request.Message))
     {
         return Results.BadRequest(new { error = "Message is required." });
+    }
+
+    var message = request.Message.Trim();
+    if (message.Length > MaxAdminBroadcastMessageLength)
+    {
+        return Results.BadRequest(new { error = $"Message must be {MaxAdminBroadcastMessageLength} characters or fewer." });
+    }
+
+    string? url = null;
+    if (!string.IsNullOrWhiteSpace(request.Url))
+    {
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return Results.BadRequest(new { error = "Url must be an absolute http or https URL." });
+        }
+
+        url = uri.ToString();
     }
 
     await hubContext.Clients.All.SendAsync("AdminMessageReceived", new
     {
         id = Guid.NewGuid().ToString(),
-        message = request.Message,
+        message,
         createdAt = DateTime.UtcNow,
-        url = request.Url
+        url
     });
 
     return Results.Ok(new { success = true, broadcasted = true });
-});
+}).RequireRateLimiting(AdminBroadcastRateLimitPolicy);
 
 app.MapHub<JobNotificationHub>("/jobNotificationHub");
 
 app.Run();
+
+public partial class Program;
