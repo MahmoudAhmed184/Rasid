@@ -2,46 +2,53 @@
     display: inline-flex;
     align-items: center;
     margin-right: 8px;
-    color: var(--primary);
-    font-size: 13px;
-    font-weight: 760;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
 }
 
 .bid-status-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    gap: 12px;
 }
 
 .bid-status-card {
     display: flex;
-    min-height: 104px;
+    min-height: 88px;
     align-items: center;
     gap: 14px;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--card);
-    box-shadow: var(--shadow-sm);
     transition:
         border-color var(--transition),
-        box-shadow var(--transition);
+        background-color var(--transition);
 }
 
 .bid-status-card:hover {
     border-color: var(--border-strong);
-    box-shadow: var(--shadow-premium);
+    background: #0d0d0d;
 }
 
 .bid-status-icon {
     display: flex;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-lg);
-    font-size: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
 .bid-status-info {
@@ -52,23 +59,28 @@
 .bid-status-count {
     display: block;
     color: var(--text-title);
-    font-size: 23px;
-    font-weight: 850;
-    line-height: 1.18;
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    line-height: 1.2;
 }
 
 .bid-status-label {
     display: block;
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--text-muted);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 400;
 }
 
 .bid-status-pct {
     flex: 0 0 auto;
-    font-size: 13px;
-    font-weight: 820;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
     direction: ltr;
 }
 
@@ -80,9 +92,10 @@
 .bid-timeline-item {
     position: relative;
     display: flex;
-    gap: 16px;
-    padding: 18px 4px;
-    border-bottom: 1px solid var(--border);
+    gap: 14px;
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
     transition: background-color var(--transition);
 }
 
@@ -91,17 +104,16 @@
 }
 
 .bid-timeline-item:hover {
-    background: var(--primary-softer);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .bid-timeline-marker {
-    width: 12px;
-    height: 12px;
-    min-width: 12px;
-    margin-top: 8px;
-    border: 2px solid var(--card);
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    margin-top: 7px;
     border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+    background: var(--text-muted);
 }
 
 .bid-timeline-content {
@@ -114,7 +126,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     flex-wrap: wrap;
 }
 
@@ -122,9 +134,9 @@
     min-width: 0;
     flex: 1;
     overflow: hidden;
-    color: var(--primary);
-    font-size: 15px;
-    font-weight: 780;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
     text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -132,42 +144,45 @@
 }
 
 .bid-timeline-title:hover {
-    color: var(--primary-hover);
+    color: #ffffff;
     text-decoration: underline;
 }
 
 .bid-timeline-status {
     display: inline-flex;
-    min-height: 24px;
+    min-height: 22px;
     align-items: center;
     flex-shrink: 0;
-    padding: 3px 9px;
-    border-radius: 999px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
     font-size: 11px;
-    font-weight: 780;
+    font-weight: 500;
     white-space: nowrap;
 }
 
 .bid-status-pending {
+    border: 1px solid rgba(245, 158, 11, 0.3);
     background: var(--warning-soft);
-    color: #92400e;
+    color: #fbbf24;
 }
 
 .bid-status-completed {
+    border: 1px solid rgba(34, 197, 94, 0.3);
     background: var(--success-soft);
-    color: var(--success);
+    color: #4ade80;
 }
 
 .bid-status-rejected {
+    border: 1px solid rgba(239, 68, 68, 0.3);
     background: var(--danger-soft);
-    color: var(--danger);
+    color: #f87171;
 }
 
 .bid-timeline-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 6px 16px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .bid-timeline-meta span {
@@ -175,92 +190,91 @@
     align-items: center;
     gap: 5px;
     color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 650;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
 }
 
 .bid-timeline-meta span i {
-    color: var(--primary);
+    color: var(--text-subtle);
     font-size: 11px;
 }
 
 .bid-timeline-progress {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 }
 
 .bid-progress-bar {
-    height: 8px;
+    height: 6px;
     flex: 1;
     overflow: hidden;
     border-radius: 999px;
-    background: #dce7e4;
+    background: #1c1c1c;
 }
 
 .bid-progress-fill {
     height: 100%;
     border-radius: 999px;
-    transition:
-        width 1s linear,
-        background-color 300ms ease;
+    background-color: #ededed;
+    transition: width 1s linear;
 }
 
 .bid-countdown {
-    min-width: 100px;
-    color: var(--text-title);
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 13px;
-    font-weight: 800;
+    min-width: 90px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
     text-align: left;
     white-space: nowrap;
     direction: ltr;
-    letter-spacing: 0;
 }
 
 .bids-loading,
 .bids-empty,
 .bids-error {
     display: flex;
-    min-height: 220px;
+    min-height: 200px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 44px 18px;
+    gap: 10px;
+    padding: 40px 16px;
     color: var(--text-muted);
     text-align: center;
 }
 
 .bids-loading i {
-    color: var(--primary);
-    font-size: 30px;
+    color: var(--text-primary);
+    font-size: 24px;
 }
 
 .bids-loading p,
 .bids-empty p,
 .bids-error p {
-    color: var(--text-title);
-    font-size: 15px;
-    font-weight: 760;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .bids-empty i,
 .bids-error i {
-    font-size: 42px;
+    font-size: 32px;
 }
 
 .bids-empty i {
-    color: var(--text-muted);
-    opacity: 0.55;
+    color: var(--text-subtle);
 }
 
 .bids-empty span,
 .bids-error span {
-    max-width: 420px;
+    max-width: 400px;
     color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 620;
+    font-size: 12px;
+    font-weight: 400;
 }
 
 .bids-error i {
@@ -273,13 +287,13 @@
     }
 
     .bid-timeline-item {
-        gap: 12px;
+        gap: 10px;
     }
 
     .bid-timeline-progress {
         align-items: stretch;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
     }
 
     .bid-countdown {

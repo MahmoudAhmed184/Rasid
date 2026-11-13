@@ -49,7 +49,7 @@ test.describe('Firefox generated extension pages', () => {
         const dashboardErrors = await openGeneratedExtensionPage(dashboard, 'dashboard.html');
 
         await expect(dashboard.locator('body')).toBeVisible();
-        await expect(dashboard.getByText('النظرة العامة')).toBeVisible();
+        await expect(dashboard.getByRole('tab', { name: 'النظرة العامة' })).toBeVisible();
         await expect(dashboard.getByRole('tab', { name: 'الإعدادات المتقدمة' })).toBeVisible();
         expect(dashboardErrors).toEqual([]);
     });
