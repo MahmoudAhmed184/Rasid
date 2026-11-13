@@ -106,17 +106,17 @@ Constants:
 
 Functions:
 
-| Function                                  | Purpose                                                 | Inputs                             | Outputs               | Side effects, errors, security                                       |
-| ----------------------------------------- | ------------------------------------------------------- | ---------------------------------- | --------------------- | -------------------------------------------------------------------- |
-| `normalizeNotificationUrl(value)`         | Validates notification target URL.                      | URL string                         | URL string or `null`  | Requires HTTPS and supported platform host; strips credentials/hash. |
-| `getNotificationIcon(platformId)`         | Resolves notification icon asset.                       | platform ID/undefined              | URL string            | Uses platform icons or fallback extension icon.                      |
-| `buildNotificationOptions(options)`       | Builds cross-browser notification options.              | icon/title/message/context/buttons | notification options  | Omits context message and buttons in Firefox.                        |
+| Function                                  | Purpose                                                 | Inputs                             | Outputs                          | Side effects, errors, security                                       |
+| ----------------------------------------- | ------------------------------------------------------- | ---------------------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| `normalizeNotificationUrl(value)`         | Validates notification target URL.                      | URL string                         | URL string or `null`             | Requires HTTPS and supported platform host; strips credentials/hash. |
+| `getNotificationIcon(platformId)`         | Resolves notification icon asset.                       | platform ID/undefined              | URL string                       | Uses platform icons or fallback extension icon.                      |
+| `buildNotificationOptions(options)`       | Builds cross-browser notification options.              | icon/title/message/context/buttons | notification options             | Omits context message and buttons in Firefox.                        |
 | `buildJobNotificationBody(job)`           | Creates Arabic notification title/body.                 | job                                | title/message/context/platformId | Uses job and platform labels.                                        |
-| `createNotificationService(storage)`      | Creates notification service.                           | extension storage                  | `NotificationService` | Registers click/close handlers; stores and prunes click payloads.    |
-| `registerHandlers()` inner                | Registers notification listeners once.                  | none                               | `void`                | Consumes payloads on click and opens tabs for normalized URLs.       |
-| `showJobsNotification(jobs)` inner        | Stores payloads and creates notifications for each job. | job array                          | notification IDs array | Removes payload if `browser.notifications.create()` fails.           |
-| `showAdminMessageNotification(msg)` inner | Stores optional payload and creates admin notification. | admin message                      | notification ID       | Uses fallback icon and optional normalized URL payload.              |
-| `showTestNotification()` inner            | Creates test notification.                              | none                               | notification ID       | Uses Mostaql projects URL.                                           |
+| `createNotificationService(storage)`      | Creates notification service.                           | extension storage                  | `NotificationService`            | Registers click/close handlers; stores and prunes click payloads.    |
+| `registerHandlers()` inner                | Registers notification listeners once.                  | none                               | `void`                           | Consumes payloads on click and opens tabs for normalized URLs.       |
+| `showJobsNotification(jobs)` inner        | Stores payloads and creates notifications for each job. | job array                          | notification IDs array           | Removes payload if `browser.notifications.create()` fails.           |
+| `showAdminMessageNotification(msg)` inner | Stores optional payload and creates admin notification. | admin message                      | notification ID                  | Uses fallback icon and optional normalized URL payload.              |
+| `showTestNotification()` inner            | Creates test notification.                              | none                               | notification ID                  | Uses Mostaql projects URL.                                           |
 
 ### `src/features/notifications/audio-service.ts`
 
