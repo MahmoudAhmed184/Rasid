@@ -5,136 +5,146 @@
     z-index: 2147483646;
     width: min(320px, calc(100vw - 32px));
     padding: 16px;
-    border: 1px solid rgba(27, 168, 240, 0.18);
-    border-radius: 18px;
-    background:
-        radial-gradient(circle at top right, rgba(27, 168, 240, 0.1), transparent 42%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 253, 0.98));
-    box-shadow: 0 20px 40px rgba(15, 98, 140, 0.18);
-    color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(10, 10, 10, 0.94);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    color: #ededed;
     direction: rtl;
-    font-family: 'Cairo', 'Noto Sans Arabic', 'Open Sans', sans-serif;
-    backdrop-filter: blur(12px);
+    font-family:
+        'Cairo',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        system-ui,
+        sans-serif;
+    backdrop-filter: blur(16px);
+    -webkit-font-smoothing: antialiased;
 }
 
 .rasid-nafezly-panel__title {
     margin: 0;
-    font-size: 18px;
-    font-weight: 800;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
 }
 
 .rasid-nafezly-panel__subtitle {
-    margin: 8px 0 14px;
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.6;
+    margin: 4px 0 12px;
+    color: #888888;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .rasid-nafezly-panel__label {
     display: block;
     margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #1480b8;
+    font-size: 11px;
+    font-weight: 500;
+    color: #a1a1a1;
 }
 
 .rasid-nafezly-panel__select {
     width: 100%;
     margin-bottom: 12px;
-    padding: 10px 12px;
-    border: 1px solid rgba(27, 168, 240, 0.18);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    color: inherit;
+    padding: 8px 12px;
+    border: 1px solid #282828;
+    border-radius: 8px;
+    background: #000000;
+    color: #ededed;
     font: inherit;
+    font-size: 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 10px center;
+    background-size: 12px;
+    padding-left: 28px;
+    transition: border-color 140ms ease;
+}
+
+.rasid-nafezly-panel__select:focus {
+    border-color: #ededed;
+    outline: none;
 }
 
 .rasid-nafezly-panel__actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .rasid-nafezly-panel__button {
     appearance: none;
-    border: 0;
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 8px;
+    padding: 8px 12px;
     font: inherit;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
     transition:
-        transform 120ms ease,
-        opacity 120ms ease,
-        box-shadow 120ms ease;
+        background-color 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        transform 140ms ease;
 }
 
-.rasid-nafezly-panel__button:hover:not(:disabled) {
-    transform: translateY(-1px);
+.rasid-nafezly-panel__button:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .rasid-nafezly-panel__button:disabled {
-    opacity: 0.55;
-    cursor: default;
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .rasid-nafezly-panel__button--primary {
-    background: linear-gradient(135deg, #1ba8f0, #0284c7);
-    color: #fff;
-    box-shadow: 0 12px 22px rgba(27, 168, 240, 0.24);
+    border: 1px solid #ffffff;
+    background: #ffffff;
+    color: #000000;
+}
+
+.rasid-nafezly-panel__button--primary:hover:not(:disabled) {
+    background: #e5e5e5;
+    border-color: #e5e5e5;
 }
 
 .rasid-nafezly-panel__button--ghost {
-    background: rgba(255, 255, 255, 0.82);
-    color: #0f628c;
-    border: 1px solid rgba(27, 168, 240, 0.14);
+    border: 1px solid #282828;
+    background: #141414;
+    color: #ededed;
+}
+
+.rasid-nafezly-panel__button--ghost:hover:not(:disabled) {
+    border-color: #383838;
+    background: #1c1c1c;
+    color: #ffffff;
 }
 
 .rasid-nafezly-panel__status {
-    margin: 12px 0 0;
-    font-size: 12px;
-    line-height: 1.7;
+    margin: 10px 0 0;
+    font-size: 11px;
+    line-height: 1.6;
 }
 
 .rasid-nafezly-panel__status[data-tone='info'] {
-    color: #4b6b7e;
+    color: #888888;
 }
 
 .rasid-nafezly-panel__status[data-tone='success'] {
-    color: #15803d;
+    color: #4ade80;
 }
 
 .rasid-nafezly-panel__status[data-tone='error'] {
-    color: #be123c;
-}
-
-.rasid-nafezly-autofilled {
-    background: #e0f2fe !important;
-    box-shadow: 0 0 0 2px rgba(27, 168, 240, 0.22) !important;
+    color: #f87171;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #rasid-nafezly-panel,
-    .rasid-nafezly-panel__button,
-    .rasid-nafezly-autofilled {
+    .rasid-nafezly-panel__button {
         transition-duration: 0.01ms !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-    }
-
-    .rasid-nafezly-panel__button:hover:not(:disabled) {
         transform: none !important;
-    }
-}
-
-@media (max-width: 640px) {
-    #rasid-nafezly-panel {
-        inset-inline: 12px;
-        inset-block-end: 12px;
-        width: auto;
-    }
-
-    .rasid-nafezly-panel__actions {
-        grid-template-columns: 1fr;
     }
 }

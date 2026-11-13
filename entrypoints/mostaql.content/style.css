@@ -9,9 +9,12 @@
     left: auto;
     text-align: right;
     min-width: 200px;
-    margin-top: 2px;
-    border-radius: 4px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+    margin-top: 4px;
+    padding: 6px;
+    border-radius: 8px;
+    background: #0a0a0a;
+    border: 1px solid #282828;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
     z-index: 1000;
 }
 
@@ -29,30 +32,36 @@
 }
 
 .mostaql-custom-dropdown .dropdown-menu > li > a {
-    padding: 8px 15px;
-    color: #333;
+    padding: 8px 12px;
+    color: #ededed;
+    border-radius: 6px;
     text-decoration: none;
     display: block;
     cursor: pointer;
     font-size: 13px;
+    font-weight: 500;
+    transition:
+        background-color 140ms ease,
+        color 140ms ease;
 }
 
 .mostaql-custom-dropdown .dropdown-menu > li > a:hover {
-    background-color: #f5f5f5;
-    color: #262626;
+    background-color: #171717;
+    color: #ffffff;
 }
 
 .mostaql-custom-dropdown .dropdown-menu .divider {
     height: 1px;
-    margin: 9px 0;
+    margin: 6px 0;
     overflow: hidden;
-    background-color: #e5e5e5;
+    background-color: #1f1f1f;
 }
 
 /* Selected item styling */
 .mostaql-custom-dropdown .dropdown-menu > li.active > a {
-    color: #fff;
-    background-color: #2386c8;
+    color: #ffffff;
+    background-color: #1f1f1f;
+    font-weight: 600;
 }
 
 #mostaql-ext-btn-container {
@@ -92,8 +101,7 @@
 
 /* Modal Styling */
 #mostaql-prompt-modal {
-    background-color: rgba(0, 0, 0, 0.5);
-    /* Re-adding backdrop since inline style was removed in JS refactor */
+    background-color: rgba(0, 0, 0, 0.75);
     position: fixed;
     top: 0;
     left: 0;
@@ -103,27 +111,34 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(2px);
-    transition: opacity 0.3s;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.2s;
 }
 
 .mostaql-modal-content {
-    background: #fff;
+    background: #0a0a0a;
+    border: 1px solid #282828;
+    color: #ededed;
     padding: 24px;
-    border-radius: 8px;
-    width: 450px;
+    border-radius: 16px;
+    width: 460px;
     max-width: 90%;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    font-family: 'Cairo', 'Hacen Tunisia', sans-serif;
-    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+    font-family:
+        'Cairo',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        system-ui,
+        sans-serif;
+    animation: slideIn 0.2s ease-out;
 }
 
 @keyframes slideIn {
     from {
-        transform: translateY(-20px);
+        transform: translateY(-8px);
         opacity: 0;
     }
-
     to {
         transform: translateY(0);
         opacity: 1;
@@ -131,7 +146,7 @@
 }
 
 .mostaql-form-group {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -139,97 +154,101 @@
 }
 
 .mostaql-form-label {
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
+    font-weight: 500;
+    color: #ededed;
+    font-size: 13px;
 }
 
 .mostaql-form-input,
 .mostaql-form-textarea {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-    background: #fdfdfd;
-    transition: border-color 0.2s;
+    padding: 10px 12px;
+    border: 1px solid #282828;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #000000;
+    color: #ededed;
+    transition: border-color 0.14s ease;
     font-family: inherit;
 }
 
 .mostaql-form-input:focus,
 .mostaql-form-textarea:focus {
-    border-color: #2386c8;
+    border-color: #ededed;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(35, 134, 200, 0.1);
+    box-shadow: 0 0 0 1px #ededed;
 }
 
 .mostaql-form-help {
-    font-size: 12px;
-    color: #888;
+    font-size: 11px;
+    color: #707070;
     margin-top: 4px;
 }
 
 .mostaql-modal-actions {
     display: flex;
     justify-content: flex-end;
-    /* RTL: Left side */
     gap: 10px;
     margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
+    padding-top: 16px;
+    border-top: 1px solid #1f1f1f;
 }
 
 .btn-modal-primary {
-    background-color: #2386c8;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 4px;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-}
-
-.btn-modal-secondary {
-    background-color: #eee;
-    color: #555;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
+    transition: background-color 140ms ease;
 }
 
 .btn-modal-primary:hover {
-    background-color: #1b6fa8;
+    background-color: #e5e5e5;
+}
+
+.btn-modal-secondary {
+    background-color: #141414;
+    color: #ededed;
+    border: 1px solid #282828;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease;
 }
 
 .btn-modal-secondary:hover {
-    background-color: #e0e0e0;
+    background-color: #1c1c1c;
+    border-color: #383838;
 }
 
 #track-project-btn {
-    border-radius: 4px;
+    border-radius: 8px;
     height: 38px;
-    /* Match typical btn-lg or default height */
-    padding: 0 15px;
+    padding: 0 14px;
     font-weight: 600;
     font-size: 13px;
     display: flex;
     align-items: center;
     gap: 6px;
-    border: 1px solid transparent;
+    border: 1px solid #282828;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s;
+    transition: all 0.14s ease;
 }
 
 .btn-track-active {
-    background-color: #dc3545;
-    color: #fff;
-    border-color: #bd2130;
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
-/* FIX: Repair Native Mostaql Button Groups (e.g. "Edit Deal")
-   that get broken by the flex parent container */
+/* FIX: Repair Native Mostaql Button Groups */
 .header_action-wide-container .btn-group {
     display: inline-flex !important;
     flex-wrap: nowrap !important;
@@ -244,44 +263,45 @@
     border-radius: 0;
 }
 
-/* Restore border radius for the first and last buttons in the native group
-   assuming RTL context since Mostaql is Arabic */
 .header_action-wide-container .btn-group > .btn:first-child {
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
 }
 
 .header_action-wide-container .btn-group > .btn:last-child {
-    border-top-left-radius: 4px;
-    border-bottom-left-radius: 4px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
 }
 
 /* Autofill Highlighting */
 .mostaql-autofilled {
-    border-color: #2386c8 !important;
-    background-color: #f0f7ff !important;
-    box-shadow: 0 0 5px rgba(35, 134, 200, 0.3) !important;
-    transition: all 0.5s ease;
+    border-color: #22c55e !important;
+    background-color: rgba(34, 197, 94, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25) !important;
+    transition: all 0.3s ease;
 }
 
 /* Autofill Toast Notification */
 .mostaql-autofill-toast {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: #2386c8;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    bottom: 24px;
+    right: 24px;
+    background: rgba(10, 10, 10, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    padding: 12px 18px;
+    border-radius: 10px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
     z-index: 10001;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-weight: 600;
-    transform: translateY(100px);
+    font-size: 13px;
+    font-weight: 500;
+    transform: translateY(20px);
     opacity: 0;
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mostaql-autofill-toast.show {
@@ -290,7 +310,8 @@
 }
 
 .mostaql-autofill-toast i {
-    font-size: 18px;
+    font-size: 16px;
+    color: #22c55e;
 }
 
 /* ── Bid Stats Dashboard ───────────────────────────────────── */
@@ -302,7 +323,8 @@
 
 .mostaql-stats-header {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
+    color: #a1a1a1;
     margin-bottom: 6px;
     text-align: right;
 }
@@ -313,6 +335,7 @@
 
 .mostaql-stats-empty {
     font-size: 12px;
+    color: #707070;
     display: block;
     text-align: right;
     padding: 4px 0;
