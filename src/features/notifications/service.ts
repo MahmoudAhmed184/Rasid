@@ -1,8 +1,12 @@
 import { browser } from 'wxt/browser';
 
 import type { JobRecord } from '../../entities/job/model';
-import { getPlatformDisplayName } from '../../platforms/platform-ids';
-import { resolveJobPlatformId } from '../../entities/job/identity';
+import {
+    getPlatformDisplayName,
+    inferSupportedPlatformIdFromUrl,
+    isPlatformId,
+    type PlatformId,
+} from '../../platforms/platform-ids';
 import type { AdminMessage } from '../../shared/storage/modules/admin-message-storage';
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 
@@ -37,7 +41,17 @@ function normalizeNotificationUrl(value: string): string | null {
     }
 }
 
-function getNotificationIcon(platformId: string | undefined): string {
+function resolveNotificationPlatformId(
+    job: Pick<JobRecord, 'platformId' | 'url'>
+): PlatformId | undefined {
+    if (isPlatformId(job.platformId)) {
+        return job.platformId;
+    }
+
+    return inferSupportedPlatformIdFromUrl(job.url) ?? undefined;
+}
+
+function getNotificationIcon(platformId: PlatformId | undefined): string {
     switch (platformId) {
         case 'mostaql':
             return browser.runtime.getURL('/platforms/Mostql.png');
@@ -79,15 +93,16 @@ function buildJobNotificationBody(job: JobRecord): {
     title: string;
     message: string;
     contextMessage: string;
-    platformId: string | undefined;
+    platformId: PlatformId | undefined;
 } {
-    const platformId = resolveJobPlatformId(job) ?? job.platformId;
+    const platformId = resolveNotificationPlatformId(job);
     const platformLabel = platformId ? getPlatformDisplayName(platformId) : 'منصات العمل الحر';
     const contextMessage = `Rasid - ${platformLabel}`;
 
-    const title = `مشروع جديد: ${job.title}`;
-    const budgetStr = job.budget ? `الميزانية: ${job.budget}` : '';
-    const descriptionStr = job.description ? `${job.description.slice(0, 100).trim()}...` : '';
+    const title = job.title?.trim() ? `مشروع جديد: ${job.title.trim()}` : 'مشروع جديد';
+    const budgetStr = job.budget?.trim() ? `الميزانية: ${job.budget.trim()}` : '';
+    const trimmedDesc = job.description?.slice(0, 100).trim();
+    const descriptionStr = trimmedDesc ? `${trimmedDesc}...` : '';
 
     const message = [budgetStr, descriptionStr].filter(Boolean).join('\n');
 
@@ -154,7 +169,7 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
 
         for (const job of jobs) {
             const { title, message, contextMessage, platformId } = buildJobNotificationBody(job);
-            const notificationId = `rasid-${Date.now()}-${++notificationSequence}-${Math.random().toString(36).slice(2)}`;
+            const notificationId = `rasid-${Date.now()}-${++notificationSequence}-${Math.random().toString(36).slice(2) || '0'}`;
             const payloadUrl = normalizeNotificationUrl(job.url);
 
             if (payloadUrl) {
@@ -197,7 +212,7 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
     }
 
     async function showAdminMessageNotification(msg: AdminMessage): Promise<string> {
-        const notificationId = `rasid-admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const notificationId = `rasid-admin-${Date.now()}-${Math.random().toString(36).slice(2) || '0'}`;
         const payloadUrl = msg.url ? normalizeNotificationUrl(msg.url) : null;
 
         if (payloadUrl) {

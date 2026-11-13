@@ -357,4 +357,120 @@ describe('notification service', () => {
         expect([...payloads.values()][0]?.jobId).toBe('success-1');
         expect(storage.removeNotificationPayload).toHaveBeenCalledOnce();
     });
+
+    it('falls back to generic platform label and icon when platform is unknown or unsupported', async () => {
+        useBrowserBuild('chrome');
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const ids = await service.showJobsNotification([
+            {
+                id: 'unknown-1',
+                title: 'مشروع منصة خارجية',
+                url: 'https://example.com/jobs/1',
+            },
+        ]);
+
+        expect(ids).toHaveLength(1);
+        expect(create).toHaveBeenCalledWith(
+            ids[0],
+            expect.objectContaining({
+                iconUrl: fakeBrowser.runtime.getURL('/icons/icon128.png'),
+                title: 'مشروع جديد: مشروع منصة خارجية',
+                contextMessage: 'Rasid - منصات العمل الحر',
+            })
+        );
+    });
+
+    it('sanitizes whitespace in title, budget, and description and avoids placeholder dots for empty description', async () => {
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        await service.showJobsNotification([
+            {
+                id: 'whitespace-1',
+                platformId: 'mostaql',
+                title: '  مشروع مع مسافات  ',
+                budget: '   ',
+                description: '   ',
+                url: 'https://mostaql.com/project/ws-1',
+            },
+        ]);
+
+        expect(create).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                title: 'مشروع جديد: مشروع مع مسافات',
+                message: '',
+            })
+        );
+    });
+
+    it('opens individual job URLs when Chrome notification action button is clicked', async () => {
+        useBrowserBuild('chrome');
+        const tabsCreate = vi.spyOn(fakeBrowser.tabs, 'create');
+        const { storage, payloads } = createStorage();
+        payloads.set('btn-1', {
+            url: 'https://mostaql.com/project/btn-1',
+            jobId: 'btn-1',
+            createdAt: '2026-05-22T10:00:00.000Z',
+        });
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        service.registerHandlers();
+        await fakeBrowser.notifications.onButtonClicked?.trigger('btn-1', 0);
+
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({
+                url: 'https://mostaql.com/project/btn-1',
+            })
+        );
+        expect(storage.consumeNotificationPayload).toHaveBeenCalledWith('btn-1');
+        expect(payloads.has('btn-1')).toBe(false);
+    });
+
+    it('creates a test notification and returns its notification ID', async () => {
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const testId = await service.showTestNotification();
+
+        expect(testId).toMatch(/^rasid-/);
+        expect(create).toHaveBeenCalledWith(
+            testId,
+            expect.objectContaining({
+                title: expect.stringContaining('إشعار تجريبي'),
+            })
+        );
+        expect(payloads.has(testId)).toBe(true);
+    });
+
+    it('creates admin message notification with developer broadcast title and payload', async () => {
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const adminId = await service.showAdminMessageNotification({
+            id: 'admin-msg-1',
+            message: 'تحديث أمني مهم للنظام',
+            url: 'https://mostaql.com/announcements/update',
+            receivedAt: '2026-05-22T10:00:00.000Z',
+            read: false,
+        });
+
+        expect(adminId).toMatch(/^rasid-admin-/);
+        expect(create).toHaveBeenCalledWith(
+            adminId,
+            expect.objectContaining({
+                title: '📢 تنبيهات من المطورين',
+                message: 'تحديث أمني مهم للنظام',
+            })
+        );
+        expect(payloads.get(adminId)).toMatchObject({
+            url: 'https://mostaql.com/announcements/update',
+        });
+    });
 });

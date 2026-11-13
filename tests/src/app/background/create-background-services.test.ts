@@ -239,7 +239,7 @@ interface CapturedRuntimeDeps {
 interface CapturedBatchOptions {
     readonly jobs?: readonly JobRecord[];
     readonly reason?: string;
-    readonly notifyJobs: (jobs: JobRecord[]) => Promise<string>;
+    readonly notifyJobs: (jobs: JobRecord[]) => Promise<string[]>;
     readonly playNotificationSound?: () => Promise<void>;
 }
 
