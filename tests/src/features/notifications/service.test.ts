@@ -48,7 +48,7 @@ describe('notification service', () => {
         const { storage, payloads } = createStorage();
         const service = createNotificationService(storage as unknown as ExtensionStorage);
 
-        const id = await service.showJobsNotification([
+        const ids = await service.showJobsNotification([
             {
                 id: '123',
                 platformId: 'mostaql',
@@ -59,8 +59,10 @@ describe('notification service', () => {
             },
         ]);
 
+        expect(ids).toHaveLength(1);
+        const [id] = ids;
         expect(id).toMatch(/^rasid-/);
-        expect(payloads.get(id)).toMatchObject({
+        expect(payloads.get(id!)).toMatchObject({
             url: 'https://mostaql.com/project/123',
             jobId: '123',
         });
@@ -185,5 +187,174 @@ describe('notification service', () => {
         );
         expect(storage.removeNotificationPayload).toHaveBeenCalledWith('n1');
         expect(storage.pruneNotificationPayloads).toHaveBeenCalledOnce();
+    });
+
+    it('creates separate notifications and storage payloads for every job in a batch', async () => {
+        useBrowserBuild('chrome');
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const jobs = [
+            {
+                id: 'job-mostaql',
+                platformId: 'mostaql',
+                title: 'تطوير تطبيق ويب',
+                url: 'https://mostaql.com/project/job-mostaql',
+                budget: '$500 - $1000',
+                description:
+                    'مطلوب مطور React خبير لبناء منصة إدارة أعمال متكاملة وسريعة الاستجابة',
+            },
+            {
+                id: 'job-khamsat',
+                platformId: 'khamsat',
+                title: 'تصميم واجهة متجر',
+                url: 'https://khamsat.com/design/job-khamsat',
+                budget: '25 $',
+                description: 'مطلوب تصميم واجهة احترافية لمتجر سلة مع ملفات فيجما مفتوحة المصدر',
+            },
+            {
+                id: 'job-nafezly',
+                platformId: 'nafezly',
+                title: 'برمجة سكريبت أتمتة',
+                url: 'https://nafezly.com/project/job-nafezly',
+                budget: '150 $',
+                description: 'سكريبت بلغة بايثون لجلب البيانات وتنظيفها وتصديرها إلى ملف إكسل',
+            },
+        ] as const;
+
+        const ids = await service.showJobsNotification([...jobs]);
+
+        expect(ids).toHaveLength(3);
+        expect(new Set(ids).size).toBe(3);
+        ids.forEach((id) => expect(id).toMatch(/^rasid-/));
+
+        expect(create).toHaveBeenCalledTimes(3);
+
+        // Job 1 (Mostaql)
+        const id0 = ids[0]!;
+        expect(payloads.get(id0)).toEqual({
+            url: 'https://mostaql.com/project/job-mostaql',
+            jobId: 'job-mostaql',
+            createdAt: expect.any(String),
+        });
+        expect(create).toHaveBeenNthCalledWith(1, id0, {
+            type: 'basic',
+            iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
+            title: 'مشروع جديد: تطوير تطبيق ويب',
+            message:
+                'الميزانية: $500 - $1000\nمطلوب مطور React خبير لبناء منصة إدارة أعمال متكاملة وسريعة الاستجابة...',
+            contextMessage: 'Rasid - مستقل',
+            buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+        });
+
+        // Job 2 (Khamsat)
+        const id1 = ids[1]!;
+        expect(payloads.get(id1)).toEqual({
+            url: 'https://khamsat.com/design/job-khamsat',
+            jobId: 'job-khamsat',
+            createdAt: expect.any(String),
+        });
+        expect(create).toHaveBeenNthCalledWith(2, id1, {
+            type: 'basic',
+            iconUrl: fakeBrowser.runtime.getURL('/platforms/Khamsat.png'),
+            title: 'مشروع جديد: تصميم واجهة متجر',
+            message:
+                'الميزانية: 25 $\nمطلوب تصميم واجهة احترافية لمتجر سلة مع ملفات فيجما مفتوحة المصدر...',
+            contextMessage: 'Rasid - خمسات',
+            buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+        });
+
+        // Job 3 (Nafezly)
+        const id2 = ids[2]!;
+        expect(payloads.get(id2)).toEqual({
+            url: 'https://nafezly.com/project/job-nafezly',
+            jobId: 'job-nafezly',
+            createdAt: expect.any(String),
+        });
+        expect(create).toHaveBeenNthCalledWith(3, id2, {
+            type: 'basic',
+            iconUrl: fakeBrowser.runtime.getURL('/platforms/Nafezly.png'),
+            title: 'مشروع جديد: برمجة سكريبت أتمتة',
+            message:
+                'الميزانية: 150 $\nسكريبت بلغة بايثون لجلب البيانات وتنظيفها وتصديرها إلى ملف إكسل...',
+            contextMessage: 'Rasid - نفذلي',
+            buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+        });
+    });
+
+    it('opens the correct individual job URL when respective notification is clicked', async () => {
+        const tabsCreate = vi.spyOn(fakeBrowser.tabs, 'create');
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+        service.registerHandlers();
+
+        const [id1, id2] = await service.showJobsNotification([
+            {
+                id: 'm-1',
+                platformId: 'mostaql',
+                title: 'المشروع الأول',
+                url: 'https://mostaql.com/project/m-1',
+            },
+            {
+                id: 'm-2',
+                platformId: 'mostaql',
+                title: 'المشروع الثاني',
+                url: 'https://mostaql.com/project/m-2',
+            },
+        ]);
+
+        await fakeBrowser.notifications.onClicked.trigger(id1!);
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({ url: 'https://mostaql.com/project/m-1' })
+        );
+
+        await fakeBrowser.notifications.onClicked.trigger(id2!);
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({ url: 'https://mostaql.com/project/m-2' })
+        );
+    });
+
+    it('returns empty array when given an empty job list', async () => {
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const ids = await service.showJobsNotification([]);
+
+        expect(ids).toEqual([]);
+        expect(create).not.toHaveBeenCalled();
+        expect(payloads.size).toBe(0);
+    });
+
+    it('cleans up failed job payload when one notification fails during batch creation', async () => {
+        const create = vi
+            .spyOn(fakeBrowser.notifications, 'create')
+            .mockResolvedValueOnce(undefined as never)
+            .mockRejectedValueOnce(new Error('Notification limit reached'));
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        await expect(
+            service.showJobsNotification([
+                {
+                    id: 'success-1',
+                    platformId: 'mostaql',
+                    title: 'الناجح',
+                    url: 'https://mostaql.com/project/success-1',
+                },
+                {
+                    id: 'fail-2',
+                    platformId: 'mostaql',
+                    title: 'الفاشل',
+                    url: 'https://mostaql.com/project/fail-2',
+                },
+            ])
+        ).rejects.toThrow('Notification limit reached');
+
+        expect(create).toHaveBeenCalledTimes(2);
+        expect(payloads.size).toBe(1);
+        expect([...payloads.values()][0]?.jobId).toBe('success-1');
+        expect(storage.removeNotificationPayload).toHaveBeenCalledOnce();
     });
 });

@@ -1,5 +1,6 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
+import { parseSafeDocument } from '../../shared/dom/safe-html';
 import { KHAMSAT_SELECTORS, queryAll, queryFirst } from './selectors';
 
 const KHAMSAT_HOSTS = ['khamsat.com'] as const;
@@ -8,7 +9,7 @@ const KHAMSAT_REQUEST_PATH_PATTERN = /^\/community\/requests\/\d+(?:[-/]|$)/;
 const KHAMSAT_REQUEST_ID_PATTERN = /\/community\/requests\/(\d+)/;
 
 function parseDocument(html: string): Document {
-    return new DOMParser().parseFromString(html, 'text/html');
+    return parseSafeDocument(html);
 }
 
 function normalizeText(value: string | null | undefined): string {

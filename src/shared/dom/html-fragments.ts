@@ -1,3 +1,5 @@
+import { parseSafeDocument } from './safe-html';
+
 type HtmlFragmentContext = 'default' | 'table-body';
 
 interface QueryHtmlFragmentOptions {
@@ -23,11 +25,7 @@ export function queryHtmlFragment<T extends Element>(
         return null;
     }
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(
-        wrapHtmlFragment(normalizedHtml, options.context ?? 'default'),
-        'text/html'
-    );
+    const doc = parseSafeDocument(wrapHtmlFragment(normalizedHtml, options.context ?? 'default'));
 
     return doc.querySelector<T>(selector);
 }

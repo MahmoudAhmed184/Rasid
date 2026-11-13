@@ -1,5 +1,6 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
+import { parseSafeDocument } from '../../shared/dom/safe-html';
 
 const NAFEZLY_HOSTS = ['nafezly.com'] as const;
 const NAFEZLY_BASE_URL = 'https://nafezly.com/';
@@ -7,7 +8,7 @@ const NAFEZLY_PROJECT_PATH_PATTERN = /^\/project\/\d+(?:[-/]|$)/;
 const NAFEZLY_PROJECT_ID_PATTERN = /\/project\/(\d+)/;
 
 function parseDocument(html: string): Document {
-    return new DOMParser().parseFromString(html, 'text/html');
+    return parseSafeDocument(html);
 }
 
 function normalizeText(value: string | null | undefined): string {

@@ -1,5 +1,6 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
+import { parseSafeDocument } from '../../shared/dom/safe-html';
 
 const MOSTAQL_HOSTS = ['mostaql.com'] as const;
 const MOSTAQL_BASE_URL = 'https://mostaql.com/';
@@ -7,7 +8,7 @@ const MOSTAQL_PROJECT_PATH_PATTERN = /^\/projects?\/\d+(?:[-/]|$)/;
 const MOSTAQL_PROJECT_ID_PATTERN = /\/projects?\/(\d+)/;
 
 function parseDocument(html: string): Document {
-    return new DOMParser().parseFromString(html, 'text/html');
+    return parseSafeDocument(html);
 }
 
 function resolveMostaqlProjectUrl(href: string | null): string | null {

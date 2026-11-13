@@ -77,4 +77,49 @@ describe('job batch publisher', () => {
         });
         expect(notifyJobs).not.toHaveBeenCalled();
     });
+
+    it('triggers notification sound only once per batch regardless of job count', async () => {
+        const notifyJobs = vi.fn(async () => ['id-1', 'id-2', 'id-3']);
+        const playNotificationSound = vi.fn(async () => undefined);
+
+        const multiJobs: JobRecord[] = [
+            {
+                id: '1',
+                platformId: 'mostaql',
+                title: 'مشروع 1',
+                url: 'https://mostaql.com/project/1',
+            },
+            {
+                id: '2',
+                platformId: 'khamsat',
+                title: 'مشروع 2',
+                url: 'https://khamsat.com/design/2',
+            },
+            {
+                id: '3',
+                platformId: 'nafezly',
+                title: 'مشروع 3',
+                url: 'https://nafezly.com/project/3',
+            },
+        ];
+
+        const result = await publishJobBatch({
+            source: 'signalr',
+            jobs: multiJobs,
+            totalChecked: 3,
+            settings: DEFAULT_SETTINGS,
+            notificationsEnabled: true,
+            notifyJobs,
+            playNotificationSound,
+        });
+
+        expect(result).toMatchObject({
+            kind: 'published',
+            newJobs: 3,
+            notificationsSent: true,
+        });
+        expect(notifyJobs).toHaveBeenCalledOnce();
+        expect(notifyJobs).toHaveBeenCalledWith(multiJobs);
+        expect(playNotificationSound).toHaveBeenCalledOnce();
+    });
 });

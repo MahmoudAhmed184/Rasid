@@ -1,5 +1,6 @@
 import { resolvePlatformUrl } from '../../entities/platform/url';
 import { queryHtmlFragment } from '../../shared/dom/html-fragments';
+import { parseSafeDocument } from '../../shared/dom/safe-html';
 
 interface BidPageResponse {
     collection?: Array<{ id?: string | number; rendered?: string } | string>;
@@ -415,8 +416,7 @@ async function fetchHomepageStats(fetchImpl: typeof fetch): Promise<MostaqlHomep
         }
 
         const html = await response.text();
-        const parser = new DOMParser();
-        const documentRoot = parser.parseFromString(html, 'text/html');
+        const documentRoot = parseSafeDocument(html);
         const availableLink = documentRoot.querySelector('a[href*="dashboard/bids"] .text-alpha');
 
         if (availableLink) {

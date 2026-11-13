@@ -11,7 +11,7 @@ const JOB_NOTIFICATION_BUTTON_TITLE = '🔗 عرض تفاصيل المشروع';
 
 export interface NotificationService {
     registerHandlers(): void;
-    showJobsNotification(jobs: JobRecord[]): Promise<string>;
+    showJobsNotification(jobs: JobRecord[]): Promise<string[]>;
     showAdminMessageNotification(msg: AdminMessage): Promise<string>;
     showTestNotification(): Promise<string>;
 }
@@ -75,47 +75,33 @@ function buildNotificationOptions(options: {
     };
 }
 
-function buildNotificationBody(jobs: JobRecord[]): {
+function buildJobNotificationBody(job: JobRecord): {
     title: string;
     message: string;
     contextMessage: string;
-    primary: JobRecord;
+    platformId: string | undefined;
 } {
-    const primary = jobs[0];
-    const platformIds = [...new Set(jobs.map((job) => resolveJobPlatformId(job)))];
-    const [platformId] = platformIds;
-    const platformLabel =
-        platformIds.length === 1 && platformId
-            ? getPlatformDisplayName(platformId)
-            : 'منصات العمل الحر';
-
-    let title: string;
-    let message: string;
+    const platformId = resolveJobPlatformId(job) ?? job.platformId;
+    const platformLabel = platformId ? getPlatformDisplayName(platformId) : 'منصات العمل الحر';
     const contextMessage = `Rasid - ${platformLabel}`;
 
-    if (jobs.length === 1) {
-        title = `مشروع جديد: ${primary.title}`;
-        const budgetStr = primary.budget ? `الميزانية: ${primary.budget}` : '';
-        const descriptionStr = primary.description
-            ? `${primary.description.slice(0, 100).trim()}...`
-            : '';
+    const title = `مشروع جديد: ${job.title}`;
+    const budgetStr = job.budget ? `الميزانية: ${job.budget}` : '';
+    const descriptionStr = job.description ? `${job.description.slice(0, 100).trim()}...` : '';
 
-        message = budgetStr ? `${budgetStr}\n${descriptionStr}` : descriptionStr;
-    } else {
-        title = `${jobs.length} مشاريع جديدة متاحة`;
-        message = `أحدثها: ${primary.title}\nانقر هنا لعرض التفاصيل.`;
-    }
+    const message = [budgetStr, descriptionStr].filter(Boolean).join('\n');
 
     return {
         title,
         message,
         contextMessage,
-        primary,
+        platformId,
     };
 }
 
 export function createNotificationService(storage: ExtensionStorage): NotificationService {
     let handlersRegistered = false;
+    let notificationSequence = 0;
 
     function registerHandlers(): void {
         if (handlersRegistered) {
@@ -159,46 +145,55 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
         });
     }
 
-    async function showJobsNotification(jobs: JobRecord[]): Promise<string> {
-        const { title, message, contextMessage, primary } = buildNotificationBody(jobs);
-        const notificationId = `rasid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const payloadUrl = normalizeNotificationUrl(primary.url);
-
-        if (payloadUrl) {
-            await storage.storeNotificationPayload(notificationId, {
-                url: payloadUrl,
-                jobId: primary.id,
-                createdAt: new Date().toISOString(),
-            });
+    async function showJobsNotification(jobs: JobRecord[]): Promise<string[]> {
+        if (!jobs || jobs.length === 0) {
+            return [];
         }
 
-        try {
-            await browser.notifications.create(
-                notificationId,
-                buildNotificationOptions(
-                    import.meta.env.BROWSER === 'firefox'
-                        ? {
-                              iconUrl: getNotificationIcon(primary.platformId),
-                              title,
-                              message,
-                          }
-                        : {
-                              iconUrl: getNotificationIcon(primary.platformId),
-                              title,
-                              message,
-                              contextMessage,
-                              buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
-                          }
-                )
-            );
-        } catch (error) {
+        const notificationIds: string[] = [];
+
+        for (const job of jobs) {
+            const { title, message, contextMessage, platformId } = buildJobNotificationBody(job);
+            const notificationId = `rasid-${Date.now()}-${++notificationSequence}-${Math.random().toString(36).slice(2)}`;
+            const payloadUrl = normalizeNotificationUrl(job.url);
+
             if (payloadUrl) {
-                await storage.removeNotificationPayload(notificationId);
+                await storage.storeNotificationPayload(notificationId, {
+                    url: payloadUrl,
+                    jobId: job.id,
+                    createdAt: new Date().toISOString(),
+                });
             }
-            throw error;
+
+            try {
+                await browser.notifications.create(
+                    notificationId,
+                    buildNotificationOptions(
+                        import.meta.env.BROWSER === 'firefox'
+                            ? {
+                                  iconUrl: getNotificationIcon(platformId),
+                                  title,
+                                  message,
+                              }
+                            : {
+                                  iconUrl: getNotificationIcon(platformId),
+                                  title,
+                                  message,
+                                  contextMessage,
+                                  buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
+                              }
+                    )
+                );
+                notificationIds.push(notificationId);
+            } catch (error) {
+                if (payloadUrl) {
+                    await storage.removeNotificationPayload(notificationId);
+                }
+                throw error;
+            }
         }
 
-        return notificationId;
+        return notificationIds;
     }
 
     async function showAdminMessageNotification(msg: AdminMessage): Promise<string> {
@@ -241,7 +236,7 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
     }
 
     async function showTestNotification(): Promise<string> {
-        return showJobsNotification([
+        const ids = await showJobsNotification([
             {
                 id: `test-${Date.now()}`,
                 platformId: 'mostaql',
@@ -251,6 +246,8 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
                 description: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
             },
         ]);
+
+        return ids[0] ?? '';
     }
 
     return {

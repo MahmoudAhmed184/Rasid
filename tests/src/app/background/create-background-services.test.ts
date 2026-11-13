@@ -14,7 +14,7 @@ const factoryMocks = vi.hoisted(() => {
     };
     const notifications = {
         registerHandlers: vi.fn(),
-        showJobsNotification: vi.fn(async () => 'notification-id'),
+        showJobsNotification: vi.fn(async () => ['notification-id']),
     };
     const offscreen = {
         bootstrap: vi.fn(async () => undefined),
@@ -123,7 +123,7 @@ const factoryMocks = vi.hoisted(() => {
         reset() {
             storage.ensureDefaults.mockReset().mockResolvedValue(undefined);
             notifications.registerHandlers.mockReset();
-            notifications.showJobsNotification.mockReset().mockResolvedValue('notification-id');
+            notifications.showJobsNotification.mockReset().mockResolvedValue(['notification-id']);
             offscreen.bootstrap.mockReset().mockResolvedValue(undefined);
             offscreen.registerLocalHandler.mockReset();
             audio.playNotification.mockReset().mockResolvedValue(undefined);

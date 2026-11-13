@@ -1,5 +1,6 @@
 import type { ProjectAttachment } from '../../../entities/job/model';
 import { resolvePlatformUrl } from '../../../entities/platform/url';
+import { parseSafeDocument } from '../../../shared/dom/safe-html';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
 import { getProjectId } from './runtime';
 
@@ -297,8 +298,7 @@ export async function fetchDeepProjectData(url: string): Promise<MostaqlRemotePr
             return null;
         }
         const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
+        const doc = parseSafeDocument(html);
 
         const res: MostaqlRemoteProjectData = {};
 
