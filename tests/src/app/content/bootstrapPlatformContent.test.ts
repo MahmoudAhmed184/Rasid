@@ -143,7 +143,7 @@ describe('platform content bootstrap', () => {
         expect(firstDispose).toHaveBeenCalledOnce();
         expect(mount).toHaveBeenCalledTimes(2);
 
-        document.defaultView?.dispatchEvent(new Event('unload'));
+        document.defaultView?.dispatchEvent(new Event('pagehide'));
         expect(secondDispose).toHaveBeenCalledOnce();
     });
 
@@ -221,7 +221,7 @@ describe('platform content bootstrap', () => {
         await vi.advanceTimersByTimeAsync(0);
 
         expect(mount).toHaveBeenCalledTimes(2);
-        document.defaultView?.dispatchEvent(new Event('unload'));
+        document.defaultView?.dispatchEvent(new Event('pagehide'));
         expect(dispose).toHaveBeenCalledOnce();
     });
 

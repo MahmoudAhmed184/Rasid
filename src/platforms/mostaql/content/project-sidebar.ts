@@ -217,8 +217,8 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                         group.classList.remove('open');
                         createPromptModal(services.prompts, renderMenu, p);
                     });
-                    editBtn.onmouseover = () => (editBtn.style.color = '#2386c8');
-                    editBtn.onmouseout = () => (editBtn.style.color = '#777');
+                    editBtn.addEventListener('mouseover', () => (editBtn.style.color = '#2386c8'));
+                    editBtn.addEventListener('mouseout', () => (editBtn.style.color = '#777'));
 
                     itemContainer.appendChild(itemButton);
                     itemContainer.appendChild(editBtn);

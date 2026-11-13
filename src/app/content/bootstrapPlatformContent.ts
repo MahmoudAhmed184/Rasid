@@ -272,7 +272,7 @@ export function bootstrapPlatformContent(options: BootstrapPlatformContentOption
         refreshObservationTargets(getCurrentPage(options.adapter, doc));
 
         doc.defaultView?.addEventListener(
-            'unload',
+            'pagehide',
             () => {
                 if (scheduledFrameId !== null) {
                     window.cancelAnimationFrame(scheduledFrameId);

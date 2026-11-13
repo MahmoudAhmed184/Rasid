@@ -106,7 +106,7 @@ export function bootstrapPlatformAutofill(
             subtree: true,
         });
 
-        doc.defaultView?.addEventListener('unload', dispose, { once: true });
+        doc.defaultView?.addEventListener('pagehide', dispose, { once: true });
     }
 
     function dispose(): void {
@@ -116,7 +116,7 @@ export function bootstrapPlatformAutofill(
 
         disposed = true;
         doc.removeEventListener('DOMContentLoaded', init);
-        doc.defaultView?.removeEventListener('unload', dispose);
+        doc.defaultView?.removeEventListener('pagehide', dispose);
 
         if (intervalId !== null) {
             window.clearInterval(intervalId);

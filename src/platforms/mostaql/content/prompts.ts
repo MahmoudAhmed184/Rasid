@@ -115,7 +115,7 @@ export function createPromptModal(
     const saveBtn = document.createElement('button');
     saveBtn.textContent = existingPrompt ? 'حفظ التعديلات' : 'حفظ القالب';
     saveBtn.className = 'btn-modal-primary';
-    saveBtn.onclick = () => {
+    saveBtn.addEventListener('click', () => {
         const t = titleInput.value.trim();
         const c = contentInput.value.trim();
         if (t && c) {
@@ -136,14 +136,14 @@ export function createPromptModal(
         } else {
             alert('يرجى ملء جميع الحقول');
         }
-    };
+    });
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'إلغاء';
     cancelBtn.className = 'btn-modal-secondary';
-    cancelBtn.onclick = () => {
+    cancelBtn.addEventListener('click', () => {
         document.body.removeChild(modalOverlay);
-    };
+    });
 
     btnContainer.appendChild(cancelBtn);
     btnContainer.appendChild(saveBtn);

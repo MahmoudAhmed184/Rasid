@@ -360,7 +360,7 @@ export function bootstrapPopup(root: Document = document, deps: PopupDependencie
     void controller.init();
 
     root.defaultView?.addEventListener(
-        'unload',
+        'pagehide',
         () => {
             controller.destroy();
         },

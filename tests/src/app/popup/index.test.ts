@@ -365,7 +365,7 @@ describe('popup controller', () => {
         await vi.advanceTimersByTimeAsync(30_000);
         expect(monitoringRepository.getOverview).toHaveBeenCalledTimes(2);
 
-        root.defaultView?.dispatchEvent(new Event('unload'));
+        root.defaultView?.dispatchEvent(new Event('pagehide'));
         await vi.advanceTimersByTimeAsync(30_000);
         expect(monitoringRepository.getOverview).toHaveBeenCalledTimes(2);
     });

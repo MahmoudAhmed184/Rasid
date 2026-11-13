@@ -286,7 +286,7 @@ describe('platform autofill bootstrap', () => {
         readyDocument.dispatchEvent(new Event('DOMContentLoaded'));
 
         await vi.waitFor(() => expect(applyProposalAutofill).toHaveBeenCalledOnce());
-        readyDocument.defaultView?.dispatchEvent(new Event('unload'));
+        readyDocument.defaultView?.dispatchEvent(new Event('pagehide'));
         await vi.advanceTimersByTimeAsync(25);
         expect(applyProposalAutofill).toHaveBeenCalledOnce();
     });
