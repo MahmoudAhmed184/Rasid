@@ -25,6 +25,7 @@ export async function launchChromiumExtension(): Promise<LoadedExtensionContext>
         channel: 'chromium',
         headless: false,
         args: [
+            '--headless=new',
             `--disable-extensions-except=${chromeExtensionPath}`,
             `--load-extension=${chromeExtensionPath}`,
         ],

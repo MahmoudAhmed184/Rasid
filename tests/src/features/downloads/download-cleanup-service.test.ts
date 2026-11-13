@@ -20,9 +20,9 @@ function createStorage(initial: PendingDownloadCleanup[] = []) {
                 records.delete(downloadId);
                 return payload;
             }),
-            listPendingDownloadCleanups: vi.fn(
-                async (): Promise<PendingDownloadCleanup[]> => [...records.values()]
-            ),
+            listPendingDownloadCleanups: vi.fn(async (): Promise<PendingDownloadCleanup[]> => [
+                ...records.values(),
+            ]),
             pruneExpiredDownloadCleanups: vi.fn(async (): Promise<PendingDownloadCleanup[]> => []),
         } satisfies Pick<
             ExtensionStorage,
@@ -60,15 +60,13 @@ describe('download cleanup service', () => {
     });
 
     it('cleans up terminal download records from browser download events', async () => {
-        type DownloadChangedListener = Parameters<
-            typeof fakeBrowser.downloads.onChanged.addListener
-        >[0];
-        type DownloadDelta = Parameters<DownloadChangedListener>[0];
+        type DownloadDelta = Browser.downloads.DownloadDelta;
+        type DownloadChangedListener = (delta: DownloadDelta) => void;
         let onChanged: DownloadChangedListener | null = null;
 
         vi.spyOn(fakeBrowser.downloads.onChanged, 'addListener').mockImplementation(
-            (listener: DownloadChangedListener) => {
-                onChanged = listener;
+            (listener: unknown) => {
+                onChanged = listener as DownloadChangedListener;
             }
         );
         const { storage } = createStorage([
@@ -87,10 +85,9 @@ describe('download cleanup service', () => {
         );
 
         service.registerHandlers();
-        if (!onChanged) {
-            throw new Error('Expected download change listener to be registered.');
-        }
-        onChanged({
+        const listener = onChanged as unknown as (delta: DownloadDelta) => void;
+        expect(listener).toBeDefined();
+        listener({
             id: 7,
             state: { current: 'complete' },
         } as DownloadDelta);
@@ -118,9 +115,9 @@ describe('download cleanup service', () => {
         };
         const { storage } = createStorage([pending]);
         storage.pruneExpiredDownloadCleanups.mockResolvedValue([expired]);
-        vi.spyOn(fakeBrowser.downloads, 'search').mockResolvedValue([
-            { id: 2, state: 'complete' } as Browser.downloads.DownloadItem,
-        ]);
+        (
+            vi.spyOn(fakeBrowser.downloads, 'search') as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue([{ id: 2, state: 'complete' } as Browser.downloads.DownloadItem]);
         const request = vi.fn(async () => ({ success: true as const }));
         const offscreen = { request: request as unknown as OffscreenManager['request'] };
         const service = createDownloadCleanupService(

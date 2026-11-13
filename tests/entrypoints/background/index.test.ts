@@ -76,8 +76,7 @@ describe('background entrypoint', () => {
 
     it('registers worker lifecycle handlers and runs release-critical bootstraps', async () => {
         const definition = (await import('../../../entrypoints/background')).default as
-            | BackgroundDefinition
-            | undefined;
+            BackgroundDefinition | undefined;
 
         expect(definition?.type).toBe('module');
         definition?.main();
@@ -105,22 +104,24 @@ describe('background entrypoint', () => {
 
         await fakeBrowser.runtime.onInstalled.trigger({
             reason: 'install',
-            temporary: false,
         });
         await fakeBrowser.runtime.onStartup.trigger();
         await fakeBrowser.alarms.onAlarm.trigger({
             name: 'signalr-reconnect',
             scheduledTime: Date.now(),
+            persistAcrossSessions: false,
         });
 
         await vi.waitFor(() => {
             expect(entrypointMocks.app.ensureReady).toHaveBeenCalledWith('runtime-installed');
             expect(entrypointMocks.app.ensureReady).toHaveBeenCalledWith('runtime-startup');
             expect(entrypointMocks.app.ensureReady).toHaveBeenCalledWith('alarm:signalr-reconnect');
-            expect(entrypointMocks.app.signalr.handleAlarm).toHaveBeenCalledWith({
-                name: 'signalr-reconnect',
-                scheduledTime: expect.any(Number),
-            });
+            expect(entrypointMocks.app.signalr.handleAlarm).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    name: 'signalr-reconnect',
+                    scheduledTime: expect.any(Number),
+                })
+            );
         });
     });
 });

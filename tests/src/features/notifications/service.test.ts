@@ -176,7 +176,7 @@ describe('notification service', () => {
         service.registerHandlers();
         service.registerHandlers();
         await fakeBrowser.notifications.onClicked.trigger('n1');
-        await fakeBrowser.notifications.onClosed.trigger('n1');
+        await fakeBrowser.notifications.onClosed.trigger('n1', true);
 
         await vi.waitFor(() =>
             expect(tabsCreate).toHaveBeenCalledWith({

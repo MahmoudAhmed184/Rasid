@@ -183,7 +183,9 @@ describe('offscreen task protocol', () => {
             mode: 'document',
             documentPath,
         });
-        vi.spyOn(fakeBrowser.runtime, 'sendMessage').mockResolvedValue({
+        (
+            vi.spyOn(fakeBrowser.runtime, 'sendMessage') as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue({
             task: 'audio.play-notification',
             requestId: 'wrong',
             ok: true,

@@ -69,16 +69,14 @@ describe('proposal repository', () => {
     });
 
     it('subscribes only to valid local pending bridge prompt changes and disposes the listener', () => {
-        type StorageChangeListener = Parameters<
-            typeof fakeBrowser.storage.onChanged.addListener
-        >[0];
-        type StorageChanges = Parameters<StorageChangeListener>[0];
-        type StorageNamespace = Parameters<StorageChangeListener>[1];
+        type StorageChanges = Record<string, Browser.storage.StorageChange>;
+        type StorageNamespace = string;
+        type StorageChangeListener = (changes: StorageChanges, areaName: StorageNamespace) => void;
         let capturedListener: StorageChangeListener | null = null;
         const addListener = vi
             .spyOn(fakeBrowser.storage.onChanged, 'addListener')
-            .mockImplementation((listener: StorageChangeListener) => {
-                capturedListener = listener;
+            .mockImplementation((listener: unknown) => {
+                capturedListener = listener as StorageChangeListener;
             });
         const removeListener = vi
             .spyOn(fakeBrowser.storage.onChanged, 'removeListener')
@@ -91,11 +89,10 @@ describe('proposal repository', () => {
 
         const dispose = repository.onPendingBridgePromptChanged(listener);
         expect(addListener).toHaveBeenCalledOnce();
-        if (!capturedListener) {
-            throw new Error('Expected proposal storage listener to be registered.');
-        }
+        const changeListener = capturedListener as unknown as StorageChangeListener;
+        expect(changeListener).toBeDefined();
 
-        capturedListener(
+        changeListener(
             {
                 [PENDING_BRIDGE_PROMPT_STORAGE_KEY]: {
                     newValue: {
@@ -109,7 +106,7 @@ describe('proposal repository', () => {
             } as StorageChanges,
             'sync' as StorageNamespace
         );
-        capturedListener(
+        changeListener(
             {
                 [PENDING_BRIDGE_PROMPT_STORAGE_KEY]: {
                     newValue: {

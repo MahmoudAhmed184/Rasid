@@ -85,16 +85,14 @@ function createAdapter(
         displayName: 'مستقل',
         debugProbeUrl: 'https://mostaql.com/projects',
         resolveFeeds: () => ['https://mostaql.com/projects'],
-        parseListingHtml: vi.fn(
-            async (): Promise<readonly JobRecord[]> => [
-                {
-                    id: '1',
-                    platformId: 'mostaql' as const,
-                    title: 'TypeScript extension',
-                    url: 'https://mostaql.com/project/1',
-                },
-            ]
-        ),
+        parseListingHtml: vi.fn(async (): Promise<readonly JobRecord[]> => [
+            {
+                id: '1',
+                platformId: 'mostaql' as const,
+                title: 'TypeScript extension',
+                url: 'https://mostaql.com/project/1',
+            },
+        ]),
         parseProjectHtml: vi.fn(async () => ({
             description: 'browser extension',
             budget: '$500',

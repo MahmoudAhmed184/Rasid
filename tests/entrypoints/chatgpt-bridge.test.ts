@@ -47,8 +47,7 @@ describe('ChatGPT bridge unlisted entrypoint', () => {
 
     it('boots the bridge without declaring static ChatGPT content-script matches', async () => {
         const definition = (await import('../../entrypoints/chatgpt-bridge')).default as
-            | UnlistedScriptDefinition
-            | undefined;
+            UnlistedScriptDefinition | undefined;
 
         expect(bridgeEntrypointMocks.defineUnlistedScript).toHaveBeenCalledOnce();
         expect(definition).toBeDefined();

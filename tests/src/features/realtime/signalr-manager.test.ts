@@ -142,6 +142,10 @@ function createStorage(
     return storage;
 }
 
+function createAlarm(name: string, scheduledTime = Date.now()): Browser.alarms.Alarm {
+    return { name, scheduledTime, persistAcrossSessions: false };
+}
+
 describe('SignalR manager', () => {
     beforeEach(() => {
         signalrMock.builders.length = 0;
@@ -400,15 +404,11 @@ describe('SignalR manager', () => {
             now: () => new Date('2026-05-22T12:00:00.000Z'),
         });
 
-        await expect(
-            manager.handleAlarm({ name: 'jobs:poll', scheduledTime: Date.now() })
-        ).resolves.toBe(true);
+        await expect(manager.handleAlarm(createAlarm('jobs:poll'))).resolves.toBe(true);
         expect(onPollingFallback).toHaveBeenCalledWith('jobs-poll-alarm');
         expect(signalrMock.HubConnectionBuilder).not.toHaveBeenCalled();
 
-        await expect(
-            manager.handleAlarm({ name: 'signalr:health', scheduledTime: Date.now() })
-        ).resolves.toBe(true);
+        await expect(manager.handleAlarm(createAlarm('signalr:health'))).resolves.toBe(true);
         expect(onPollingFallback).toHaveBeenCalledWith('signalr-health-no-connection');
         expect(storage.setSignalRState.mock.calls.map(([state]) => state.status)).toContain(
             'suspended'
@@ -569,14 +569,10 @@ describe('SignalR manager', () => {
         await manager.bootstrap('worker-start');
         const liveConnection = signalrMock.connections.at(-1);
 
-        await expect(
-            manager.handleAlarm({ name: 'jobs:poll', scheduledTime: Date.now() })
-        ).resolves.toBe(true);
+        await expect(manager.handleAlarm(createAlarm('jobs:poll'))).resolves.toBe(true);
         expect(onPollingFallback).not.toHaveBeenCalledWith('jobs-poll-no-live-connection');
 
-        await expect(
-            manager.handleAlarm({ name: 'signalr:lease', scheduledTime: Date.now() })
-        ).resolves.toBe(true);
+        await expect(manager.handleAlarm(createAlarm('signalr:lease'))).resolves.toBe(true);
         expect(liveConnection?.stop).toHaveBeenCalledOnce();
         expect(onPollingFallback).toHaveBeenCalledWith('signalr-lease-window-ended');
         expect(storage.setSignalRState.mock.calls.at(-1)?.[0]).toMatchObject({
@@ -584,13 +580,9 @@ describe('SignalR manager', () => {
             lastDisconnectReason: 'signalr-lease-window-ended',
         });
 
-        await expect(
-            manager.handleAlarm({ name: 'signalr:reconnect', scheduledTime: Date.now() })
-        ).resolves.toBe(true);
+        await expect(manager.handleAlarm(createAlarm('signalr:reconnect'))).resolves.toBe(true);
         expect(signalrMock.connections).toHaveLength(1);
 
-        await expect(
-            manager.handleAlarm({ name: 'unknown-alarm', scheduledTime: Date.now() })
-        ).resolves.toBe(false);
+        await expect(manager.handleAlarm(createAlarm('unknown-alarm'))).resolves.toBe(false);
     });
 });
