@@ -173,6 +173,46 @@ test.describe('Dashboard screenshots', () => {
         await page.waitForTimeout(400);
         await page.screenshot({ path: resolve(screenshotDir, '06-settings.png') });
 
+        // Popup screenshots
+        const popupDir = resolve(process.cwd(), 'screenshots/popup');
+        mkdirSync(popupDir, { recursive: true });
+
+        const popupPage = await context.newPage();
+        await popupPage.setViewportSize({ width: 380, height: 600 });
+        await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+        await popupPage.waitForLoadState('domcontentloaded');
+        await popupPage.waitForTimeout(600);
+        await popupPage.screenshot({ path: resolve(popupDir, '01-popup-normal.png') });
+
+        // Trigger an admin message or active notification toggle
+        await popupPage.evaluate(async () => {
+            const chromeApi = (
+                window as unknown as {
+                    chrome?: {
+                        storage?: {
+                            local?: { set: (items: Record<string, unknown>) => Promise<void> };
+                        };
+                    };
+                }
+            ).chrome;
+            if (chromeApi?.storage?.local) {
+                await chromeApi.storage.local.set({
+                    adminMessages: [
+                        {
+                            id: 'msg-1',
+                            text: 'تم تحديث خوارزميات رصد المشاريع وتحسين أداء الإشعارات اللحظية.',
+                            link: 'https://github.com/rasid',
+                            read: false,
+                            createdAt: new Date().toISOString(),
+                        },
+                    ],
+                });
+            }
+        });
+        await popupPage.reload();
+        await popupPage.waitForTimeout(500);
+        await popupPage.screenshot({ path: resolve(popupDir, '02-popup-admin-msg.png') });
+
         await context.close();
     });
 });
