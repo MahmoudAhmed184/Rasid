@@ -51,7 +51,7 @@ function normalizeProposalGenerationResult(
 function getBridgeFailureMessage(reason: OpenChatBridgePromptFailureReason): string {
     switch (reason) {
         case 'permission-denied':
-            return 'لم تُمنح صلاحية فتح ChatGPT. أعد المحاولة ووافق على الصلاحية عند الطلب.';
+            return 'لم تُمنح صلاحية فتح ChatGPT. يرجى تفعيل الصلاحية من إعدادات الإضافة (لوحة التحكم) والمحاولة مرة أخرى.';
         case 'unsupported':
             return 'المتصفح لا يدعم فتح جسر ChatGPT من الإضافة الحالية.';
         case 'tab-open-failed':

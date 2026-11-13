@@ -3,7 +3,12 @@ import { browser } from 'wxt/browser';
 import { debugFetchMonitoringSources } from '../../features/monitoring/fetch-platform-html';
 import type { JobBatchResult } from '../../features/monitoring/job-batch-publisher';
 import type { ProposalGenerator } from '../../features/proposals/generate-proposal';
-import { getAiChatTargetHost, normalizeAiChatUrl } from '../../entities/ai/chat-url';
+import {
+    getChatBridgeHostPermission,
+    hasChatBridgePermission,
+    requestChatBridgePermission,
+} from '../../shared/browser/permissions';
+import { normalizeAiChatUrl } from '../../entities/ai/chat-url';
 import type {
     BackgroundMessageHandlerMap,
     BackgroundMessageRequestMap,
@@ -33,26 +38,24 @@ interface BackgroundRuntimeHandlerDependencies {
     readonly runPolling: (reason: string) => Promise<JobBatchResult>;
 }
 
-function getChatBridgeHostPermission(chatUrl: string): string {
-    return `https://${getAiChatTargetHost(chatUrl)}/*`;
-}
-
 function getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
 async function ensureChatBridgePermission(chatUrl: string): Promise<boolean | 'unsupported'> {
+    if (!browser.permissions?.request && !browser.permissions?.contains) {
+        return 'unsupported';
+    }
+
+    if (await hasChatBridgePermission(chatUrl)) {
+        return true;
+    }
+
     if (!browser.permissions?.request) {
         return 'unsupported';
     }
 
-    const origins = [getChatBridgeHostPermission(chatUrl)];
-
-    if (browser.permissions.contains && (await browser.permissions.contains({ origins }))) {
-        return true;
-    }
-
-    return browser.permissions.request({ origins });
+    return requestChatBridgePermission(chatUrl);
 }
 
 async function resolveChatBridgeTab(chatUrl: string): Promise<{

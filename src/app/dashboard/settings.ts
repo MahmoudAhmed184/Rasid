@@ -467,6 +467,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         setFieldValue('systemToggle', settings.systemEnabled !== false);
         setFieldValue('notificationMode', settings.notificationMode || 'auto');
         updateAiFieldsVisibility(aiExecutionMode);
+        void updateChatGptPermissionStatus(settings.aiChatUrl);
     }
 
     function collectSettings(baseSettings: Partial<ExtensionSettings> = {}): ExtensionSettings {
@@ -536,6 +537,57 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         return granted;
     }
 
+    async function ensureChatBridgePermissionBeforeSave(
+        settings: ExtensionSettings
+    ): Promise<boolean> {
+        if (settings.aiExecutionMode !== 'bridge') {
+            return true;
+        }
+
+        const { hasChatBridgePermission, requestChatBridgePermission } =
+            await import('../../shared/browser/permissions');
+
+        if (await hasChatBridgePermission(settings.aiChatUrl)) {
+            return true;
+        }
+
+        const granted = await requestChatBridgePermission(settings.aiChatUrl);
+
+        if (!granted) {
+            showSaveStatus(
+                'تعذر حفظ إعدادات ChatGPT لأن صلاحية مضيف ChatGPT لم تُمنح.',
+                'error',
+                false
+            );
+        }
+
+        return granted;
+    }
+
+    async function updateChatGptPermissionStatus(chatUrl?: string) {
+        const statusEl = root.getElementById('chatGptPermissionStatus');
+        if (!statusEl) {
+            return;
+        }
+
+        try {
+            const { hasChatBridgePermission } = await import('../../shared/browser/permissions');
+            const targetUrl =
+                chatUrl ?? String(getFieldValue('aiChatUrl') ?? 'https://chatgpt.com/');
+            const granted = await hasChatBridgePermission(targetUrl);
+
+            if (granted) {
+                statusEl.textContent = 'صلاحية ChatGPT ممنوحة ✓';
+                statusEl.className = 'help-text text-success';
+            } else {
+                statusEl.textContent = 'صلاحية ChatGPT غير ممنوحة بعد (انقر للطلب).';
+                statusEl.className = 'help-text text-warning';
+            }
+        } catch {
+            // Ignore if permissions API is unavailable
+        }
+    }
+
     async function saveAll(button?: HTMLButtonElement) {
         if (!validateSettingsForm()) {
             return;
@@ -551,6 +603,10 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
                 (getField('proposalTemplate') as HTMLTextAreaElement | null)?.value ?? '';
 
             if (!(await ensureDirectAiPermissionBeforeSave(settings))) {
+                return;
+            }
+
+            if (!(await ensureChatBridgePermissionBeforeSave(settings))) {
                 return;
             }
 
@@ -820,6 +876,42 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             updateAiFieldsVisibility(
                 (unsafeDirectAiEnabled ? select.value : 'bridge') as AiExecutionMode
             );
+        });
+
+        async function handleGrantChatGptPermission(button: HTMLButtonElement) {
+            setButtonBusy(button, true);
+
+            try {
+                const chatUrl = String(getFieldValue('aiChatUrl') ?? 'https://chatgpt.com/');
+                const { requestChatBridgePermission } =
+                    await import('../../shared/browser/permissions');
+                const granted = await requestChatBridgePermission(chatUrl);
+                const statusEl = root.getElementById('chatGptPermissionStatus');
+
+                if (statusEl) {
+                    if (granted) {
+                        statusEl.textContent = 'تم منح صلاحية ChatGPT بنجاح ✓';
+                        statusEl.className = 'help-text text-success';
+                        showSaveStatus('تم منح صلاحية ChatGPT بنجاح.');
+                    } else {
+                        statusEl.textContent = 'تم رفض صلاحية ChatGPT.';
+                        statusEl.className = 'help-text text-danger';
+                        showSaveStatus('تم رفض منح صلاحية ChatGPT.', 'error', false);
+                    }
+                }
+            } catch {
+                const statusEl = root.getElementById('chatGptPermissionStatus');
+                if (statusEl) {
+                    statusEl.textContent = 'تعذر طلب الصلاحية من المتصفح.';
+                    statusEl.className = 'help-text text-danger';
+                }
+            } finally {
+                setButtonBusy(button, false);
+            }
+        }
+
+        root.getElementById('grantChatGptPermissionBtn')?.addEventListener('click', (event) => {
+            void handleGrantChatGptPermission(event.currentTarget as HTMLButtonElement);
         });
 
         root.getElementById('exportBackupBtn')?.addEventListener('click', (event) => {

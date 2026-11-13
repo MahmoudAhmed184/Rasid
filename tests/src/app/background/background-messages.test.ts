@@ -623,7 +623,9 @@ describe('background message contracts', () => {
     });
 
     it('sends request wrappers through browser.runtime and rejects malformed transports', async () => {
-        const sendMessage = vi.spyOn(fakeBrowser.runtime, 'sendMessage');
+        const sendMessage = vi.spyOn(fakeBrowser.runtime, 'sendMessage') as unknown as ReturnType<
+            typeof vi.fn
+        >;
         sendMessage.mockImplementation(async (message: unknown) => {
             const action = getBackgroundMessageAction(message);
 

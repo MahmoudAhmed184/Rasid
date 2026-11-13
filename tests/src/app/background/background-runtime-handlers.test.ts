@@ -4,6 +4,9 @@ import { createBackgroundRuntimeHandlers } from '../../../../src/app/background/
 import type { JobBatchResult } from '../../../../src/features/monitoring/job-batch-publisher';
 import { fakeBrowser } from '../../../support/fake-browser';
 
+const spyOn = (obj: object, method: string): ReturnType<typeof vi.fn> =>
+    vi.spyOn(obj, method as never) as unknown as ReturnType<typeof vi.fn>;
+
 function createDeps(overrides: Record<string, unknown> = {}) {
     const storage = {
         updateSettings: vi.fn(async () => ({ interval: 5 })),
@@ -161,9 +164,9 @@ describe('background runtime handlers', () => {
     });
 
     it('returns an actionable bridge failure when ChatGPT host permission is denied', async () => {
-        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
-        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(false);
-        const create = vi.spyOn(fakeBrowser.tabs, 'create');
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(false);
+        const create = spyOn(fakeBrowser.tabs, 'create');
         const deps = createDeps();
         const handlers = createBackgroundRuntimeHandlers(deps as never);
 
@@ -185,22 +188,20 @@ describe('background runtime handlers', () => {
     });
 
     it('focuses existing ChatGPT tabs, stores the prompt, and injects the bridge script once', async () => {
-        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
-        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
-        vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([
             {
                 id: 17,
                 url: 'https://chatgpt.com/',
             } as Browser.tabs.Tab,
         ]);
-        const update = vi.spyOn(fakeBrowser.tabs, 'update').mockResolvedValue({
+        const update = spyOn(fakeBrowser.tabs, 'update').mockResolvedValue({
             id: 17,
             url: 'https://chatgpt.com/',
         } as Browser.tabs.Tab);
-        const create = vi.spyOn(fakeBrowser.tabs, 'create');
-        const executeScript = vi
-            .spyOn(fakeBrowser.scripting, 'executeScript')
-            .mockResolvedValue([]);
+        const create = spyOn(fakeBrowser.tabs, 'create');
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
         const deps = createDeps();
         const handlers = createBackgroundRuntimeHandlers(deps as never);
 
@@ -233,14 +234,14 @@ describe('background runtime handlers', () => {
     });
 
     it('reports injection failures after opening ChatGPT and storing the prompt', async () => {
-        vi.spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
-        vi.spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
-        vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
-        vi.spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(false);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
             id: 23,
             url: 'https://chat.openai.com/',
         } as Browser.tabs.Tab);
-        vi.spyOn(fakeBrowser.scripting, 'executeScript').mockRejectedValue(
+        spyOn(fakeBrowser.scripting, 'executeScript').mockRejectedValue(
             new Error('Cannot access tab')
         );
         const deps = createDeps();
@@ -277,7 +278,7 @@ describe('background runtime handlers', () => {
     });
 
     it('creates ZIP downloads and records object URL cleanup state', async () => {
-        vi.spyOn(fakeBrowser.downloads, 'download').mockResolvedValue(42);
+        spyOn(fakeBrowser.downloads, 'download').mockResolvedValue(42);
         const deps = createDeps();
         const handlers = createBackgroundRuntimeHandlers(deps as never);
 
@@ -303,7 +304,7 @@ describe('background runtime handlers', () => {
     });
 
     it('revokes offscreen object URLs when browser download creation fails', async () => {
-        vi.spyOn(fakeBrowser.downloads, 'download').mockRejectedValue(new Error('download failed'));
+        spyOn(fakeBrowser.downloads, 'download').mockRejectedValue(new Error('download failed'));
         const deps = createDeps();
         const handlers = createBackgroundRuntimeHandlers(deps as never);
 
@@ -323,7 +324,7 @@ describe('background runtime handlers', () => {
     });
 
     it('returns ZIP creation failures before calling browser downloads', async () => {
-        const download = vi.spyOn(fakeBrowser.downloads, 'download');
+        const download = spyOn(fakeBrowser.downloads, 'download');
         const deps = createDeps({
             offscreen: {
                 request: vi.fn(async () => ({
@@ -348,7 +349,7 @@ describe('background runtime handlers', () => {
     });
 
     it('returns successful ZIP downloads even when cleanup tracking cannot be persisted', async () => {
-        vi.spyOn(fakeBrowser.downloads, 'download').mockResolvedValue(77);
+        spyOn(fakeBrowser.downloads, 'download').mockResolvedValue(77);
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         const deps = createDeps({
             downloads: {

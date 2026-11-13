@@ -10,10 +10,7 @@ import { normalizeAiChatUrl } from '../../entities/ai/chat-url';
 import { isAllowedPlatformHostname } from '../../entities/platform/url';
 
 export type OpenChatBridgePromptFailureReason =
-    | 'permission-denied'
-    | 'unsupported'
-    | 'tab-open-failed'
-    | 'injection-failed';
+    'permission-denied' | 'unsupported' | 'tab-open-failed' | 'injection-failed';
 
 export type OpenChatBridgePromptResponse =
     | {

@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 
+import { getAiChatTargetHost } from '../../entities/ai/chat-url';
 import type { AiProviderId } from '../../entities/ai/model';
 
 export const AI_PROVIDER_HOST_PERMISSIONS = {
@@ -33,5 +34,28 @@ export async function requestAiProviderHostPermission(providerId: AiProviderId):
         return false;
     }
 
+    return browser.permissions.request({ origins: [origin] });
+}
+
+export function getChatBridgeHostPermission(chatUrl?: string): string {
+    const host = chatUrl ? getAiChatTargetHost(chatUrl) : 'chatgpt.com';
+    return `https://${host}/*`;
+}
+
+export async function hasChatBridgePermission(chatUrl?: string): Promise<boolean> {
+    if (!browser.permissions?.contains) {
+        return false;
+    }
+
+    const origin = getChatBridgeHostPermission(chatUrl);
+    return browser.permissions.contains({ origins: [origin] });
+}
+
+export async function requestChatBridgePermission(chatUrl?: string): Promise<boolean> {
+    if (!browser.permissions?.request) {
+        return false;
+    }
+
+    const origin = getChatBridgeHostPermission(chatUrl);
     return browser.permissions.request({ origins: [origin] });
 }
