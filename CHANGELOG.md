@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.1.0 - 2026-11-14
+
+Feature release introducing individualized job notifications, modernized monochrome UI design, and platform stability fixes.
+
+### Release Artifacts
+
+- Chrome MV3 extension package: `rasid-v1.1.0-chrome-mv3.zip`.
+- Firefox MV3 extension package: `rasid-v1.1.0-firefox-mv3.zip`.
+- Firefox review source package: `rasid-v1.1.0-firefox-sources.zip`.
+- SHA-256 checksum manifest: `SHA256SUMS.txt`.
+- Build and manifest evidence: `release-evidence.json`.
+
+### Added & Improved
+
+- **Individual Job Notifications**: Batch job notifications now spawn independent desktop notifications for every project with dedicated title, budget, description snippet, platform icon, and click-through payload, while keeping chime audio to once per batch.
+- **Modernized Monochrome UI**: Completely overhauled popup, dashboard, and content script injected panels (Mostaql, Khamsat, Nafezly) with sleek, modern Vercel-inspired monochrome styling.
+- **New Chrome Radar Branding**: Updated extension icons with modern chrome radar emblems across all sizes (16px, 48px, 128px).
+- **DOM & CSP Hardening**: Secured HTML parsing against DOM XSS across all marketplace parsers and replaced inline event handlers with standards-compliant event listeners.
+- **ChatGPT Bridge & Settings**: Fixed host permission requesting and improved ChatGPT bridge and settings workflows.
+
 ## v1.0.1 - 2026-08-07
 
 Maintenance release with rebranding updates and monitoring stability improvements.
