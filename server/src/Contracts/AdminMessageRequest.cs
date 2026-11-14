@@ -1,6 +1,6 @@
-namespace Rasid.Server.Models;
+namespace Rasid.Server.Contracts;
 
-public class AdminMessageRequest
+public sealed class AdminMessageRequest
 {
     public string Message { get; set; } = string.Empty;
     public string? Url { get; set; }

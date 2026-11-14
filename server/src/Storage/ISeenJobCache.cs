@@ -1,6 +1,6 @@
 using Rasid.Server.Contracts;
 
-namespace Rasid.Server.Services;
+namespace Rasid.Server.Storage;
 
 public interface ISeenJobCache
 {

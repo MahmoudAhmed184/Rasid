@@ -50,4 +50,19 @@ public sealed class StartupValidationTests
 
         Assert.Contains("JobScraper:CheckIntervalSeconds must be greater than or equal to 1.", exception.ToString());
     }
+
+    [Fact]
+    public void Startup_Fails_WhenAdminTokenIsEmpty_InDevelopment()
+    {
+        using var factory = new RasidServerApplicationFactory(
+            Environments.Development,
+            new Dictionary<string, string?>
+            {
+                ["AdminToken"] = ""
+            });
+
+        var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+        Assert.Contains("AdminToken must not be empty.", exception.ToString());
+    }
 }

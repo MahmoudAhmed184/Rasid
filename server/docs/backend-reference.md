@@ -29,7 +29,7 @@ The app project `server/src/Rasid.Server.csproj` and test project `server/tests/
 - package lock-file generation enabled
 - locked restore enabled automatically in CI
 
-`server/Directory.Packages.props` enables central package management and owns versions for the backend package set, including HtmlAgilityPack, Swashbuckle, ASP.NET test host packages, xUnit v3, and Microsoft.NET.Test.Sdk. The tracked lock files are:
+`server/Directory.Packages.props` enables central package management and owns versions for the backend package set, including AngleSharp, Swashbuckle, ASP.NET test host packages, xUnit v3, and Microsoft.NET.Test.Sdk. The tracked lock files are:
 
 - `server/src/packages.lock.json`
 - `server/tests/Rasid.Server.Tests/packages.lock.json`
@@ -63,7 +63,7 @@ Bootstraps the app and registers:
     - `POST /api/admin/broadcast`
     - `GET /broadcast-tool`
 
-### `src/Services/JobPollingWorker.cs`
+### `src/Workers/JobPollingWorker.cs`
 
 This is the hosted scheduler. It does not scrape HTML itself.
 
@@ -73,7 +73,7 @@ Responsibilities:
 - runs a polling cycle every `JobScraper:CheckIntervalSeconds`
 - delegates each cycle to `IScrapeCycleRunner`
 
-### `src/Services/ScrapeCycleRunner.cs`
+### `src/Workers/ScrapeCycleRunner.cs`
 
 This is the per-cycle orchestrator.
 
@@ -81,22 +81,23 @@ Responsibilities:
 
 - asks each registered platform scraper for the latest jobs
 - uses `ISeenJobCache` to deduplicate by `platform:id`
-- treats the first successful non-empty cycle as a baseline
+- treats the first successful non-empty cycle per platform as a baseline
 - enriches only newly detected jobs
 - uses bounded parallelism for enrichment per platform
 - broadcasts `NewJobsDetected` through `IJobBroadcaster`
 
-### `src/Services/InMemorySeenJobCache.cs`
+### `src/Storage/SqliteSeenJobCache.cs`
 
-Default in-memory implementation of the deduplication store.
+Persistent SQLite implementation of the deduplication store.
 
 Responsibilities:
 
-- remembers seen `platform:id` keys
+- remembers seen `platform:id` keys in SQLite with WAL mode
 - evicts oldest entries when `JobScraper:MaxSeenJobs` is exceeded
-- keeps the orchestration layer storage-agnostic for future replacement
+- prunes expired seen jobs beyond `JobScraper:SeenJobRetentionDays`
+- keeps the orchestration layer storage-agnostic via `ISeenJobCache`
 
-### `src/Services/SignalRJobBroadcaster.cs`
+### `src/Hubs/SignalRJobBroadcaster.cs`
 
 SignalR adapter that preserves the browser extension wire contract while keeping the orchestrator transport-agnostic.
 
@@ -213,7 +214,7 @@ Important properties:
 - `clientType`
 - `tags`
 
-### `src/Models/AdminMessageRequest.cs`
+### `src/Contracts/AdminMessageRequest.cs`
 
 Request body for `POST /api/admin/broadcast`.
 
@@ -242,7 +243,7 @@ Startup validators for:
 
 Production startup rejects permissive CORS with credentials and rejects the default admin token.
 
-### `src/Services/AdminTokenComparer.cs`
+### `src/Endpoints/AdminTokenComparer.cs`
 
 Compares supplied and expected admin tokens by hashing both with SHA-256 and using `CryptographicOperations.FixedTimeEquals()`.
 

@@ -1,6 +1,9 @@
-using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rasid.Server.Contracts;
+using Rasid.Server.Crawler;
 using Rasid.Server.Models;
 
 namespace Rasid.Server.Platforms;
@@ -15,9 +18,19 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
         "https://nafezly.com/projects");
 
     public NafezlyPlatformScraper(
+        ICrawlerEngine crawlerEngine,
+        ILogger<NafezlyPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(crawlerEngine, logger, timeProvider)
+    {
+    }
+
+    // Overload for testing
+    internal NafezlyPlatformScraper(
         HttpClient httpClient,
-        ILogger<NafezlyPlatformScraper> logger)
-        : base(httpClient, logger, TimeSpan.FromSeconds(20))
+        ILogger<NafezlyPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(httpClient, logger, TimeSpan.FromSeconds(20), timeProvider)
     {
     }
 
@@ -26,18 +39,17 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
     public override async Task<ScrapeResult<IReadOnlyList<JobListing>>> FetchListingsAsync(
         CancellationToken cancellationToken)
     {
-        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl), cancellationToken);
+        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl, TimeProvider), cancellationToken);
         if (!documentResult.IsSuccess || documentResult.Value is null)
         {
             return documentResult.WithoutValue<IReadOnlyList<JobListing>>();
         }
 
+        var doc = documentResult.Value;
         var jobs = new List<JobListing>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var card in SelectNodes(
-                     documentResult.Value.DocumentNode,
-                     "//div[contains(concat(' ', normalize-space(@class), ' '), ' project-box ')]"))
+        foreach (var card in doc.QuerySelectorAll("div.project-box"))
         {
             var job = TryParseListingCard(card, seenIds);
             if (job is not null)
@@ -64,8 +76,11 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
             return documentResult.WithoutValue<JobDetails>();
         }
 
-        var description = NullIfEmpty(documentResult.Value.DocumentNode.SelectSingleNode(
-            "//div[normalize-space()='تفاصيل المشروع']/ancestor::div[contains(@class, 'main-nafez-box-styles')][1]//h2")?.InnerText);
+        var doc = documentResult.Value;
+
+        var descriptionBox = doc.QuerySelectorAll("div.main-nafez-box-styles")
+            .FirstOrDefault(static b => b.TextContent.Contains("تفاصيل المشروع", StringComparison.Ordinal));
+        var description = NullIfEmpty(descriptionBox?.QuerySelector("h2")?.TextContent);
 
         string? status = null;
         string? postedAt = null;
@@ -73,54 +88,58 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
         string? budget = null;
         string? bidsText = null;
 
-        foreach (var row in SelectNodes(
-                     documentResult.Value.DocumentNode,
-                     "//div[normalize-space()='بطاقة المشروع']/ancestor::div[contains(@class, 'main-nafez-box-styles')][1]//div[contains(@class, 'row') and contains(@style, 'padding:4px 5px')]"))
+        var metaBox = doc.QuerySelectorAll("div.main-nafez-box-styles")
+            .FirstOrDefault(static b => b.TextContent.Contains("بطاقة المشروع", StringComparison.Ordinal));
+
+        if (metaBox is not null)
         {
-            var cells = row.Elements("div").Take(2).ToArray();
-            if (cells.Length < 2)
+            foreach (var row in metaBox.QuerySelectorAll("div.row"))
             {
-                continue;
-            }
+                var cells = row.Children.Where(static c => c.TagName.Equals("DIV", StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
+                if (cells.Length < 2)
+                {
+                    continue;
+                }
 
-            var label = CleanText(cells[0].InnerText);
-            var value = NullIfEmpty(cells[1].InnerText);
+                var label = CleanText(cells[0].TextContent);
+                var value = NullIfEmpty(cells[1].TextContent);
 
-            if (string.IsNullOrWhiteSpace(label) || value is null)
-            {
-                continue;
-            }
+                if (string.IsNullOrWhiteSpace(label) || value is null)
+                {
+                    continue;
+                }
 
-            if (label.Contains("حالة المشروع", StringComparison.Ordinal))
-            {
-                status = value;
-            }
-            else if (label.Contains("تاريخ النشر", StringComparison.Ordinal))
-            {
-                postedAt = value;
-            }
-            else if (label.Contains("المدة المتاحة", StringComparison.Ordinal))
-            {
-                duration = value;
-            }
-            else if (label.Contains("الميزانية", StringComparison.Ordinal))
-            {
-                budget = value;
-            }
-            else if (label.Contains("عدد المتقدمين", StringComparison.Ordinal))
-            {
-                bidsText = value;
+                if (label.Contains("حالة المشروع", StringComparison.Ordinal))
+                {
+                    status = value;
+                }
+                else if (label.Contains("تاريخ النشر", StringComparison.Ordinal))
+                {
+                    postedAt = value;
+                }
+                else if (label.Contains("المدة المتاحة", StringComparison.Ordinal))
+                {
+                    duration = value;
+                }
+                else if (label.Contains("الميزانية", StringComparison.Ordinal))
+                {
+                    budget = value;
+                }
+                else if (label.Contains("عدد المتقدمين", StringComparison.Ordinal))
+                {
+                    bidsText = value;
+                }
             }
         }
 
-        var clientName = NullIfEmpty(documentResult.Value.DocumentNode.SelectSingleNode(
-            "//span[normalize-space()='صاحب المشروع']/ancestor::div[contains(@class, 'main-nafez-box-styles')][1]//a[contains(@href, '/u/') and not(.//img)][1]")?.InnerText);
+        var clientBox = doc.QuerySelectorAll("div.main-nafez-box-styles")
+            .FirstOrDefault(static b => b.TextContent.Contains("صاحب المشروع", StringComparison.Ordinal));
+        var clientName = NullIfEmpty(clientBox?.QuerySelectorAll("a[href*='/u/']")
+            .FirstOrDefault(static a => a.QuerySelector("img") is null)?.TextContent);
 
-        var tags = SelectNodes(
-                documentResult.Value.DocumentNode,
-                "//a[contains(concat(' ', normalize-space(@class), ' '), ' tag-class ')]")
-            .Select(node => CleanText(node.InnerText))
-            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        var tags = doc.QuerySelectorAll("a.tag-class")
+            .Select(static node => CleanText(node.TextContent))
+            .Where(static tag => !string.IsNullOrWhiteSpace(tag))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
@@ -136,11 +155,11 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
                 Tags: tags.Length > 0 ? tags : null));
     }
 
-    private static JobListing? TryParseListingCard(HtmlNode card, HashSet<string> seenIds)
+    private static JobListing? TryParseListingCard(IElement card, HashSet<string> seenIds)
     {
-        var titleLink = card.SelectSingleNode(
-            ".//a[contains(@href, '/project/') and contains(@class, 'text-truncate') and not(contains(@href, '/project/create'))][1]");
-        var href = GetAttribute(titleLink, "href");
+        var titleLink = card.QuerySelector("a[href*='/project/'].text-truncate:not([href*='/project/create'])") ??
+                        card.QuerySelector("a[href*='/project/']:not([href*='/project/create'])");
+        var href = titleLink?.GetAttribute("href");
         var match = ProjectIdRegex.Match(href ?? string.Empty);
 
         if (!match.Success || !seenIds.Add(match.Groups[1].Value))
@@ -148,29 +167,30 @@ public sealed class NafezlyPlatformScraper : JobPlatformScraperBase
             return null;
         }
 
-        var descriptionNode = card.SelectSingleNode(".//h3[contains(@class, 'naskh')][1]");
-        var posterNode = card.SelectSingleNode(
-            ".//a[contains(@href, '/u/') and not(.//img)][1]");
+        var descriptionNode = card.QuerySelector("h3.naskh");
+        var posterNode = card.QuerySelectorAll("a[href*='/u/']").FirstOrDefault(static a => a.QuerySelector("img") is null);
 
-        var budget = CleanText(card.SelectSingleNode(
-            ".//span[.//span[contains(@class, 'fa-usd-circle')]][1]")?.InnerText);
-        var duration = NullIfEmpty(card.SelectSingleNode(
-            ".//span[.//span[contains(@class, 'fa-business-time')]][1]")?.InnerText);
-        var bidsText = NullIfEmpty(card.SelectSingleNode(
-            ".//span[.//span[contains(@class, 'fa-ballot')]][1]")?.InnerText);
-        var time = CleanText(card.SelectSingleNode(
-            ".//span[.//span[contains(@class, 'fa-clock')]][1]")?.InnerText);
+        var spans = card.QuerySelectorAll("span");
+        var budgetSpan = spans.FirstOrDefault(static s => s.QuerySelector(".fa-usd-circle") is not null);
+        var durationSpan = spans.FirstOrDefault(static s => s.QuerySelector(".fa-business-time") is not null);
+        var bidsSpan = spans.FirstOrDefault(static s => s.QuerySelector(".fa-ballot") is not null);
+        var timeSpan = spans.FirstOrDefault(static s => s.QuerySelector(".fa-clock") is not null);
+
+        var budget = CleanText(budgetSpan?.TextContent);
+        var duration = NullIfEmpty(durationSpan?.TextContent);
+        var bidsText = NullIfEmpty(bidsSpan?.TextContent);
+        var time = CleanText(timeSpan?.TextContent);
 
         return new JobListing(
             Id: match.Groups[1].Value,
             PlatformId: Descriptor.Id,
-            Title: CleanText(titleLink?.InnerText),
+            Title: CleanText(titleLink?.TextContent),
             Budget: string.IsNullOrWhiteSpace(budget) ? "غير محدد" : budget,
             Time: time,
             Url: AbsoluteUrl(BaseUrl, href),
-            Poster: NullIfEmpty(posterNode?.InnerText),
+            Poster: NullIfEmpty(posterNode?.TextContent),
             BidsText: bidsText,
-            Description: NullIfEmpty(descriptionNode?.InnerText),
+            Description: NullIfEmpty(descriptionNode?.TextContent),
             Duration: duration);
     }
 }

@@ -39,6 +39,21 @@ public sealed class EndpointSmokeTests
         Assert.Contains(providers, provider => provider.GetProperty("id").GetString() == "nafezly");
     }
 
+    [Fact]
+    public async Task BroadcastTool_ReturnsHtmlContent()
+    {
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        using var response = await client.GetAsync("/broadcast-tool", cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("لوحة بث الإشعارات الإدارية", content);
+    }
+
     private static RasidServerApplicationFactory CreateFactory() =>
         new(settings: new Dictionary<string, string?>
         {

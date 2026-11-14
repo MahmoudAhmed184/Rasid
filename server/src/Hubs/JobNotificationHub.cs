@@ -1,41 +1,56 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Rasid.Server.Contracts;
+using Rasid.Server.Models;
 
 namespace Rasid.Server.Hubs;
 
-public class JobNotificationHub : Hub
+public class JobNotificationHub(ILogger<JobNotificationHub> logger, TimeProvider timeProvider) : Hub<IJobNotificationClient>
 {
-    private readonly ILogger<JobNotificationHub> _logger;
-
-    public JobNotificationHub(ILogger<JobNotificationHub> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<JobNotificationHub> _logger = logger;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     public override async Task OnConnectedAsync()
     {
-        _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
+        _logger.LogInformation("SignalR client connected: {ConnectionId}", Context.ConnectionId);
         await base.OnConnectedAsync();
 
-        await Clients.Caller.SendAsync("Connected", new
+        try
         {
-            connectionId = Context.ConnectionId,
-            timestamp = DateTime.UtcNow,
-            message = "Successfully connected to Job Notification Hub"
-        });
+            await Clients.Caller.Connected(new ConnectedPayload(
+                Context.ConnectionId,
+                _timeProvider.GetUtcNow().UtcDateTime,
+                "Successfully connected to Job Notification Hub"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send Connected acknowledgement to client: {ConnectionId}", Context.ConnectionId);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
-
         if (exception is not null)
         {
-            _logger.LogError(exception, "Client {ConnectionId} disconnected with error.", Context.ConnectionId);
+            _logger.LogWarning(exception, "SignalR client {ConnectionId} disconnected with error.", Context.ConnectionId);
+        }
+        else
+        {
+            _logger.LogInformation("SignalR client disconnected cleanly: {ConnectionId}", Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);
     }
 
-    public Task Ping() =>
-        Clients.Caller.SendAsync("Pong", DateTime.UtcNow);
+    public async Task Ping()
+    {
+        try
+        {
+            await Clients.Caller.Pong(_timeProvider.GetUtcNow().UtcDateTime);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send Pong to client: {ConnectionId}", Context.ConnectionId);
+        }
+    }
 }

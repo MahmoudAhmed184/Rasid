@@ -1,6 +1,6 @@
 using Rasid.Server.Models;
 using Rasid.Server.Options;
-using Rasid.Server.Services;
+using Rasid.Server.Platforms;
 using Xunit;
 
 namespace Rasid.Server.Tests;

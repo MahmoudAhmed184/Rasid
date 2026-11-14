@@ -1,4 +1,4 @@
-namespace Rasid.Server.Services;
+namespace Rasid.Server.Workers;
 
 public interface IScrapeCycleRunner
 {

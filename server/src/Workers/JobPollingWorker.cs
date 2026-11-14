@@ -1,23 +1,20 @@
-using Rasid.Server.Options;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Rasid.Server.Options;
 
-namespace Rasid.Server.Services;
+namespace Rasid.Server.Workers;
 
-public sealed class JobPollingWorker : BackgroundService
+public sealed class JobPollingWorker(
+    IScrapeCycleRunner cycleRunner,
+    IOptions<JobScraperOptions> options,
+    TimeProvider timeProvider,
+    ILogger<JobPollingWorker> logger) : BackgroundService
 {
-    private readonly IScrapeCycleRunner _cycleRunner;
-    private readonly JobScraperOptions _options;
-    private readonly ILogger<JobPollingWorker> _logger;
-
-    public JobPollingWorker(
-        IScrapeCycleRunner cycleRunner,
-        IOptions<JobScraperOptions> options,
-        ILogger<JobPollingWorker> logger)
-    {
-        _cycleRunner = cycleRunner;
-        _options = options.Value;
-        _logger = logger;
-    }
+    private readonly IScrapeCycleRunner _cycleRunner = cycleRunner;
+    private readonly JobScraperOptions _options = options.Value;
+    private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly ILogger<JobPollingWorker> _logger = logger;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,11 +27,13 @@ public sealed class JobPollingWorker : BackgroundService
         {
             await Task.Delay(
                 TimeSpan.FromSeconds(Math.Max(0, _options.InitialDelaySeconds)),
+                _timeProvider,
                 stoppingToken);
         }
 
         using var timer = new PeriodicTimer(
-            TimeSpan.FromSeconds(Math.Max(1, _options.CheckIntervalSeconds)));
+            TimeSpan.FromSeconds(Math.Max(1, _options.CheckIntervalSeconds)),
+            _timeProvider);
 
         while (!stoppingToken.IsCancellationRequested)
         {

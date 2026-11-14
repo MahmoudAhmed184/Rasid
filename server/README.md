@@ -134,15 +134,15 @@ dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/ra
 ## Main Files
 
 - [`src/Program.cs`](src/Program.cs): application bootstrap, CORS, endpoints, and SignalR hub registration
-- [`src/Models/AdminMessageRequest.cs`](src/Models/AdminMessageRequest.cs): admin broadcast request body
+- [`src/Contracts/AdminMessageRequest.cs`](src/Contracts/AdminMessageRequest.cs): admin broadcast request body
 - [`src/Options/AdminOptions.cs`](src/Options/AdminOptions.cs): admin token option defaults
 - [`src/Options/OptionsValidation.cs`](src/Options/OptionsValidation.cs): startup validators for scraper, CORS, and admin options
-- [`src/Services/AdminTokenComparer.cs`](src/Services/AdminTokenComparer.cs): fixed-time admin token comparison helper
-- [`src/Services/KhamsatFreshnessPolicy.cs`](src/Services/KhamsatFreshnessPolicy.cs): Khamsat publish-date freshness classification
-- [`src/Services/JobPollingWorker.cs`](src/Services/JobPollingWorker.cs): hosted polling scheduler
-- [`src/Services/ScrapeCycleRunner.cs`](src/Services/ScrapeCycleRunner.cs): listing fetch, deduplication, enrichment, and broadcast orchestration
-- [`src/Services/InMemorySeenJobCache.cs`](src/Services/InMemorySeenJobCache.cs): in-memory seen-job cache
-- [`src/Services/SignalRJobBroadcaster.cs`](src/Services/SignalRJobBroadcaster.cs): SignalR broadcaster
+- [`src/Endpoints/AdminTokenComparer.cs`](src/Endpoints/AdminTokenComparer.cs): fixed-time admin token comparison helper
+- [`src/Platforms/KhamsatFreshnessPolicy.cs`](src/Platforms/KhamsatFreshnessPolicy.cs): Khamsat publish-date freshness classification
+- [`src/Workers/JobPollingWorker.cs`](src/Workers/JobPollingWorker.cs): hosted polling scheduler
+- [`src/Workers/ScrapeCycleRunner.cs`](src/Workers/ScrapeCycleRunner.cs): listing fetch, deduplication, enrichment, and broadcast orchestration
+- [`src/Storage/SqliteSeenJobCache.cs`](src/Storage/SqliteSeenJobCache.cs): persistent SQLite seen-job cache
+- [`src/Hubs/SignalRJobBroadcaster.cs`](src/Hubs/SignalRJobBroadcaster.cs): SignalR broadcaster
 - [`src/Platforms/`](src/Platforms): per-platform scraper implementations
 - [`tests/Rasid.Server.Tests`](tests/Rasid.Server.Tests): xUnit v3 tests run through Microsoft Testing Platform for endpoints, admin broadcasts, startup validation, Khamsat freshness, and scraping behavior
 

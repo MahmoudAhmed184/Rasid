@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Rasid.Server.Options;
@@ -33,21 +34,47 @@ public sealed class JobScraperOptionsValidator : IValidateOptions<JobScraperOpti
             failures.Add("JobScraper:KhamsatPublishFreshnessHours must be greater than or equal to 1.");
         }
 
+        if (string.IsNullOrWhiteSpace(options.DbPath))
+        {
+            failures.Add("JobScraper:DbPath must not be empty.");
+        }
+
         return failures.Count == 0
             ? ValidateOptionsResult.Success
             : ValidateOptionsResult.Fail(failures);
     }
 }
 
-public sealed class BrowserExtensionCorsOptionsValidator : IValidateOptions<BrowserExtensionCorsOptions>
+public sealed class CrawlerOptionsValidator : IValidateOptions<CrawlerOptions>
 {
-    private readonly IHostEnvironment _environment;
-
-    public BrowserExtensionCorsOptionsValidator(IHostEnvironment environment)
+    public ValidateOptionsResult Validate(string? name, CrawlerOptions options)
     {
-        _environment = environment;
-    }
+        var failures = new List<string>();
 
+        if (options.PerDomainDelayMilliseconds < 0)
+        {
+            failures.Add("Crawler:PerDomainDelayMilliseconds must be greater than or equal to 0.");
+        }
+
+        if (options.RequestTimeoutSeconds < 1)
+        {
+            failures.Add("Crawler:RequestTimeoutSeconds must be greater than or equal to 1.");
+        }
+
+        if (options.MaxRetries < 0)
+        {
+            failures.Add("Crawler:MaxRetries must be greater than or equal to 0.");
+        }
+
+        return failures.Count == 0
+            ? ValidateOptionsResult.Success
+            : ValidateOptionsResult.Fail(failures);
+    }
+}
+
+public sealed class BrowserExtensionCorsOptionsValidator(IHostEnvironment environment)
+    : IValidateOptions<BrowserExtensionCorsOptions>
+{
     public ValidateOptionsResult Validate(string? name, BrowserExtensionCorsOptions options)
     {
         var failures = new List<string>();
@@ -67,7 +94,7 @@ public sealed class BrowserExtensionCorsOptionsValidator : IValidateOptions<Brow
             failures.Add("Cors:AllowedOrigins must contain at least one origin when Cors:Mode is AllowConfiguredOrigins.");
         }
 
-        if (_environment.IsProduction() && options.Mode == CorsPolicyMode.AllowAll)
+        if (environment.IsProduction() && options.Mode == CorsPolicyMode.AllowAll)
         {
             failures.Add("Production CORS cannot use AllowAll because credentials are enabled.");
         }
@@ -78,25 +105,25 @@ public sealed class BrowserExtensionCorsOptionsValidator : IValidateOptions<Brow
     }
 }
 
-public sealed class AdminOptionsValidator : IValidateOptions<AdminOptions>
+public sealed class AdminOptionsValidator(IHostEnvironment environment)
+    : IValidateOptions<AdminOptions>
 {
-    private readonly IHostEnvironment _environment;
-
-    public AdminOptionsValidator(IHostEnvironment environment)
-    {
-        _environment = environment;
-    }
-
     public ValidateOptionsResult Validate(string? name, AdminOptions options)
     {
         var failures = new List<string>();
 
         if (string.IsNullOrWhiteSpace(options.Token))
         {
-            failures.Add("AdminToken must not be empty.");
+            if (environment.IsProduction())
+            {
+                failures.Add("Production AdminToken must be set to a non-default secret.");
+            }
+            else
+            {
+                failures.Add("AdminToken must not be empty.");
+            }
         }
-
-        if (_environment.IsProduction() && options.UsesDefaultToken)
+        else if (environment.IsProduction() && options.UsesDefaultToken)
         {
             failures.Add("Production AdminToken must be set to a non-default secret.");
         }

@@ -1,6 +1,9 @@
-using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rasid.Server.Contracts;
+using Rasid.Server.Crawler;
 using Rasid.Server.Models;
 
 namespace Rasid.Server.Platforms;
@@ -15,9 +18,19 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         "https://mostaql.com/projects?sort=latest");
 
     public MostaqlPlatformScraper(
+        ICrawlerEngine crawlerEngine,
+        ILogger<MostaqlPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(crawlerEngine, logger, timeProvider)
+    {
+    }
+
+    // Overload for testing
+    internal MostaqlPlatformScraper(
         HttpClient httpClient,
-        ILogger<MostaqlPlatformScraper> logger)
-        : base(httpClient, logger, TimeSpan.FromSeconds(20))
+        ILogger<MostaqlPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(httpClient, logger, TimeSpan.FromSeconds(20), timeProvider)
     {
     }
 
@@ -26,18 +39,17 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
     public override async Task<ScrapeResult<IReadOnlyList<JobListing>>> FetchListingsAsync(
         CancellationToken cancellationToken)
     {
-        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl), cancellationToken);
+        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl, TimeProvider), cancellationToken);
         if (!documentResult.IsSuccess || documentResult.Value is null)
         {
             return documentResult.WithoutValue<IReadOnlyList<JobListing>>();
         }
 
+        var doc = documentResult.Value;
         var jobs = new List<JobListing>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var row in SelectNodes(
-                     documentResult.Value.DocumentNode,
-                     "//div[contains(@class, 'list-group-item')] | //div[contains(@class, 'project-row')] | //tr[contains(@class, 'project-row')] | //li[contains(@class, 'project-row')]"))
+        foreach (var row in doc.QuerySelectorAll("div.list-group-item, div.project-row, tr.project-row, li.project-row"))
         {
             var job = TryParseProjectRow(row, seenIds);
             if (job is not null)
@@ -46,10 +58,13 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             }
         }
 
-        foreach (var row in SelectNodes(
-                     documentResult.Value.DocumentNode,
-                     "//tr[.//a[contains(@href, '/project/') or contains(@href, '/projects/')]]"))
+        foreach (var row in doc.QuerySelectorAll("tr"))
         {
+            if (row.QuerySelector("a[href*='/project/'], a[href*='/projects/']") is null)
+            {
+                continue;
+            }
+
             var job = TryParseClassicRow(row, seenIds);
             if (job is not null)
             {
@@ -59,9 +74,7 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
 
         if (jobs.Count == 0)
         {
-            foreach (var link in SelectNodes(
-                         documentResult.Value.DocumentNode,
-                         "//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]"))
+            foreach (var link in doc.QuerySelectorAll("a[href*='/project/']:not([href*='create']), a[href*='/projects/']:not([href*='create'])"))
             {
                 var job = TryParseFallbackLink(link, seenIds);
                 if (job is not null)
@@ -89,13 +102,9 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             return documentResult.WithoutValue<JobDetails>();
         }
 
-        var document = documentResult.Value;
-        var status = NullIfEmpty(document.DocumentNode
-            .SelectSingleNode("//span[contains(@class, 'label-prj')] | //*[contains(@class, 'label-prj')]")
-            ?.InnerText);
-        var description = NullIfEmpty(document.DocumentNode
-            .SelectSingleNode("//*[contains(@class, 'project-post__body')]")
-            ?.InnerText);
+        var doc = documentResult.Value;
+        var status = NullIfEmpty(doc.QuerySelector(".label-prj-open, .label-prj, span.label-prj")?.TextContent);
+        var description = NullIfEmpty(doc.QuerySelector(".project-post__body, .carda__content, .text-wrapper-div")?.TextContent);
 
         string? communications = null;
         string? hiringRate = null;
@@ -103,46 +112,33 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         string? budget = null;
         string? registrationDate = null;
 
-        var metaNodes = SelectNodes(
-            document.DocumentNode,
-            "//tr[contains(@class, 'meta-row')] | " +
-            "//table[contains(@class, 'table-meta')]//tr | " +
-            "//*[contains(@class, 'meta-row')] | " +
-            "//*[contains(@class, 'meta-item')] | " +
-            "//li[contains(@class, 'meta-item')] | " +
-            "//div[contains(@class, 'meta-item')] | " +
-            "//table[contains(@class, 'table')]//tr"
-        );
+        var metaNodes = doc.QuerySelectorAll("tr.meta-row, table.table-meta tr, .meta-row, .meta-item, li.meta-item, div.meta-item, table.table tr");
 
         foreach (var row in metaNodes)
         {
-            var text = CleanText(row.InnerText);
+            var text = CleanText(row.TextContent);
             if (string.IsNullOrWhiteSpace(text))
             {
                 continue;
             }
 
-            var valueNode = row.SelectSingleNode(
-                ".//*[contains(@class, 'meta-value') or contains(@class, 'meta-item-value')] | " +
-                ".//td[contains(@class, 'meta-value')] | " +
-                ".//td[last()]"
-            );
+            var valueNode = row.QuerySelector(".meta-value, .meta-item-value, td.meta-value, td:last-child");
 
             string? value = null;
             if (valueNode != null)
             {
-                value = NullIfEmpty(valueNode.InnerText);
+                value = NullIfEmpty(valueNode.TextContent);
             }
             else
             {
-                var children = row.SelectNodes("./*");
-                if (children != null && children.Count >= 2)
+                var children = row.Children;
+                if (children.Length >= 2)
                 {
-                    value = NullIfEmpty(children[1].InnerText);
+                    value = NullIfEmpty(children[1].TextContent);
                 }
                 else
                 {
-                    var parts = text.Split(new[] { ':', '：' }, 2);
+                    var parts = text.Split([':', '：'], 2);
                     if (parts.Length == 2)
                     {
                         value = NullIfEmpty(parts[1]);
@@ -177,23 +173,16 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             }
         }
 
-        var clientNode = document.DocumentNode.SelectSingleNode(
-            "//*[contains(@class, 'profile__name')]//bdi | " +
-            "//*[contains(@class, 'profile__name')]//a | " +
-            "//a[contains(@href, '/u/') and not(.//img)]");
-        var clientName = NullIfEmpty(clientNode?.InnerText);
+        var clientNode = doc.QuerySelector(".profile__name bdi, .profile__name a") ??
+                         doc.QuerySelectorAll("a[href*='/u/']").FirstOrDefault(static a => a.QuerySelector("img") is null);
+        var clientName = NullIfEmpty(clientNode?.TextContent);
 
-        var timeNode = document.DocumentNode.SelectSingleNode(
-            "//time[@itemprop='datePublished'] | " +
-            "//*[@id='project-meta-panel']//time | " +
-            "//time");
-        var postedAt = NullIfEmpty(GetAttribute(timeNode, "datetime") ?? GetAttribute(timeNode, "title"));
+        var timeNode = doc.QuerySelector("time[itemprop='datePublished'], #project-meta-panel time, time");
+        var postedAt = NullIfEmpty(timeNode?.GetAttribute("datetime") ?? timeNode?.GetAttribute("title"));
 
-        var tags = SelectNodes(
-                document.DocumentNode,
-                "//a[contains(@class, 'skill') or contains(@class, 'tag')]")
-            .Select(node => CleanText(node.InnerText))
-            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        var tags = doc.QuerySelectorAll("a.skill, a.tag, .tags .tag, .skills .tag")
+            .Select(static node => CleanText(node.TextContent))
+            .Where(static tag => !string.IsNullOrWhiteSpace(tag))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
@@ -250,13 +239,11 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         return uri.ToString();
     }
 
-    private static JobListing? TryParseProjectRow(HtmlNode row, HashSet<string> seenIds)
+    private static JobListing? TryParseProjectRow(IElement row, HashSet<string> seenIds)
     {
-        var titleLink = row.SelectSingleNode(
-            ".//h2//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]")
-            ?? row.SelectSingleNode(
-                ".//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]");
-        var href = GetAttribute(titleLink, "href");
+        var titleLink = row.QuerySelector("h2 a[href*='/project/']:not([href*='create']), h2 a[href*='/projects/']:not([href*='create'])")
+            ?? row.QuerySelector("a[href*='/project/']:not([href*='create']), a[href*='/projects/']:not([href*='create'])");
+        var href = titleLink?.GetAttribute("href");
         var resolvedUrl = ResolveMostaqlProjectUrl(href);
         if (resolvedUrl is null)
         {
@@ -264,40 +251,36 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         }
 
         var match = ProjectIdRegex.Match(resolvedUrl);
-
         if (!match.Success || !seenIds.Add(match.Groups[1].Value))
         {
             return null;
         }
 
-        var timeNode = row.SelectSingleNode(".//time");
-        var metaItems = row.SelectNodes(".//ul[contains(@class, 'project__meta')]//li | .//*[contains(@class, 'project__meta')]//li");
-        var posterNode = row.SelectSingleNode(
-            ".//ul[contains(@class, 'project__meta')]//li[.//i[contains(@class, 'fa-user')]] | " +
-            ".//*[.//i[contains(@class, 'fa-user')]] | " +
-            ".//a[contains(@href, '/u/') and not(.//img)]");
-        var budgetNode = row.SelectSingleNode(".//*[contains(@class, 'budget')] | .//td[4]");
-        var budget = CleanText(budgetNode?.InnerText);
+        var timeNode = row.QuerySelector("time");
+        var metaItems = row.QuerySelectorAll("ul.project__meta li, .project__meta li");
+        var posterNode = row.QuerySelector("ul.project__meta li:has(.fa-user), li:has(.fa-user)") ??
+                         row.QuerySelectorAll("a[href*='/u/']").FirstOrDefault(static a => a.QuerySelector("img") is null) ??
+                         row.QuerySelector(".fa-user")?.ParentElement;
+
+        var budgetNode = row.QuerySelector(".budget, td:nth-child(4)");
+        var budget = CleanText(budgetNode?.TextContent);
 
         return new JobListing(
             Id: match.Groups[1].Value,
             PlatformId: Descriptor.Id,
-            Title: CleanText(titleLink?.InnerText),
+            Title: CleanText(titleLink?.TextContent),
             Budget: string.IsNullOrWhiteSpace(budget) ? "غير محدد" : budget,
-            Time: CleanText(timeNode?.InnerText),
+            Time: CleanText(timeNode?.TextContent),
             Url: resolvedUrl,
-            Poster: NullIfEmpty(posterNode?.InnerText),
-            PostedAt: NullIfEmpty(GetAttribute(timeNode, "datetime") ?? GetAttribute(timeNode, "title")),
-            BidsText: metaItems is { Count: >= 3 }
-                ? NullIfEmpty(metaItems[2].InnerText)
-                : null);
+            Poster: NullIfEmpty(posterNode?.TextContent),
+            PostedAt: NullIfEmpty(timeNode?.GetAttribute("datetime") ?? timeNode?.GetAttribute("title")),
+            BidsText: metaItems.Length >= 3 ? NullIfEmpty(metaItems[2].TextContent) : null);
     }
 
-    private static JobListing? TryParseClassicRow(HtmlNode row, HashSet<string> seenIds)
+    private static JobListing? TryParseClassicRow(IElement row, HashSet<string> seenIds)
     {
-        var titleLink = row.SelectSingleNode(
-            ".//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]");
-        var href = GetAttribute(titleLink, "href");
+        var titleLink = row.QuerySelector("a[href*='/project/']:not([href*='create']), a[href*='/projects/']:not([href*='create'])");
+        var href = titleLink?.GetAttribute("href");
         var resolvedUrl = ResolveMostaqlProjectUrl(href);
         if (resolvedUrl is null)
         {
@@ -305,27 +288,27 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         }
 
         var match = ProjectIdRegex.Match(resolvedUrl);
-
         if (!match.Success || !seenIds.Add(match.Groups[1].Value))
         {
             return null;
         }
 
-        var budget = CleanText(row.SelectSingleNode(".//td[4]")?.InnerText);
-        var timeNode = row.SelectSingleNode(".//td[5] | .//time");
+        var cells = row.QuerySelectorAll("td");
+        var budget = cells.Length >= 4 ? CleanText(cells[3].TextContent) : string.Empty;
+        var timeNode = cells.Length >= 5 ? cells[4] : row.QuerySelector("time");
 
         return new JobListing(
             Id: match.Groups[1].Value,
             PlatformId: Descriptor.Id,
-            Title: CleanText(titleLink?.InnerText),
+            Title: CleanText(titleLink?.TextContent),
             Budget: string.IsNullOrWhiteSpace(budget) ? "غير محدد" : budget,
-            Time: CleanText(timeNode?.InnerText),
+            Time: CleanText(timeNode?.TextContent),
             Url: resolvedUrl);
     }
 
-    private static JobListing? TryParseFallbackLink(HtmlNode link, HashSet<string> seenIds)
+    private static JobListing? TryParseFallbackLink(IElement link, HashSet<string> seenIds)
     {
-        var href = GetAttribute(link, "href");
+        var href = link.GetAttribute("href");
         var resolvedUrl = ResolveMostaqlProjectUrl(href);
         if (resolvedUrl is null)
         {
@@ -333,7 +316,7 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         }
 
         var match = ProjectIdRegex.Match(resolvedUrl);
-        var title = CleanText(link.InnerText);
+        var title = CleanText(link.TextContent);
 
         if (!match.Success || title.Length <= 5 || !seenIds.Add(match.Groups[1].Value))
         {

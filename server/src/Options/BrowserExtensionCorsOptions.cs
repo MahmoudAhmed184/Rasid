@@ -9,8 +9,9 @@ public enum CorsPolicyMode
 public sealed class BrowserExtensionCorsOptions
 {
     public const string SectionName = "Cors";
-    public const string PolicyName = "ExtensionClients";
+    public const string PolicyName = "RasidBrowserExtension";
 
-    public CorsPolicyMode Mode { get; init; } = CorsPolicyMode.AllowAll;
-    public string[] AllowedOrigins { get; init; } = [];
+    public CorsPolicyMode Mode { get; set; } = CorsPolicyMode.AllowAll;
+
+    public string[] AllowedOrigins { get; set; } = [];
 }

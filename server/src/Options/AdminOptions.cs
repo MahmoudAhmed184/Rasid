@@ -2,10 +2,10 @@ namespace Rasid.Server.Options;
 
 public sealed class AdminOptions
 {
-    public const string DefaultToken = "change-me-in-production";
+    public const string SectionName = "Admin";
 
-    public string Token { get; set; } = DefaultToken;
+    public string Token { get; set; } = string.Empty;
 
     public bool UsesDefaultToken =>
-        string.Equals(Token, DefaultToken, StringComparison.Ordinal);
+        string.Equals(Token, "change-me-in-production", StringComparison.OrdinalIgnoreCase);
 }

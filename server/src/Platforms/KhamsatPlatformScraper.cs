@@ -1,6 +1,9 @@
-using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rasid.Server.Contracts;
+using Rasid.Server.Crawler;
 using Rasid.Server.Models;
 
 namespace Rasid.Server.Platforms;
@@ -15,9 +18,19 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
         "https://khamsat.com/community/requests");
 
     public KhamsatPlatformScraper(
+        ICrawlerEngine crawlerEngine,
+        ILogger<KhamsatPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(crawlerEngine, logger, timeProvider)
+    {
+    }
+
+    // Overload for testing
+    internal KhamsatPlatformScraper(
         HttpClient httpClient,
-        ILogger<KhamsatPlatformScraper> logger)
-        : base(httpClient, logger, TimeSpan.FromSeconds(20))
+        ILogger<KhamsatPlatformScraper> logger,
+        TimeProvider? timeProvider = null)
+        : base(httpClient, logger, TimeSpan.FromSeconds(20), timeProvider)
     {
     }
 
@@ -26,7 +39,7 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
     public override async Task<ScrapeResult<IReadOnlyList<JobListing>>> FetchListingsAsync(
         CancellationToken cancellationToken)
     {
-        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl), cancellationToken);
+        var documentResult = await LoadDocumentAsync(WithCacheBuster(Platform.ListingUrl, TimeProvider), cancellationToken);
         if (!documentResult.IsSuccess || documentResult.Value is null)
         {
             return documentResult.WithoutValue<IReadOnlyList<JobListing>>();
@@ -35,11 +48,10 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
         var jobs = new List<JobListing>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var row in SelectNodes(documentResult.Value.DocumentNode, "//tr[contains(@class, 'forum_post')]"))
+        foreach (var row in documentResult.Value.QuerySelectorAll("tr.forum_post"))
         {
-            var titleLink = row.SelectSingleNode(
-                ".//h3[contains(@class, 'details-head')]//a[contains(@href, '/community/requests/')]");
-            var href = GetAttribute(titleLink, "href");
+            var titleLink = row.QuerySelector(".details-head a[href*='/community/requests/']");
+            var href = titleLink?.GetAttribute("href");
             var match = RequestIdRegex.Match(href ?? string.Empty);
 
             if (!match.Success || !seenIds.Add(match.Groups[1].Value))
@@ -47,22 +59,19 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
                 continue;
             }
 
-            var authorNode = row.SelectSingleNode(
-                ".//td[contains(@class, 'details-td')]//a[contains(@class, 'user')]");
-            var timeNode = row.SelectSingleNode(
-                               ".//td[contains(@class, 'details-td')]//li[contains(@class, 'd-lg-inline-block')]//span[@title]") ??
-                           row.SelectSingleNode(
-                               ".//td[contains(@class, 'details-td')]//span[@title]");
+            var authorNode = row.QuerySelector(".details-td a.user");
+            var timeNode = row.QuerySelector(".details-td li.d-lg-inline-block span[title]") ??
+                           row.QuerySelector(".details-td span[title]");
 
             jobs.Add(new JobListing(
                 Id: match.Groups[1].Value,
                 PlatformId: Descriptor.Id,
-                Title: CleanText(titleLink?.InnerText),
+                Title: CleanText(titleLink?.TextContent),
                 Budget: string.Empty,
-                Time: CleanText(timeNode?.InnerText),
+                Time: CleanText(timeNode?.TextContent),
                 Url: AbsoluteUrl(BaseUrl, href),
-                Poster: NullIfEmpty(authorNode?.InnerText),
-                LastInteractionAt: NullIfEmpty(GetAttribute(timeNode, "title"))));
+                Poster: NullIfEmpty(authorNode?.TextContent),
+                LastInteractionAt: NullIfEmpty(timeNode?.GetAttribute("title"))));
         }
 
         return ScrapeResult<IReadOnlyList<JobListing>>.Success(jobs);
@@ -84,76 +93,73 @@ public sealed class KhamsatPlatformScraper : JobPlatformScraperBase
             return documentResult.WithoutValue<JobDetails>();
         }
 
-        var description = SelectLongestText(
-            documentResult.Value,
-            "//*[@itemprop='articleBody']",
-            "//*[contains(@class, 'comment-body')]",
-            "//*[contains(@class, 'topic-body')]",
-            "//*[contains(@class, 'post-body')]",
-            "//*[contains(@class, 'content-body')]",
-            "//article",
-            "//main//article",
-            "//main//*[contains(@class, 'content')]");
+        var doc = documentResult.Value;
 
-        var timeNode = documentResult.Value.DocumentNode.SelectSingleNode(
-            "//time[@datetime] | //time | //*[contains(@class, 'meta')]//time | //*[contains(@class, 'comment-time')]");
-        var clientNameNode =
-            documentResult.Value.DocumentNode.SelectSingleNode(
-                "//*[@id='community_sidebar']//*[@id='sidebar']//a[contains(@class, 'sidebar_user')] | //*[@id='sidebar']//a[contains(@class, 'sidebar_user')]") ??
-            documentResult.Value.DocumentNode.SelectSingleNode(
-                "//*[contains(@class, 'comment-user')]//a | //*[contains(@class, 'post-author')]//*[contains(@class, 'username')] | //*[contains(@class, 'user-info')]//*[contains(@class, 'username')]");
-        var sidebarPublishDate = SelectSidebarPublishDate(documentResult.Value);
+        var description = SelectLongestText(
+            doc,
+            ".card-body > article.replace_urls",
+            "article.replace_urls",
+            "[itemprop='articleBody']",
+            ".topic-body",
+            ".post-body",
+            ".content-body",
+            ".comment-body",
+            "article",
+            "main article",
+            "main .content");
+
+        var timeNode = doc.QuerySelector("time[datetime], time, .meta time, .comment-time");
+        var clientNameNode = doc.QuerySelector("#community_sidebar #sidebar a.sidebar_user, #sidebar a.sidebar_user, .comment-user a, .post-author .username, .user-info .username");
+        var sidebarPublishDate = SelectSidebarPublishDate(doc);
 
         return ScrapeResult<JobDetails>.Success(
             new JobDetails(
                 Description: NullIfEmpty(description),
                 PostedAt: NullIfEmpty(
                     sidebarPublishDate ??
-                    GetAttribute(timeNode, "datetime") ??
-                    timeNode?.InnerText),
-                ClientName: NullIfEmpty(clientNameNode?.InnerText)));
+                    timeNode?.GetAttribute("datetime") ??
+                    timeNode?.TextContent),
+                ClientName: NullIfEmpty(clientNameNode?.TextContent)));
     }
 
-    private static string? SelectLongestText(HtmlDocument document, params string[] xpaths) =>
-        xpaths
-            .SelectMany(xpath => SelectNodes(document.DocumentNode, xpath))
-            .Select(node => CleanText(node.InnerText))
-            .Where(text => !string.IsNullOrWhiteSpace(text))
-            .OrderByDescending(text => text.Length)
+    private static string? SelectLongestText(IDocument document, params string[] selectors) =>
+        selectors
+            .SelectMany(selector => document.QuerySelectorAll(selector))
+            .Select(static node => CleanText(node.TextContent))
+            .Where(static text => !string.IsNullOrWhiteSpace(text))
+            .OrderByDescending(static text => text.Length)
             .FirstOrDefault();
 
-    private static string? SelectSidebarPublishDate(HtmlDocument document)
+    private static string? SelectSidebarPublishDate(IDocument document)
     {
-        foreach (var sidebar in SelectNodes(
-                     document.DocumentNode,
-                     "//*[@id='community_sidebar']//*[@id='sidebar'] | //*[@id='sidebar']"))
+        foreach (var sidebar in document.QuerySelectorAll("#community_sidebar #sidebar, #sidebar"))
         {
-            foreach (var valueNode in SelectNodes(sidebar, ".//span[@title]"))
+            foreach (var valueNode in sidebar.QuerySelectorAll("span[title]"))
             {
                 if (!HasPublishDateLabelNearby(valueNode))
                 {
                     continue;
                 }
 
-                return NullIfEmpty(GetAttribute(valueNode, "title") ?? valueNode.InnerText);
+                return NullIfEmpty(valueNode.GetAttribute("title") ?? valueNode.TextContent);
             }
         }
 
         return null;
     }
 
-    private static bool HasPublishDateLabelNearby(HtmlNode valueNode)
+    private static bool HasPublishDateLabelNearby(IElement valueNode)
     {
-        var current = valueNode.ParentNode;
+        var current = valueNode.ParentElement;
 
         for (var depth = 0; current is not null && depth < 4; depth += 1)
         {
-            if (CleanText(current.InnerText).Contains("تاريخ النشر", StringComparison.Ordinal))
+            if (CleanText(current.TextContent).Contains("تاريخ النشر", StringComparison.Ordinal))
             {
                 return true;
             }
 
-            current = current.ParentNode;
+            current = current.ParentElement;
         }
 
         return false;

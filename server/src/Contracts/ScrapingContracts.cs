@@ -13,16 +13,54 @@ public sealed record JobKey(string PlatformId, string JobId)
     public static JobKey From(JobListing listing) => new(listing.PlatformId, listing.Id);
 }
 
-public sealed record NewJobsDetectedMessage(
-    DateTimeOffset Timestamp,
-    IReadOnlyList<JobListing> Jobs)
+public sealed record NewJobsDetectedMessage
 {
+    public DateTimeOffset Timestamp { get; }
+    public IReadOnlyList<JobListing> Jobs { get; }
     public int Count => Jobs.Count;
+    public IReadOnlyList<string> Platforms { get; }
 
-    public IReadOnlyList<string> Platforms =>
-        Jobs.Select(job => job.PlatformId)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+    public NewJobsDetectedMessage(DateTimeOffset timestamp, IReadOnlyList<JobListing> jobs)
+    {
+        Timestamp = timestamp;
+        Jobs = jobs;
+
+        if (jobs.Count == 0)
+        {
+            Platforms = [];
+        }
+        else if (jobs.Count == 1)
+        {
+            Platforms = [jobs[0].PlatformId];
+        }
+        else
+        {
+            var firstPlatform = jobs[0].PlatformId;
+            var allSame = true;
+            for (var i = 1; i < jobs.Count; i++)
+            {
+                if (!string.Equals(jobs[i].PlatformId, firstPlatform, StringComparison.Ordinal))
+                {
+                    allSame = false;
+                    break;
+                }
+            }
+
+            if (allSame)
+            {
+                Platforms = [firstPlatform];
+            }
+            else
+            {
+                var distinct = new HashSet<string>(StringComparer.Ordinal);
+                for (var i = 0; i < jobs.Count; i++)
+                {
+                    distinct.Add(jobs[i].PlatformId);
+                }
+                Platforms = distinct.ToArray();
+            }
+        }
+    }
 }
 
 public enum ScrapeOutcomeKind
@@ -50,18 +88,10 @@ public sealed record ScrapeError(
     string? Url = null,
     HttpStatusCode? StatusCode = null);
 
-public interface IScrapeResult<out T>
-{
-    ScrapeOutcomeKind Outcome { get; }
-    T? Value { get; }
-    ScrapeError? Error { get; }
-    bool IsSuccess { get; }
-}
-
 public sealed record ScrapeResult<T>(
     ScrapeOutcomeKind Outcome,
     T? Value = default,
-    ScrapeError? Error = null) : IScrapeResult<T>
+    ScrapeError? Error = null)
 {
     public bool IsSuccess => Outcome == ScrapeOutcomeKind.Success;
 

@@ -1,9 +1,10 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Rasid.Server.Models;
 using Rasid.Server.Options;
 
-namespace Rasid.Server.Services;
+namespace Rasid.Server.Platforms;
 
 internal enum KhamsatFreshness
 {
@@ -18,7 +19,7 @@ internal static class KhamsatFreshnessPolicy
         @"^\s*(?<day>\d{1,2})/(?<month>\d{1,2})/(?<year>\d{4})(?:\s+(?<hour>\d{1,2}):(?<minute>\d{2})(?::(?<second>\d{2}))?)?\s+GMT\s*$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private static readonly IReadOnlyDictionary<string, int> ArabicMonths =
+    private static readonly FrozenDictionary<string, int> ArabicMonths =
         new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["يناير"] = 1,
@@ -33,7 +34,7 @@ internal static class KhamsatFreshnessPolicy
             ["أكتوبر"] = 10,
             ["نوفمبر"] = 11,
             ["ديسمبر"] = 12
-        };
+        }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static TimeSpan GetFreshnessWindow(JobScraperOptions options) =>
         TimeSpan.FromHours(Math.Max(1, options.KhamsatPublishFreshnessHours));
