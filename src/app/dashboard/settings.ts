@@ -822,15 +822,23 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
 
         root.getElementById('testNotificationBtn')?.addEventListener('click', (event) => {
             const button = event.currentTarget as HTMLButtonElement;
+            if (button.disabled) {
+                return;
+            }
 
             setButtonBusy(button, true);
             showSaveStatus('جاري إرسال إشعار تجريبي...', 'info', false);
 
+            const startTime = performance.now();
             void requestTestNotification()
                 .then(() => {
+                    const elapsed = Math.round(performance.now() - startTime);
+                    console.info(`[inspection] testNotification completed in ${elapsed}ms`);
                     showSaveStatus('تم إرسال الإشعار التجريبي.');
                 })
                 .catch((error) => {
+                    const elapsed = Math.round(performance.now() - startTime);
+                    console.warn(`[inspection] testNotification failed after ${elapsed}ms:`, error);
                     const detail = getErrorMessage(error);
 
                     console.error('Error testing notification:', error);
@@ -849,15 +857,23 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
 
         root.getElementById('testSoundBtn')?.addEventListener('click', (event) => {
             const button = event.currentTarget as HTMLButtonElement;
+            if (button.disabled) {
+                return;
+            }
 
             setButtonBusy(button, true);
             showSaveStatus('جاري تشغيل صوت تجريبي...', 'info', false);
 
+            const startTime = performance.now();
             void requestTestSound()
                 .then(() => {
+                    const elapsed = Math.round(performance.now() - startTime);
+                    console.info(`[inspection] testSound completed in ${elapsed}ms`);
                     showSaveStatus('تم تشغيل صوت الإشعار التجريبي.');
                 })
                 .catch((error) => {
+                    const elapsed = Math.round(performance.now() - startTime);
+                    console.warn(`[inspection] testSound failed after ${elapsed}ms:`, error);
                     console.error('Error testing sound:', error);
                     showSaveStatus('تعذر تشغيل صوت الإشعار التجريبي.', 'error', false);
                 })

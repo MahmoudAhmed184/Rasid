@@ -121,7 +121,6 @@ describe('notification service', () => {
             type: 'basic',
             iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
             title: 'مشروع جديد: فرصة كروم',
-            contextMessage: 'Rasid - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
         });
     });
@@ -246,6 +245,8 @@ describe('notification service', () => {
                 'الميزانية: $500 - $1000\nمطلوب مطور React خبير لبناء منصة إدارة أعمال متكاملة وسريعة الاستجابة...',
             contextMessage: 'Rasid - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+            priority: 2,
+            requireInteraction: true,
         });
 
         // Job 2 (Khamsat)
@@ -263,6 +264,8 @@ describe('notification service', () => {
                 'الميزانية: 25 $\nمطلوب تصميم واجهة احترافية لمتجر سلة مع ملفات فيجما مفتوحة المصدر...',
             contextMessage: 'Rasid - خمسات',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+            priority: 2,
+            requireInteraction: true,
         });
 
         // Job 3 (Nafezly)
@@ -280,6 +283,8 @@ describe('notification service', () => {
                 'الميزانية: 150 $\nسكريبت بلغة بايثون لجلب البيانات وتنظيفها وتصديرها إلى ملف إكسل...',
             contextMessage: 'Rasid - نفذلي',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+            priority: 2,
+            requireInteraction: true,
         });
     });
 
@@ -378,7 +383,6 @@ describe('notification service', () => {
             expect.objectContaining({
                 iconUrl: fakeBrowser.runtime.getURL('/icons/icon128.png'),
                 title: 'مشروع جديد: مشروع منصة خارجية',
-                contextMessage: 'Rasid - منصات العمل الحر',
             })
         );
     });
@@ -472,5 +476,147 @@ describe('notification service', () => {
         expect(payloads.get(adminId)).toMatchObject({
             url: 'https://mostaql.com/announcements/update',
         });
+    });
+
+    it('staggers notification creation across batches in Chromium builds to prevent toast aggregation', async () => {
+        useBrowserBuild('chrome');
+        const timestamps: number[] = [];
+        vi.spyOn(fakeBrowser.notifications, 'create').mockImplementation(async () => {
+            timestamps.push(Date.now());
+            return 'ok';
+        });
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage, {
+            staggerMs: 80,
+        });
+
+        const jobs = [
+            {
+                id: 'j-1',
+                platformId: 'mostaql' as const,
+                title: 'Job 1',
+                url: 'https://mostaql.com/project/1',
+            },
+            {
+                id: 'j-2',
+                platformId: 'mostaql' as const,
+                title: 'Job 2',
+                url: 'https://mostaql.com/project/2',
+            },
+            {
+                id: 'j-3',
+                platformId: 'mostaql' as const,
+                title: 'Job 3',
+                url: 'https://mostaql.com/project/3',
+            },
+        ];
+
+        const ids = await service.showJobsNotification(jobs);
+
+        expect(ids).toHaveLength(3);
+        expect(timestamps).toHaveLength(3);
+        expect(timestamps[1]! - timestamps[0]!).toBeGreaterThanOrEqual(75);
+        expect(timestamps[2]! - timestamps[1]!).toBeGreaterThanOrEqual(75);
+    });
+
+    it('does not stagger notification creation in Firefox builds', async () => {
+        useBrowserBuild('firefox');
+        const timestamps: number[] = [];
+        vi.spyOn(fakeBrowser.notifications, 'create').mockImplementation(async () => {
+            timestamps.push(Date.now());
+            return 'ok';
+        });
+        const { storage } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const jobs = [
+            {
+                id: 'f-1',
+                platformId: 'mostaql' as const,
+                title: 'Job 1',
+                url: 'https://mostaql.com/project/1',
+            },
+            {
+                id: 'f-2',
+                platformId: 'mostaql' as const,
+                title: 'Job 2',
+                url: 'https://mostaql.com/project/2',
+            },
+        ];
+
+        const ids = await service.showJobsNotification(jobs);
+
+        expect(ids).toHaveLength(2);
+        expect(timestamps).toHaveLength(2);
+        // Synchronous / non-delayed execution completes in less than 50ms
+        expect(timestamps[1]! - timestamps[0]!).toBeLessThan(50);
+    });
+
+    it('creates independent notifications and click routing for multiple jobs from the same platform', async () => {
+        useBrowserBuild('chrome');
+        const tabsCreate = vi.spyOn(fakeBrowser.tabs, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage, {
+            staggerMs: 10,
+        });
+        service.registerHandlers();
+
+        const jobs = [
+            {
+                id: 'same-1',
+                platformId: 'mostaql' as const,
+                title: 'مشروع مستقل 1',
+                url: 'https://mostaql.com/project/same-1',
+            },
+            {
+                id: 'same-2',
+                platformId: 'mostaql' as const,
+                title: 'مشروع مستقل 2',
+                url: 'https://mostaql.com/project/same-2',
+            },
+        ];
+
+        const [id1, id2] = await service.showJobsNotification(jobs);
+
+        expect(id1).toBeDefined();
+        expect(id2).toBeDefined();
+        expect(id1).not.toBe(id2);
+        expect(payloads.get(id1!)?.url).toBe('https://mostaql.com/project/same-1');
+        expect(payloads.get(id2!)?.url).toBe('https://mostaql.com/project/same-2');
+
+        // Clicking first notification opens project 1
+        await fakeBrowser.notifications.onClicked.trigger(id1!);
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({ url: 'https://mostaql.com/project/same-1' })
+        );
+
+        // Clicking action button on second notification opens project 2
+        await fakeBrowser.notifications.onButtonClicked?.trigger(id2!, 0);
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({ url: 'https://mostaql.com/project/same-2' })
+        );
+    });
+
+    it('executes notification creation and storage payload persistence concurrently', async () => {
+        let createFinished = false;
+        let storeFinished = false;
+        const { storage } = createStorage();
+
+        vi.spyOn(fakeBrowser.notifications, 'create').mockImplementation(async () => {
+            await new Promise((r) => setTimeout(r, 20));
+            createFinished = true;
+            return 'notif-1';
+        });
+
+        vi.spyOn(storage, 'storeNotificationPayload').mockImplementation(async () => {
+            await new Promise((r) => setTimeout(r, 20));
+            storeFinished = true;
+        });
+
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+        await service.showTestNotification();
+
+        expect(createFinished).toBe(true);
+        expect(storeFinished).toBe(true);
     });
 });

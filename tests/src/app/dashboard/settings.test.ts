@@ -345,6 +345,25 @@ describe('dashboard settings form', () => {
         expect(button.getAttribute('aria-busy')).toBe('false');
     });
 
+    it('ignores clicks while test notification or sound buttons are disabled', async () => {
+        const document = installSettingsDom();
+        const repositories = createRepositories();
+        const form = createSettingsForm(document, { repositories });
+        const notifBtn = document.getElementById('testNotificationBtn') as HTMLButtonElement;
+        const soundBtn = document.getElementById('testSoundBtn') as HTMLButtonElement;
+
+        form.bind();
+
+        notifBtn.disabled = true;
+        soundBtn.disabled = true;
+
+        notifBtn.click();
+        soundBtn.click();
+
+        expect(backgroundMessages.requestTestNotification).not.toHaveBeenCalled();
+        expect(backgroundMessages.requestTestSound).not.toHaveBeenCalled();
+    });
+
     it('normalizes disabled direct AI settings to bridge and reconnects realtime for non-polling notification modes', async () => {
         const document = installSettingsDom();
         const repositories = createRepositories({

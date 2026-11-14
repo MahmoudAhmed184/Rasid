@@ -47,7 +47,7 @@ async function playSequence(
 
     try {
         if (audioContext.state === 'suspended') {
-            await audioContext.resume();
+            void audioContext.resume().catch(() => undefined);
         }
 
         let lastOscillator: OscillatorNode | null = null;
@@ -56,13 +56,28 @@ async function playSequence(
             lastOscillator = playTone(audioContext, step.frequency, step.startTime, step.duration);
         }
 
+        const maxDurationMs = Math.max(
+            ...steps.map((step) => (step.startTime + step.duration) * 1000),
+            350
+        );
+
         await new Promise<void>((resolve) => {
             if (!lastOscillator) {
                 resolve();
                 return;
             }
 
-            lastOscillator.onended = () => resolve();
+            let settled = false;
+            const finish = () => {
+                if (!settled) {
+                    settled = true;
+                    resolve();
+                }
+            };
+
+            lastOscillator.onended = finish;
+            // Guarantee playback promise resolution even if audio hardware is suspended or muted
+            setTimeout(finish, maxDurationMs + 100);
         });
     } finally {
         if (audioContext.state !== 'closed') {
@@ -71,11 +86,26 @@ async function playSequence(
     }
 }
 
+let activeDirectPlayback: Promise<void> | null = null;
+
 export async function playNotificationAudioDirect(): Promise<void> {
-    await playSequence([
-        { frequency: 800, startTime: 0, duration: 0.15 },
-        { frequency: 1000, startTime: 0.2, duration: 0.15 },
-    ]);
+    if (activeDirectPlayback) {
+        await activeDirectPlayback;
+        return;
+    }
+
+    activeDirectPlayback = (async () => {
+        try {
+            await playSequence([
+                { frequency: 800, startTime: 0, duration: 0.15 },
+                { frequency: 1000, startTime: 0.2, duration: 0.15 },
+            ]);
+        } finally {
+            activeDirectPlayback = null;
+        }
+    })();
+
+    await activeDirectPlayback;
 }
 
 export function createAudioService(offscreen: OffscreenManager): AudioService {
@@ -83,9 +113,24 @@ export function createAudioService(offscreen: OffscreenManager): AudioService {
     // reuses the same task contract and executes these routines inside the offscreen page.
     registerNotificationAudioTask(offscreen, playNotificationAudioDirect);
 
+    let activeNotificationRequest: Promise<void> | null = null;
+
     return {
-        playNotification() {
-            return requestNotificationAudioTask(offscreen);
+        async playNotification() {
+            if (activeNotificationRequest) {
+                await activeNotificationRequest;
+                return;
+            }
+
+            activeNotificationRequest = (async () => {
+                try {
+                    await requestNotificationAudioTask(offscreen);
+                } finally {
+                    activeNotificationRequest = null;
+                }
+            })();
+
+            await activeNotificationRequest;
         },
     };
 }

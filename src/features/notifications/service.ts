@@ -12,6 +12,11 @@ import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 
 const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
 const JOB_NOTIFICATION_BUTTON_TITLE = '🔗 عرض تفاصيل المشروع';
+export const NOTIFICATION_STAGGER_MS = 25;
+
+export interface NotificationServiceOptions {
+    readonly staggerMs?: number;
+}
 
 export interface NotificationService {
     registerHandlers(): void;
@@ -70,6 +75,8 @@ function buildNotificationOptions(options: {
     readonly message: string;
     readonly contextMessage?: string;
     readonly buttons?: Browser.notifications.NotificationButton[];
+    readonly priority?: number;
+    readonly requireInteraction?: boolean;
 }): Browser.notifications.NotificationCreateOptions {
     const basicOptions: Browser.notifications.NotificationCreateOptions = {
         type: 'basic',
@@ -86,6 +93,8 @@ function buildNotificationOptions(options: {
         ...basicOptions,
         ...(options.contextMessage ? { contextMessage: options.contextMessage } : {}),
         ...(options.buttons && options.buttons.length > 0 ? { buttons: options.buttons } : {}),
+        priority: options.priority ?? 2,
+        requireInteraction: options.requireInteraction ?? true,
     };
 }
 
@@ -114,9 +123,14 @@ function buildJobNotificationBody(job: JobRecord): {
     };
 }
 
-export function createNotificationService(storage: ExtensionStorage): NotificationService {
+export function createNotificationService(
+    storage: ExtensionStorage,
+    options?: NotificationServiceOptions
+): NotificationService {
     let handlersRegistered = false;
     let notificationSequence = 0;
+    const defaultStaggerMs = import.meta.env.BROWSER === 'firefox' ? 0 : NOTIFICATION_STAGGER_MS;
+    const staggerMs = options?.staggerMs !== undefined ? options.staggerMs : defaultStaggerMs;
 
     function registerHandlers(): void {
         if (handlersRegistered) {
@@ -165,23 +179,29 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
             return [];
         }
 
-        const notificationIds: string[] = [];
+        const notificationPromises = jobs.map(async (job, index) => {
+            if (!job) {
+                return null;
+            }
 
-        for (const job of jobs) {
+            if (index > 0 && staggerMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, index * staggerMs));
+            }
+
             const { title, message, contextMessage, platformId } = buildJobNotificationBody(job);
             const notificationId = `rasid-${Date.now()}-${++notificationSequence}-${Math.random().toString(36).slice(2) || '0'}`;
             const payloadUrl = normalizeNotificationUrl(job.url);
 
-            if (payloadUrl) {
-                await storage.storeNotificationPayload(notificationId, {
-                    url: payloadUrl,
-                    jobId: job.id,
-                    createdAt: new Date().toISOString(),
-                });
-            }
+            const storePromise = payloadUrl
+                ? storage.storeNotificationPayload(notificationId, {
+                      url: payloadUrl,
+                      jobId: job.id,
+                      createdAt: new Date().toISOString(),
+                  })
+                : Promise.resolve();
 
             try {
-                await browser.notifications.create(
+                const createPromise = browser.notifications.create(
                     notificationId,
                     buildNotificationOptions(
                         import.meta.env.BROWSER === 'firefox'
@@ -199,31 +219,35 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
                               }
                     )
                 );
-                notificationIds.push(notificationId);
+
+                await Promise.all([createPromise, storePromise]);
+                return notificationId;
             } catch (error) {
                 if (payloadUrl) {
-                    await storage.removeNotificationPayload(notificationId);
+                    await storePromise.catch(() => undefined);
+                    await storage.removeNotificationPayload(notificationId).catch(() => undefined);
                 }
                 throw error;
             }
-        }
+        });
 
-        return notificationIds;
+        const results = await Promise.all(notificationPromises);
+        return results.filter((id): id is string => id !== null);
     }
 
     async function showAdminMessageNotification(msg: AdminMessage): Promise<string> {
         const notificationId = `rasid-admin-${Date.now()}-${Math.random().toString(36).slice(2) || '0'}`;
         const payloadUrl = msg.url ? normalizeNotificationUrl(msg.url) : null;
 
-        if (payloadUrl) {
-            await storage.storeNotificationPayload(notificationId, {
-                url: payloadUrl,
-                createdAt: new Date().toISOString(),
-            });
-        }
+        const storePromise = payloadUrl
+            ? storage.storeNotificationPayload(notificationId, {
+                  url: payloadUrl,
+                  createdAt: new Date().toISOString(),
+              })
+            : Promise.resolve();
 
         try {
-            await browser.notifications.create(
+            const createPromise = browser.notifications.create(
                 notificationId,
                 buildNotificationOptions(
                     import.meta.env.BROWSER === 'firefox'
@@ -237,11 +261,14 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
                               title: '📢 تنبيهات من المطورين',
                               message: msg.message,
                               contextMessage: 'Rasid',
+                              buttons: msg.url ? [{ title: '🔗 فتح الرابط' }] : undefined,
                           }
                 )
             );
+            await Promise.all([createPromise, storePromise]);
         } catch (error) {
             if (payloadUrl) {
+                await storePromise.catch(() => undefined);
                 await storage.removeNotificationPayload(notificationId);
             }
             throw error;
@@ -251,18 +278,45 @@ export function createNotificationService(storage: ExtensionStorage): Notificati
     }
 
     async function showTestNotification(): Promise<string> {
-        const ids = await showJobsNotification([
-            {
-                id: `test-${Date.now()}`,
-                platformId: 'mostaql',
-                title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
-                budget: '500 $',
-                url: 'https://mostaql.com/projects',
-                description: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
-            },
-        ]);
+        const notificationId = `rasid-test-${Date.now()}-${++notificationSequence}`;
+        const payloadUrl = 'https://mostaql.com/projects';
 
-        return ids[0] ?? '';
+        const storePromise = storage
+            .storeNotificationPayload(notificationId, {
+                url: payloadUrl,
+                jobId: 'test-job',
+                createdAt: new Date().toISOString(),
+            })
+            .catch((error) => {
+                console.warn('[notifications] failed to store test notification payload', error);
+            });
+
+        const iconUrl = getNotificationIcon('mostaql');
+        const options = buildNotificationOptions(
+            import.meta.env.BROWSER === 'firefox'
+                ? {
+                      iconUrl,
+                      title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
+                      message: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
+                  }
+                : {
+                      iconUrl,
+                      title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
+                      message: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
+                      contextMessage: 'Rasid - مستقل',
+                      buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
+                  }
+        );
+
+        try {
+            const createPromise = browser.notifications.create(notificationId, options);
+            await Promise.all([createPromise, storePromise]);
+            return notificationId;
+        } catch (error) {
+            await storePromise.catch(() => undefined);
+            await storage.removeNotificationPayload(notificationId).catch(() => undefined);
+            throw error;
+        }
     }
 
     return {

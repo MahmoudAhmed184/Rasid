@@ -92,6 +92,28 @@ describe('background runtime handlers', () => {
         expect(deps.signalr.disconnect).toHaveBeenCalledOnce();
     });
 
+    it('dispatches test sound playback without blocking the message response', async () => {
+        let resolvePlayback!: () => void;
+        let playbackStarted = false;
+        const playNotification = vi.fn(() => {
+            playbackStarted = true;
+            return new Promise<void>((resolve) => {
+                resolvePlayback = resolve;
+            });
+        });
+        const deps = createDeps({
+            audio: { playNotification },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const responsePromise = handlers.testSound({ action: 'testSound' });
+        await expect(responsePromise).resolves.toEqual({ success: true });
+        expect(playbackStarted).toBe(true);
+        expect(playNotification).toHaveBeenCalledOnce();
+
+        resolvePlayback();
+    });
+
     it('propagates rejected test notification errors', async () => {
         const deps = createDeps({
             notifications: {

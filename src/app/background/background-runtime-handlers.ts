@@ -529,7 +529,9 @@ export function createBackgroundRuntimeHandlers(
             return { success: true } as const;
         },
         async testSound() {
-            await deps.audio.playNotification();
+            void deps.audio.playNotification().catch((error) => {
+                console.warn('[background] test sound error:', error);
+            });
             return { success: true } as const;
         },
         async updateAlarm(message) {
