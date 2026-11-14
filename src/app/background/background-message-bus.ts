@@ -35,11 +35,11 @@ function isTrustedRuntimeSender(sender: Browser.runtime.MessageSender): boolean 
     }
 
     try {
-        const url = new URL(sender.url);
-
         if (sender.url.startsWith(browser.runtime.getURL(''))) {
             return true;
         }
+
+        const url = new URL(sender.url);
 
         return (
             url.protocol === 'https:' &&

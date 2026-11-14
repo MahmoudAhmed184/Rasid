@@ -21,7 +21,7 @@ export function resolveTrackedProjectPlatformId(
     });
 }
 
-export function createTrackedProjectKey(projectId: string, platformId: PlatformId): string {
+function createTrackedProjectKey(projectId: string, platformId: PlatformId): string {
     return `${platformId}:${projectId}`;
 }
 

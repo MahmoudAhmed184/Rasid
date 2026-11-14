@@ -5,7 +5,7 @@ export type NotificationMode = 'auto' | 'signalr' | 'polling';
 export type AiExecutionMode = 'bridge' | 'direct';
 export type MonitoredPlatforms = Record<PlatformId, boolean>;
 
-export const DEFAULT_POLLING_INTERVAL = 3;
+const DEFAULT_POLLING_INTERVAL = 3;
 export const MIN_POLLING_INTERVAL = 3;
 export const MAX_POLLING_INTERVAL = 30;
 export const SUPPORTED_MONITORING_PLATFORM_IDS = ['mostaql', 'khamsat', 'nafezly'] as const;

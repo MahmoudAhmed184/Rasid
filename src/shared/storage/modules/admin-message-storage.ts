@@ -23,7 +23,8 @@ function isAdminMessage(value: unknown): value is AdminMessage {
         typeof v.message === 'string' &&
         v.message.length > 0 &&
         typeof v.receivedAt === 'string' &&
-        typeof v.read === 'boolean'
+        typeof v.read === 'boolean' &&
+        (v.url === undefined || v.url === null || typeof v.url === 'string')
     );
 }
 

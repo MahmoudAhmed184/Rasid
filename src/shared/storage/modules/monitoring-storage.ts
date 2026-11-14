@@ -21,7 +21,7 @@ export interface IngestedJobsResult {
     notificationsEnabled: boolean;
 }
 
-export function normalizeStats(value: unknown): ExtensionStats {
+function normalizeStats(value: unknown): ExtensionStats {
     if (!isObject(value)) {
         return { ...DEFAULT_STATS };
     }
@@ -68,9 +68,18 @@ function resetDailyStats(stats: ExtensionStats): ExtensionStats {
 }
 
 export interface MonitoringStorageModule {
-    getUnseenJobs(snapshot: StoredState, jobs: JobRecord[]): JobRecord[];
-    rememberJobsWithoutStats(snapshot: StoredState, jobs: JobRecord[]): Promise<string[]>;
-    ingestJobs(snapshot: StoredState, jobs: JobRecord[]): Promise<IngestedJobsResult>;
+    getUnseenJobs(snapshot: Pick<StoredState, 'seenJobs'>, jobs: JobRecord[]): JobRecord[];
+    rememberJobsWithoutStats(
+        snapshot: Pick<StoredState, 'seenJobs'>,
+        jobs: JobRecord[]
+    ): Promise<string[]>;
+    ingestJobs(
+        snapshot: Pick<
+            StoredState,
+            'seenJobs' | 'recentJobs' | 'stats' | 'settings' | 'notificationsEnabled'
+        >,
+        jobs: JobRecord[]
+    ): Promise<IngestedJobsResult>;
     mergeRecentJobs(jobs: JobRecord[]): Promise<JobRecord[]>;
     touchLastCheck(runtime: RuntimeState, reason: string): Promise<ExtensionStats>;
 }

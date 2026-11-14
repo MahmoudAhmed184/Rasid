@@ -8,15 +8,25 @@ import {
     createBrowserStorageClient,
     type StorageClient,
 } from '../browser/storage-client';
-import { SNAPSHOT_KEYS } from './storage-keys';
+import { SNAPSHOT_KEYS, STORAGE_FIELDS } from './storage-keys';
 import { createAdminMessageStorage, type AdminMessage } from './modules/admin-message-storage';
 import { createDownloadCleanupStorage } from './modules/download-cleanup-storage';
 import { createAiSecretStorage } from './modules/ai-secret-storage';
-import { createMonitoringStorage, type IngestedJobsResult } from './modules/monitoring-storage';
+import {
+    createMonitoringStorage,
+    normalizeMonitoringFields,
+    normalizeSeenJobs,
+    type IngestedJobsResult,
+} from './modules/monitoring-storage';
 import { createNotificationPayloadStorage } from './modules/notification-payload-storage';
 import { createPromptStorage } from './modules/prompt-storage';
 import { createRuntimeStorage, type RuntimeStatePatch } from './modules/runtime-storage';
-import { createSettingsStorage, getLegacySettingsApiKey } from './modules/settings-storage';
+import {
+    createSettingsStorage,
+    getLegacySettingsApiKey,
+    normalizeSettings,
+    sanitizeSettingsForPersistentStorage,
+} from './modules/settings-storage';
 import { normalizeStoredStateSnapshot } from './snapshot-state';
 import { createTrackingStorage } from './modules/tracking-storage';
 import type { JobRecord, TrackedProject } from '../../entities/job/model';
@@ -129,18 +139,37 @@ export function createExtensionStorage(
     }
 
     async function ingestJobs(jobs: JobRecord[]): Promise<IngestedJobsResult> {
-        const snapshot = await getSnapshot();
+        const raw = await client.get([
+            STORAGE_FIELDS.seenJobs,
+            STORAGE_FIELDS.recentJobs,
+            STORAGE_FIELDS.stats,
+            STORAGE_FIELDS.settings,
+            STORAGE_FIELDS.notificationsEnabled,
+        ]);
+        const snapshot = {
+            settings: sanitizeSettingsForPersistentStorage(
+                normalizeSettings(raw[STORAGE_FIELDS.settings])
+            ),
+            notificationsEnabled: raw[STORAGE_FIELDS.notificationsEnabled] !== false,
+            ...normalizeMonitoringFields(raw),
+        };
         return monitoringStorage.ingestJobs(snapshot, jobs);
     }
 
     async function getUnseenJobs(jobs: JobRecord[]): Promise<JobRecord[]> {
-        const snapshot = await getSnapshot();
-        return monitoringStorage.getUnseenJobs(snapshot, jobs);
+        const raw = await client.get(STORAGE_FIELDS.seenJobs);
+        return monitoringStorage.getUnseenJobs(
+            { seenJobs: normalizeSeenJobs(raw[STORAGE_FIELDS.seenJobs]) },
+            jobs
+        );
     }
 
     async function rememberJobsWithoutStats(jobs: JobRecord[]): Promise<string[]> {
-        const snapshot = await getSnapshot();
-        return monitoringStorage.rememberJobsWithoutStats(snapshot, jobs);
+        const raw = await client.get(STORAGE_FIELDS.seenJobs);
+        return monitoringStorage.rememberJobsWithoutStats(
+            { seenJobs: normalizeSeenJobs(raw[STORAGE_FIELDS.seenJobs]) },
+            jobs
+        );
     }
 
     async function mergeRecentJobs(jobs: JobRecord[]): Promise<JobRecord[]> {

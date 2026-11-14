@@ -163,7 +163,7 @@ export function normalizeQueuedAutofill(
     };
 }
 
-export function toStoredQueuedAutofill(draft: PlatformAutofillDraft): Record<string, unknown> {
+function toStoredQueuedAutofill(draft: PlatformAutofillDraft): Record<string, unknown> {
     return {
         platformId: draft.platformId,
         projectId: draft.projectId,

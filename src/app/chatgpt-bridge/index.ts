@@ -58,7 +58,7 @@ function isElementMounted(element: Element | null): boolean {
     return element.isConnected ?? (document.contains ? document.contains(element) : true);
 }
 
-export function isElementVisible(element: Element | null): boolean {
+function isElementVisible(element: Element | null): boolean {
     if (!element || !(element instanceof HTMLElement)) {
         return false;
     }
@@ -103,7 +103,7 @@ export function isElementVisible(element: Element | null): boolean {
     return true;
 }
 
-export function isEditableChatInput(element: Element | null): boolean {
+function isEditableChatInput(element: Element | null): boolean {
     if (!element || !(element instanceof HTMLElement)) {
         return false;
     }
@@ -133,7 +133,7 @@ function isReadyChatInput(element: Element | null): element is HTMLTextAreaEleme
     return isEditableChatInput(element) && isElementVisible(element);
 }
 
-export function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
+function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
     const promptTextarea = document.querySelector(
         '#prompt-textarea, div[contenteditable="true"]#prompt-textarea'
     );
@@ -251,7 +251,7 @@ function getEditorText(element: HTMLElement): string {
     return element.innerText || element.textContent || '';
 }
 
-export function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
+function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
     try {
         window.focus();
     } catch {

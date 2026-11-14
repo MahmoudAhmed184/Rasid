@@ -4,6 +4,7 @@ import {
     createBrowserRepositories,
     createChatGptBridgeRepositories,
     createPlatformContentRepositories,
+    createPopupRepositories,
 } from '../../../../src/app/repositories/browser-repositories';
 
 describe('browser repository composition', () => {
@@ -33,11 +34,15 @@ describe('browser repository composition', () => {
         });
     });
 
-    it('creates scoped repository graphs for content scripts and the ChatGPT bridge', () => {
+    it('creates scoped repository graphs for content scripts, popup, and the ChatGPT bridge', () => {
         expect(createPlatformContentRepositories()).toEqual({
             promptRepository: expect.any(Object),
             proposalRepository: expect.any(Object),
             trackingRepository: expect.any(Object),
+        });
+        expect(createPopupRepositories()).toEqual({
+            monitoringRepository: expect.any(Object),
+            extensionStorage: expect.any(Object),
         });
         expect(createChatGptBridgeRepositories()).toEqual({
             proposalRepository: expect.any(Object),

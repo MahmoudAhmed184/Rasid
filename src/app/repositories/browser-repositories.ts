@@ -35,6 +35,11 @@ export type PlatformContentRepositories = Pick<
     'promptRepository' | 'proposalRepository' | 'trackingRepository'
 >;
 
+export type PopupRepositories = Pick<
+    BrowserStorageComposition,
+    'monitoringRepository' | 'extensionStorage'
+>;
+
 export type ChatGptBridgeRepositories = Pick<BrowserStorageComposition, 'proposalRepository'>;
 
 function createStorageComposition() {
@@ -75,6 +80,15 @@ export function createPlatformContentRepositories(): PlatformContentRepositories
         promptRepository: createPromptRepository(extensionStorage),
         proposalRepository: createProposalRepository(extensionStorage, storageClient),
         trackingRepository: createTrackingRepository(extensionStorage),
+    };
+}
+
+export function createPopupRepositories(): PopupRepositories {
+    const { extensionStorage } = createStorageComposition();
+
+    return {
+        monitoringRepository: createMonitoringRepository(extensionStorage),
+        extensionStorage,
     };
 }
 

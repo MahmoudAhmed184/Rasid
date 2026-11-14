@@ -73,8 +73,8 @@ interface BidTrackerLoadOptions {
 }
 
 export const MOSTAQL_BID_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
-export const MOSTAQL_BID_DASHBOARD_MAX_PAGES = 20;
-export const MOSTAQL_BID_PAGE_TIMEOUT_MS = 10_000;
+const MOSTAQL_BID_DASHBOARD_MAX_PAGES = 20;
+const MOSTAQL_BID_PAGE_TIMEOUT_MS = 10_000;
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const ITEMS_PER_PAGE = 25;

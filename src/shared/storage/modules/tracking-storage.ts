@@ -14,7 +14,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
 }
 
-export function cloneTrackedProjects(
+function cloneTrackedProjects(
     value: Readonly<Record<string, TrackedProject>>
 ): Record<string, TrackedProject> {
     return Object.fromEntries(
