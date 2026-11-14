@@ -22,6 +22,77 @@ describe('Khamsat HTML parser', () => {
         expect(jobs[0]?.postedAt).toBeUndefined();
     });
 
+    it('extracts publish date and last interaction from modern Khamsat listing markup', () => {
+        const html = `
+            <table>
+                <tr class="forum_post">
+                    <td class="details-td">
+                        <h3 class="details-head">
+                            <a href="/community/requests/800583-modern-request">مطلوب مطور واجهات</a>
+                        </h3>
+                        <ul class="details-list">
+                            <li>
+                                <a class="user" href="/user/salma_m_ezzat">Salma E</a>
+                            </li>
+                            <li class="d-lg-inline-block d-none">
+                                <span dir="ltr" title="12/11/2026 18:21:24 GMT">منذ يوم و18 ساعة</span>
+                            </li>
+                            <li class="d-lg-none d-inline-block">
+                                <span title="14/11/2026 12:45:40 GMT">آخر تفاعل منذ دقيقة</span>
+                            </li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+        `;
+
+        const jobs = parseKhamsatListingHtml(html);
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]).toMatchObject({
+            id: '800583',
+            platformId: 'khamsat',
+            title: 'مطلوب مطور واجهات',
+            poster: 'Salma E',
+            time: 'منذ يوم و18 ساعة',
+            postedAt: '12/11/2026 18:21:24 GMT',
+            lastInteractionAt: '14/11/2026 12:45:40 GMT',
+        });
+    });
+
+    it('extracts publish date when request is fresh with zero comments (single timestamp span)', () => {
+        const html = `
+            <table>
+                <tr class="forum_post">
+                    <td class="details-td">
+                        <h3 class="details-head">
+                            <a href="/community/requests/800661-new-post">مبرمج بايثون فوري</a>
+                        </h3>
+                        <ul class="details-list">
+                            <li>
+                                <a class="user" href="/user/mohammad">Mohammad A</a>
+                            </li>
+                            <li class="d-lg-inline-block d-none">
+                                <span dir="ltr" title="14/11/2026 13:10:00 GMT">منذ دقيقة</span>
+                            </li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+        `;
+
+        const jobs = parseKhamsatListingHtml(html);
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]).toMatchObject({
+            id: '800661',
+            platformId: 'khamsat',
+            title: 'مبرمج بايثون فوري',
+            poster: 'Mohammad A',
+            time: 'منذ دقيقة',
+            postedAt: '14/11/2026 13:10:00 GMT',
+        });
+        expect(jobs[0].lastInteractionAt).toBeUndefined();
+    });
+
     it('deduplicates request listings and ignores malformed request rows', () => {
         const jobs = parseKhamsatListingHtml(`
             <table>

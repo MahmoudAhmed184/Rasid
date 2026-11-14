@@ -55,6 +55,35 @@ describe('Nafezly HTML parser', () => {
         ]);
     });
 
+    it('extracts poster from js-profile-app-gate role=owner and parses minute timestamps', () => {
+        const jobs = parseNafezlyListingHtml(`
+            <div class="project-box">
+                <a href="https://nafezly.com/project/58421-google-play">مطلوب حسابات مطور</a>
+                <h3 class="naskh">تفاصيل سريعة للمشروع</h3>
+                <a href="javascript:void(0)" class="js-profile-app-gate" data-profile-role="owner">Yousef Ahmed</a>
+                <span class="kufi">50 - 100 $</span>
+                <span class="kufi">1 أيام</span>
+                <span class="kufi">0 عروض</span>
+                <span class="kufi">منذ دقيقتين</span>
+            </div>
+        `);
+
+        expect(jobs).toEqual([
+            expect.objectContaining({
+                id: '58421',
+                title: 'مطلوب حسابات مطور',
+                poster: 'Yousef Ahmed',
+                budget: '50 - 100 $',
+                duration: '1 أيام',
+                bidsText: '0 عروض',
+                time: 'منذ دقيقتين',
+                status: 'مفتوح',
+            }),
+        ]);
+        expect(jobs[0].postedAt).toBeDefined();
+        expect(Date.parse(jobs[0].postedAt!)).toBeGreaterThan(0);
+    });
+
     it('extracts project details from Arabic card sections', () => {
         const project = parseNafezlyProjectHtml(readTextFixture('nafezly', 'project.html'));
 

@@ -43,6 +43,57 @@ describe('Mostaql HTML parser', () => {
         });
     });
 
+    it('parses modern Mostaql listing table row with action buttons and normalized UTC datetime', () => {
+        const html = `
+            <table>
+                <tr class="project-row">
+                    <td>
+                        <div class="card--actions">
+                            <a href="https://mostaql.com/project/create?template=1293010">مشروع مماثل</a>
+                        </div>
+                        <h2>
+                            <a href="https://mostaql.com/project/1293010-design">تصميم معماري</a>
+                        </h2>
+                        <ul class="list-meta-items">
+                            <li class="text-muted"><i class="fa fa-user"></i> <bdi>وليد م.</bdi></li>
+                            <li class="text-muted">
+                                <time datetime="2026-11-14 12:06:32" title="2026-11-14 12:06:32">
+                                    <i class="fa fa-clock-o"></i> منذ 18 دقيقة
+                                </time>
+                            </li>
+                            <li class="text-muted"><span class="hsoub-file-signature-icon"></span> 3 عروض</li>
+                        </ul>
+                        <p class="text-wrapper-div project__brief">
+                            <a href="https://mostaql.com/project/1293010-design" class="details-url">تصميم معماري لدور متكرر</a>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        `;
+
+        const jobs = parseMostaqlListingHtml(html);
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]).toMatchObject({
+            id: '1293010',
+            platformId: 'mostaql',
+            title: 'تصميم معماري',
+            url: 'https://mostaql.com/project/1293010-design',
+            poster: 'وليد م.',
+            time: 'منذ 18 دقيقة',
+            postedAt: '2026-11-14T12:06:32Z',
+            bidsText: '3 عروض',
+            description: 'تصميم معماري لدور متكرر',
+        });
+    });
+
+    it('extracts jobs from listing-modern fixture with action buttons and multiple rows', () => {
+        const jobs = parseMostaqlListingHtml(readTextFixture('mostaql', 'listing-modern.html'));
+        expect(jobs).toHaveLength(2);
+        expect(jobs[0].id).toBe('1293010');
+        expect(jobs[1].id).toBe('1293009');
+        expect(jobs[1].title).toBe('إعلانات ممولة');
+    });
+
     it('deduplicates listing rows and falls back to standalone project anchors when needed', () => {
         expect(
             parseMostaqlListingHtml(`
@@ -83,6 +134,49 @@ describe('Mostaql HTML parser', () => {
                 url: 'https://mostaql.com/project/902-fallback-title',
             }),
         ]);
+    });
+
+    it('prioritizes title link with non-empty text when icon anchor or description anchor precedes it', () => {
+        const html = `
+            <div class="list-group-item">
+                <a href="/project/555-my-job"><i class="fa fa-folder"></i></a>
+                <h2><a href="/project/555-my-job">تطوير تطبيق متكامل</a></h2>
+                <p class="project__brief">
+                    <a href="/project/555-my-job" class="details-url">تفاصيل المشروع في الوصف</a>
+                </p>
+            </div>
+        `;
+        const jobs = parseMostaqlListingHtml(html);
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0].title).toBe('تطوير تطبيق متكامل');
+        expect(jobs[0].id).toBe('555');
+    });
+
+    it('extracts metadata from fallback table row including date, budget, and poster', () => {
+        const html = `
+            <table>
+                <tr>
+                    <td>
+                        <a href="/project/777-table-job">تنفيذ متجر إلكتروني</a>
+                        <bdi>أحمد م.</bdi>
+                    </td>
+                    <td></td>
+                    <td>5 عروض</td>
+                    <td>$250 - $500</td>
+                    <td><time datetime="2026-11-14 10:00:00">منذ ساعتين</time></td>
+                </tr>
+            </table>
+        `;
+        const jobs = parseMostaqlListingHtml(html);
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]).toMatchObject({
+            id: '777',
+            title: 'تنفيذ متجر إلكتروني',
+            poster: 'أحمد م.',
+            budget: '$250 - $500',
+            postedAt: '2026-11-14T10:00:00Z',
+            bidsText: '5 عروض',
+        });
     });
 
     it('extracts project details from Arabic metadata rows and author containers', () => {

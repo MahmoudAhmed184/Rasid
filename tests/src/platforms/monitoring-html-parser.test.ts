@@ -5,7 +5,10 @@ import type {
     OffscreenTask,
     OffscreenTaskPayloadMap,
 } from '../../../src/features/offscreen/manager';
-import { createPlatformMonitoringHtmlParser } from '../../../src/platforms/monitoring-html-parser';
+import {
+    createPlatformMonitoringHtmlParser,
+    pruneHtmlForParsing,
+} from '../../../src/platforms/monitoring-html-parser';
 import { readTextFixture } from '../../support/fixtures';
 
 describe('platform monitoring HTML parser bridge', () => {
@@ -34,6 +37,22 @@ describe('platform monitoring HTML parser bridge', () => {
                 handlers.get('monitoring.parse-listing-html')?.({
                     platformId: 'mostaql',
                     html: '<title>Just a moment</title>',
+                })
+            )
+        ).resolves.toEqual([]);
+        await expect(
+            Promise.resolve(
+                handlers.get('monitoring.parse-listing-html')?.({
+                    platformId: 'khamsat',
+                    html: '<div id="challenge-container"><script src="https://token.awswaf.com/challenge.js"></script></div>',
+                })
+            )
+        ).resolves.toEqual([]);
+        await expect(
+            Promise.resolve(
+                handlers.get('monitoring.parse-listing-html')?.({
+                    platformId: 'nafezly',
+                    html: '<div class="cf-turnstile">Please verify that you\'re not a robot</div>',
                 })
             )
         ).resolves.toEqual([]);
@@ -145,5 +164,64 @@ describe('platform monitoring HTML parser bridge', () => {
             platformId: 'nafezly',
             html: '<main></main>',
         });
+    });
+
+    it('prunes non-essential markup before serializing across offscreen IPC', async () => {
+        const rawHtml = `
+            <!doctype html>
+            <html>
+                <head>
+                    <title>Test Page</title>
+                    <style>.heavy { color: red; }</style>
+                    <link rel="stylesheet" href="/app.css">
+                    <script src="/tracking.js"></script>
+                    <script>window.__PRELOADED_STATE__ = { large: "state" };</script>
+                </head>
+                <body>
+                    <!-- A comment block -->
+                    <svg viewBox="0 0 100 100"><path d="M10 10 H 90 V 90 H 10 L 10 10"/></svg>
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+                    <noscript><p>Please enable JS</p></noscript>
+                    <main>
+                        <div class="job-card">Clean Job Content</div>
+                    </main>
+                </body>
+            </html>
+        `;
+
+        const pruned = pruneHtmlForParsing(rawHtml);
+        expect(pruned).not.toContain('<script');
+        expect(pruned).not.toContain('<style');
+        expect(pruned).not.toContain('<svg');
+        expect(pruned).not.toContain('<img');
+        expect(pruned).not.toContain('<noscript');
+        expect(pruned).not.toContain('A comment block');
+        expect(pruned).toContain('<div class="job-card">Clean Job Content</div>');
+
+        const request = vi.fn(async () => []);
+        const offscreen = {
+            bootstrap: vi.fn(async () => undefined),
+            request: request as unknown as OffscreenManager['request'],
+            registerLocalHandler: vi.fn(),
+        } as unknown as OffscreenManager;
+        const parser = createPlatformMonitoringHtmlParser(offscreen);
+
+        await parser.parseListingHtml('mostaql', rawHtml);
+        expect(request).toHaveBeenCalledWith('monitoring.parse-listing-html', {
+            platformId: 'mostaql',
+            html: pruned,
+        });
+
+        // Challenge and empty HTML should return immediately without making an IPC request
+        const emptyResult = await parser.parseListingHtml('mostaql', '   ');
+        expect(emptyResult).toEqual([]);
+        expect(request).toHaveBeenCalledOnce();
+
+        const challengeResult = await parser.parseProjectHtml(
+            'khamsat',
+            '<title>Just a moment...</title>'
+        );
+        expect(challengeResult).toBeNull();
+        expect(request).toHaveBeenCalledOnce();
     });
 });

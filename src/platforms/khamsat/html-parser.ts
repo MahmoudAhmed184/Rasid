@@ -1,6 +1,7 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
 import { parseSafeDocument } from '../../shared/dom/safe-html';
+import { parseJobPostedAt } from '../../shared/parsing/arabic-date';
 import { KHAMSAT_SELECTORS, queryAll, queryFirst } from './selectors';
 
 const KHAMSAT_HOSTS = ['khamsat.com'] as const;
@@ -36,19 +37,33 @@ function extractKhamsatRequestId(url: string): string | null {
 }
 
 function findKhamsatSidebarPublishDate(doc: Document): string {
-    for (const sidebar of queryAll<HTMLElement>(doc, KHAMSAT_SELECTORS.project.sidebarContainers)) {
-        for (const titledValue of sidebar.querySelectorAll<HTMLElement>('span[title]')) {
+    const sidebars = queryAll<HTMLElement>(doc, [
+        ...KHAMSAT_SELECTORS.project.sidebarContainers,
+        '.sidebar',
+        '.community-sidebar',
+        'aside',
+    ]);
+
+    for (const sidebar of sidebars) {
+        for (const titledValue of sidebar.querySelectorAll<HTMLElement>(
+            'span[title], time[datetime], time[title], [title]'
+        )) {
             const metadataRow =
                 titledValue.closest('li, tr, .media, .d-flex, .row, p, div') ??
                 titledValue.parentElement;
             const rowText = normalizeText(metadataRow?.textContent);
 
-            if (!rowText.includes('تاريخ النشر')) {
+            if (
+                !rowText.includes('تاريخ النشر') &&
+                !rowText.includes('نشر في') &&
+                !rowText.includes('تاريخ الإضافة')
+            ) {
                 continue;
             }
 
             return (
                 normalizeText(titledValue.getAttribute('title')) ||
+                normalizeText(titledValue.getAttribute('datetime')) ||
                 normalizeText(titledValue.textContent)
             );
         }
@@ -80,10 +95,47 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
         const ownerLink = detailsCell?.querySelector<HTMLAnchorElement>(
             KHAMSAT_SELECTORS.listing.ownerLink
         );
-        const publishTime =
-            detailsCell?.querySelector<HTMLSpanElement>(
-                KHAMSAT_SELECTORS.listing.lastInteractionTime
-            ) ?? null;
+        const spansWithTitle = Array.from(
+            detailsCell?.querySelectorAll<HTMLSpanElement>('.details-list span[title]') ?? []
+        );
+
+        let publishTimeSpan: HTMLSpanElement | null = null;
+        let lastInteractionSpan: HTMLSpanElement | null = null;
+
+        if (spansWithTitle.length >= 2) {
+            publishTimeSpan = spansWithTitle[0];
+            lastInteractionSpan = spansWithTitle[1];
+        } else if (spansWithTitle.length === 1) {
+            const span = spansWithTitle[0];
+            const title = span?.getAttribute('title') ?? '';
+            const dir = span?.getAttribute('dir');
+            const spanText = normalizeText(span?.textContent);
+
+            if (
+                title.includes('GMT') ||
+                dir === 'ltr' ||
+                (!spanText.includes('تفاعل') && title.includes('/'))
+            ) {
+                publishTimeSpan = span;
+            } else {
+                lastInteractionSpan = span;
+            }
+        }
+
+        const rawPublishTitle = normalizeText(publishTimeSpan?.getAttribute('title'));
+        const rawPublishText = normalizeText(publishTimeSpan?.textContent);
+        const rawInteractionTitle = normalizeText(lastInteractionSpan?.getAttribute('title'));
+        const rawInteractionText = normalizeText(lastInteractionSpan?.textContent);
+
+        const publishTime = rawPublishText || rawInteractionText;
+
+        let postedAt: string | undefined;
+        if (rawPublishTitle) {
+            postedAt = rawPublishTitle;
+        } else if (rawPublishText) {
+            const parsed = parseJobPostedAt(rawPublishText);
+            postedAt = parsed ? parsed.toISOString() : undefined;
+        }
 
         seenIds.add(id);
 
@@ -93,8 +145,9 @@ export function parseKhamsatListingHtml(html: string): JobRecord[] {
             title: normalizeText(link.textContent),
             url,
             poster: normalizeText(ownerLink?.textContent),
-            time: normalizeText(publishTime?.textContent),
-            lastInteractionAt: normalizeText(publishTime?.getAttribute('title')),
+            time: publishTime || undefined,
+            postedAt,
+            lastInteractionAt: rawInteractionTitle || undefined,
         });
     });
 

@@ -68,6 +68,9 @@ describe('shared parsing helpers', () => {
         expect(parseArabicDate('اليوم مايو 2026')).toBeNull();
         expect(parseArabicDate('22 مايو السنة')).toBeNull();
         expect(parseArabicDate(undefined)).toBeNull();
+        expect(parseArabicDate('15 كانون الثاني 2026')?.getMonth()).toBe(0);
+        expect(parseArabicDate('20 تشرين الأول 2026')?.getMonth()).toBe(9);
+        expect(parseArabicDate('1 أيار 2026')?.getMonth()).toBe(4);
         expect(calculateArabicDateAgeDays('20 مايو 2026', new Date(2026, 4, 22))).toBe(2);
         expect(calculateArabicDateAgeDays('24 مايو 2026', new Date(2026, 4, 22))).toBe(2);
         expect(calculateArabicDateAgeDays('', new Date(2026, 4, 22))).toBe(-1);
@@ -79,5 +82,90 @@ describe('shared parsing helpers', () => {
         );
         expect(parseJobPostedAt('05/06/2026 GMT')?.toISOString()).toBe('2026-06-05T00:00:00.000Z');
         expect(parseJobPostedAt('31/02/2026 08:30 GMT')).toBeNull();
+    });
+
+    it('parses Mostaql space-separated UTC datetime strings', () => {
+        expect(parseJobPostedAt('2026-11-14 12:06:32')?.toISOString()).toBe(
+            '2026-11-14T12:06:32.000Z'
+        );
+        expect(parseJobPostedAt('2026-05-22 08:30')?.toISOString()).toBe(
+            '2026-05-22T08:30:00.000Z'
+        );
+    });
+
+    it('parses relative Arabic date strings accurately', () => {
+        const now = new Date('2026-11-14T12:00:00.000Z');
+
+        expect(parseJobPostedAt('منذ لحظات', now)?.toISOString()).toBe('2026-11-14T12:00:00.000Z');
+        expect(parseJobPostedAt('الآن', now)?.toISOString()).toBe('2026-11-14T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ دقيقة', now)?.toISOString()).toBe('2026-11-14T11:59:00.000Z');
+        expect(parseJobPostedAt('منذ دقيقتين', now)?.toISOString()).toBe(
+            '2026-11-14T11:58:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ 18 دقيقة', now)?.toISOString()).toBe(
+            '2026-11-14T11:42:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ١٨ دقيقة', now)?.toISOString()).toBe(
+            '2026-11-14T11:42:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ساعة', now)?.toISOString()).toBe('2026-11-14T11:00:00.000Z');
+        expect(parseJobPostedAt('منذ ساعتين', now)?.toISOString()).toBe('2026-11-14T10:00:00.000Z');
+        expect(parseJobPostedAt('منذ 3 ساعات', now)?.toISOString()).toBe(
+            '2026-11-14T09:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ يوم', now)?.toISOString()).toBe('2026-11-13T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ يومين', now)?.toISOString()).toBe('2026-11-12T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ ٣ أيام', now)?.toISOString()).toBe('2026-11-11T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ أسبوع', now)?.toISOString()).toBe('2026-11-07T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ شهر', now)?.toISOString()).toBe('2026-10-15T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ شهرين', now)?.toISOString()).toBe('2026-09-15T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ سنة', now)?.toISOString()).toBe('2025-11-14T12:00:00.000Z');
+        expect(parseJobPostedAt('منذ يوم و18 ساعة', now)?.toISOString()).toBe(
+            '2026-11-12T18:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ثانية', now)?.toISOString()).toBe('2026-11-14T11:59:59.000Z');
+        expect(parseJobPostedAt('منذ ثانيتين', now)?.toISOString()).toBe(
+            '2026-11-14T11:59:58.000Z'
+        );
+        expect(parseJobPostedAt('منذ 10 ثواني', now)?.toISOString()).toBe(
+            '2026-11-14T11:59:50.000Z'
+        );
+        expect(parseJobPostedAt('منذ لحظة', now)?.toISOString()).toBe('2026-11-14T12:00:00.000Z');
+        expect(parseJobPostedAt('أقل من دقيقة', now)?.toISOString()).toBe(
+            '2026-11-14T12:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ أقل من دقيقة', now)?.toISOString()).toBe(
+            '2026-11-14T12:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ نصف دقيقة', now)?.toISOString()).toBe(
+            '2026-11-14T11:59:30.000Z'
+        );
+        expect(parseJobPostedAt('منذ ثلث ساعة', now)?.toISOString()).toBe(
+            '2026-11-14T11:40:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ساعة ونصف', now)?.toISOString()).toBe(
+            '2026-11-14T10:30:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ساعة وربع', now)?.toISOString()).toBe(
+            '2026-11-14T10:45:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ ساعة وثلث', now)?.toISOString()).toBe(
+            '2026-11-14T10:40:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ يوم ونصف', now)?.toISOString()).toBe(
+            '2026-11-13T00:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ حوالي 5 دقائق', now)?.toISOString()).toBe(
+            '2026-11-14T11:55:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ قرابة ساعة', now)?.toISOString()).toBe(
+            '2026-11-14T11:00:00.000Z'
+        );
+        expect(parseJobPostedAt('منذ نحو ساعتين', now)?.toISOString()).toBe(
+            '2026-11-14T10:00:00.000Z'
+        );
+        expect(parseJobPostedAt('5 دقائق تقريبا', now)?.toISOString()).toBe(
+            '2026-11-14T11:55:00.000Z'
+        );
     });
 });

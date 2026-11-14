@@ -1,6 +1,7 @@
 import type { JobRecord } from '../../entities/job/model';
 import { resolvePlatformUrl } from '../../entities/platform/url';
 import { parseSafeDocument } from '../../shared/dom/safe-html';
+import { parseJobPostedAt } from '../../shared/parsing/arabic-date';
 
 const NAFEZLY_HOSTS = ['nafezly.com'] as const;
 const NAFEZLY_BASE_URL = 'https://nafezly.com/';
@@ -86,8 +87,12 @@ export function parseNafezlyListingHtml(html: string): JobRecord[] {
         seenIds.add(id);
 
         const preview = normalizeText(card.querySelector('h3.naskh')?.textContent);
-        const poster = normalizeText(card.querySelector('a[href*="/u/"]')?.textContent);
-        const metaText = [...card.querySelectorAll<HTMLElement>('span.kufi')]
+        const poster = normalizeText(
+            card.querySelector(
+                '[data-profile-role="owner"], .js-profile-app-gate, a[href*="/u/"], .user-name'
+            )?.textContent
+        );
+        const metaText = [...card.querySelectorAll<HTMLElement>('span.kufi, .kufi')]
             .map((element) => normalizeText(element.textContent))
             .filter(Boolean);
 
@@ -97,8 +102,25 @@ export function parseNafezlyListingHtml(html: string): JobRecord[] {
             metaText.find((text) => text.includes('يوم') || text.includes('أيام')) ?? undefined;
         const bidsText =
             metaText.find((text) => text.includes('عرض') || text.includes('عروض')) ?? undefined;
+        const clockEl = card.querySelector('.fa-clock, .fal.fa-clock, [class*="clock"]');
+        const clockText = clockEl
+            ? normalizeText(clockEl.closest('span, div, p')?.textContent)
+            : '';
+
         const time =
-            metaText.find((text) => text.includes('منذ') || text.includes('ساعة')) ?? undefined;
+            clockText ||
+            metaText.find(
+                (text) =>
+                    text.includes('منذ') ||
+                    text.includes('ساعة') ||
+                    text.includes('دقيقة') ||
+                    text.includes('الآن') ||
+                    text.includes('ثوان') ||
+                    text.includes('لحظ')
+            );
+
+        const parsedPostedAt = time ? parseJobPostedAt(time) : null;
+        const postedAt = parsedPostedAt ? parsedPostedAt.toISOString() : undefined;
 
         jobs.push({
             id,
@@ -111,6 +133,8 @@ export function parseNafezlyListingHtml(html: string): JobRecord[] {
             duration,
             bidsText,
             time,
+            postedAt,
+            status: 'مفتوح',
         });
     }
 
@@ -122,7 +146,9 @@ export function parseNafezlyProjectHtml(html: string): Partial<JobRecord> | null
     const descriptionSection = findSectionContent(doc, 'تفاصيل المشروع');
     const projectCardSection = findSectionContent(doc, 'بطاقة المشروع');
     const ownerName = normalizeText(
-        projectCardSection?.querySelector<HTMLElement>('a[href*="/u/"]')?.textContent
+        projectCardSection?.querySelector<HTMLElement>(
+            '[data-profile-role="owner"], .js-profile-app-gate, a[href*="/u/"], .user-name'
+        )?.textContent
     );
     const detailRows = projectCardSection ? parseDetailRows(projectCardSection) : {};
     const description = normalizeText(
