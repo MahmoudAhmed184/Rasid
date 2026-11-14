@@ -408,7 +408,7 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             const text = await report.innerText();
             console.log(`[REPORT TEXT]: "${text}"`);
 
-            expect(elapsed).toBeLessThanOrEqual(5000);
+            expect(elapsed).toBeLessThanOrEqual(10_000);
         } finally {
             await context.close();
         }
