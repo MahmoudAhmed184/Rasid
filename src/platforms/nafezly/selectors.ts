@@ -58,8 +58,24 @@ export function queryFirst<T extends Element>(
     return null;
 }
 
-export function queryAll<T extends Element>(root: ParentNode, selector: string): T[] {
-    return [...root.querySelectorAll(selector)].filter(
-        (element): element is T => element instanceof Element
-    );
+export function queryAll<T extends Element>(
+    root: ParentNode,
+    selectors: string | readonly string[]
+): T[] {
+    const selectorList = typeof selectors === 'string' ? [selectors] : selectors;
+    const matches: T[] = [];
+    const seen = new Set<Element>();
+
+    for (const selector of selectorList) {
+        for (const element of root.querySelectorAll(selector)) {
+            if (!(element instanceof Element) || seen.has(element)) {
+                continue;
+            }
+
+            seen.add(element);
+            matches.push(element as T);
+        }
+    }
+
+    return matches;
 }

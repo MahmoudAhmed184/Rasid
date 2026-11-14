@@ -78,9 +78,7 @@ export const nafezlyAdapter = {
         return matchPage(url);
     },
     getObservationTargets({ document }) {
-        return NAFEZLY_SELECTORS.observation.targets.flatMap((selector) =>
-            queryAll<Element>(document, selector)
-        );
+        return queryAll<Element>(document, NAFEZLY_SELECTORS.observation.targets);
     },
     extractProposalSource(input) {
         return extractNafezlyProposalSource(input);

@@ -213,4 +213,76 @@ describe('Nafezly platform adapter', () => {
 
         expect(document.getElementById('rasid-nafezly-panel')).toBeNull();
     });
+
+    it('resolves observation targets from the document', () => {
+        const document = installTestDom(`
+            <main>
+                <div class="main-nafez-box-styles"></div>
+                <section id="add-offer"></section>
+            </main>
+        `);
+
+        const targets = nafezlyAdapter.getObservationTargets({
+            document,
+            page: { kind: 'project', key: 'project:1', projectId: '1' },
+        });
+
+        expect(targets.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('extracts proposal source from project page document', () => {
+        const document = installTestDom(`
+            <meta name="nafezly-title" content="مشروع تطوير تطبيق ويب" />
+            <div class="main-nafez-box-styles">
+                <span class="mb-1">تفاصيل المشروع</span>
+                <h2>وصف تفصيلي كامل لمشروع نفذلي المطلوب تنفيذه</h2>
+            </div>
+            <div class="main-nafez-box-styles">
+                <span class="mb-1">بطاقة المشروع</span>
+                <a href="https://nafezly.com/u/client123">العميل محمد</a>
+                <div class="col-12 row">
+                    <div>الميزانية</div>
+                    <div>150 - 300 $</div>
+                </div>
+                <div class="col-12 row">
+                    <div>المدة المتاحة</div>
+                    <div>10 أيام</div>
+                </div>
+                <div class="col-12 row">
+                    <div>تاريخ النشر</div>
+                    <div>منذ ساعتين</div>
+                </div>
+                <div class="col-12 row">
+                    <div>حالة المشروع</div>
+                    <div>مفتوح</div>
+                </div>
+            </div>
+            <a class="tag-class" href="/projects/skill/react">React</a>
+            <a class="tag-class" href="/projects/skill/node">Node.js</a>
+        `);
+
+        const source = nafezlyAdapter.extractProposalSource({
+            page: { kind: 'project', key: 'project:999', projectId: '999' },
+            document,
+            url: new URL('https://nafezly.com/project/999-web-app'),
+        });
+
+        expect(source).toMatchObject({
+            minBudget: 150,
+            durationDays: 10,
+            trackedProject: {
+                id: '999',
+                platformId: 'nafezly',
+                title: 'مشروع تطوير تطبيق ويب',
+                clientName: 'العميل محمد',
+                status: 'مفتوح',
+                tags: 'React, Node.js',
+            },
+            aiContext: {
+                title: 'مشروع تطوير تطبيق ويب',
+                tags: ['React', 'Node.js'],
+            },
+        });
+        expect(source?.aiContext.description).toContain('وصف تفصيلي كامل');
+    });
 });
