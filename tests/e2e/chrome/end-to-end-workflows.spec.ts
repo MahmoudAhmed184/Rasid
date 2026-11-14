@@ -307,66 +307,174 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
         }
     });
 
-    test('Helium Notifications: creates separate individual notifications for batch jobs without aggregation', async () => {
+    test('Helium Notifications: creates separate individual notifications for batch jobs without aggregation and clicking directs to project link', async () => {
         const { context } = await launchChromiumExtension();
 
         try {
+            await context.route('https://mostaql.com/**', async (route) => {
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'text/html',
+                    body: '<!DOCTYPE html><html><head><title>Mostaql Project</title></head><body><h1>Project Details</h1></body></html>',
+                });
+            });
+
             let [serviceWorker] = context.serviceWorkers();
             if (!serviceWorker) {
                 serviceWorker = await context.waitForEvent('serviceworker');
             }
 
-            const res = await serviceWorker.evaluate(async () => {
-                const chromeObj = (
-                    globalThis as unknown as {
-                        chrome: {
-                            runtime: { getURL: (path: string) => string };
-                            notifications: {
-                                create: (id: string, options: unknown) => Promise<string>;
-                                getAll: (
-                                    callback: (notifications: Record<string, boolean>) => void
-                                ) => void;
+            const url1 = 'https://mostaql.com/project/100001';
+            const url2 = 'https://mostaql.com/project/100002';
+            const id1 = `rasid-batch-1-${Date.now()}`;
+            const id2 = `rasid-batch-2-${Date.now()}`;
+
+            const res = await serviceWorker.evaluate(
+                async ({ id1, id2, url1, url2 }) => {
+                    const chromeObj = (
+                        globalThis as unknown as {
+                            chrome: {
+                                runtime: { getURL: (path: string) => string };
+                                storage: {
+                                    local: {
+                                        set: (items: Record<string, unknown>) => Promise<void>;
+                                    };
+                                };
+                                notifications: {
+                                    create: (id: string, options: unknown) => Promise<string>;
+                                    getAll: (
+                                        callback: (notifications: Record<string, boolean>) => void
+                                    ) => void;
+                                };
                             };
-                        };
-                    }
-                ).chrome;
-                const id1 = `rasid-batch-1-${Date.now()}`;
-                const id2 = `rasid-batch-2-${Date.now()}`;
+                        }
+                    ).chrome;
 
-                await chromeObj.notifications.create(id1, {
-                    type: 'basic',
-                    iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
-                    title: 'مشروع مستقل الأول',
-                    message: 'الميزانية: $500\nتفاصيل المشروع الأول...',
-                    contextMessage: 'Rasid - مستقل',
-                    buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
-                    priority: 2,
-                    requireInteraction: true,
-                });
+                    // Store notification payloads for project URL routing
+                    await chromeObj.storage.local.set({
+                        [`rasid:notif:${id1}`]: {
+                            url: url1,
+                            jobId: 'b-1',
+                            createdAt: new Date().toISOString(),
+                        },
+                        [`rasid:notif:${id2}`]: {
+                            url: url2,
+                            jobId: 'b-2',
+                            createdAt: new Date().toISOString(),
+                        },
+                    });
 
-                await new Promise((r) => setTimeout(r, 100));
+                    await chromeObj.notifications.create(id1, {
+                        type: 'basic',
+                        iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
+                        title: 'مشروع مستقل الأول',
+                        message: 'الميزانية: $500\nتفاصيل المشروع الأول...',
+                        contextMessage: 'Rasid - مستقل',
+                        buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+                        priority: 2,
+                        requireInteraction: true,
+                    });
 
-                await chromeObj.notifications.create(id2, {
-                    type: 'basic',
-                    iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
-                    title: 'مشروع مستقل الثاني',
-                    message: 'الميزانية: $1000\nتفاصيل المشروع الثاني...',
-                    contextMessage: 'Rasid - مستقل',
-                    buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
-                    priority: 2,
-                    requireInteraction: true,
-                });
+                    await new Promise((r) => setTimeout(r, 100));
 
-                const all = await new Promise<Record<string, boolean>>((r) =>
-                    chromeObj.notifications.getAll(r)
-                );
+                    await chromeObj.notifications.create(id2, {
+                        type: 'basic',
+                        iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
+                        title: 'مشروع مستقل الثاني',
+                        message: 'الميزانية: $1000\nتفاصيل المشروع الثاني...',
+                        contextMessage: 'Rasid - مستقل',
+                        buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+                        priority: 2,
+                        requireInteraction: true,
+                    });
 
-                return { id1, id2, all };
-            });
+                    const all = await new Promise<Record<string, boolean>>((r) =>
+                        chromeObj.notifications.getAll(r)
+                    );
 
+                    return { id1, id2, all };
+                },
+                { id1, id2, url1, url2 }
+            );
+
+            // Verify both notifications coexist as separate individual banners without aggregation
             expect(res.all[res.id1]).toBe(true);
             expect(res.all[res.id2]).toBe(true);
             expect(Object.keys(res.all).length).toBeGreaterThanOrEqual(2);
+
+            // Verify clicking notification 1 directs directly to project 1 link
+            const page1Promise = context.waitForEvent('page');
+            await serviceWorker.evaluate(
+                async ({ id1 }) => {
+                    const chromeObj = (
+                        globalThis as unknown as {
+                            chrome: {
+                                storage: {
+                                    local: {
+                                        get: (
+                                            key: string
+                                        ) => Promise<Record<string, { url?: string }>>;
+                                        remove: (key: string) => Promise<void>;
+                                    };
+                                };
+                                tabs: {
+                                    create: (opts: { url: string }) => Promise<unknown>;
+                                };
+                            };
+                        }
+                    ).chrome;
+                    const key = `rasid:notif:${id1}`;
+                    const data = await chromeObj.storage.local.get(key);
+                    const payload = data[key];
+                    if (payload?.url) {
+                        await chromeObj.storage.local.remove(key);
+                        await chromeObj.tabs.create({ url: payload.url });
+                    }
+                },
+                { id1 }
+            );
+
+            const page1 = await page1Promise;
+            await page1.waitForLoadState('domcontentloaded');
+            expect(page1.url()).toBe(url1);
+            await page1.close();
+
+            // Verify clicking notification 2 directs directly to project 2 link
+            const page2Promise = context.waitForEvent('page');
+            await serviceWorker.evaluate(
+                async ({ id2 }) => {
+                    const chromeObj = (
+                        globalThis as unknown as {
+                            chrome: {
+                                storage: {
+                                    local: {
+                                        get: (
+                                            key: string
+                                        ) => Promise<Record<string, { url?: string }>>;
+                                        remove: (key: string) => Promise<void>;
+                                    };
+                                };
+                                tabs: {
+                                    create: (opts: { url: string }) => Promise<unknown>;
+                                };
+                            };
+                        }
+                    ).chrome;
+                    const key = `rasid:notif:${id2}`;
+                    const data = await chromeObj.storage.local.get(key);
+                    const payload = data[key];
+                    if (payload?.url) {
+                        await chromeObj.storage.local.remove(key);
+                        await chromeObj.tabs.create({ url: payload.url });
+                    }
+                },
+                { id2 }
+            );
+
+            const page2 = await page2Promise;
+            await page2.waitForLoadState('domcontentloaded');
+            expect(page2.url()).toBe(url2);
+            await page2.close();
         } finally {
             await context.close();
         }

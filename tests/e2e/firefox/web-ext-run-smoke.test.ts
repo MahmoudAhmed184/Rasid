@@ -15,12 +15,12 @@ interface WebExtRunResult {
 const FIREFOX_EXTENSION_PATH = resolve(process.cwd(), 'dist', 'firefox-mv3');
 const WEB_EXT_RUN_TIMEOUT_MS = 20_000;
 
-function runFirefoxTemporaryInstallSmoke(): Promise<WebExtRunResult> {
-    const firefoxPath = firefox.executablePath();
+function runFirefoxTemporaryInstallSmoke(customFirefoxPath?: string): Promise<WebExtRunResult> {
+    const firefoxPath = customFirefoxPath || firefox.executablePath();
 
     expect(
         existsSync(firefoxPath),
-        'Run npx playwright install firefox before Firefox web-ext E2E smoke tests.'
+        `Firefox binary at ${firefoxPath} must exist before Firefox web-ext E2E smoke tests.`
     ).toBe(true);
 
     return new Promise((resolveResult, reject) => {
@@ -117,6 +117,20 @@ describe('Firefox temporary extension install smoke', () => {
             expect(result.timedOut, result.output).toBe(false);
             expect(result.output).not.toMatch(/ValidationError|WebExtError|Error:/i);
             expect(result.code === 0 || result.signal === 'SIGTERM', result.output).toBe(true);
+
+            const zenPath =
+                process.env.RASID_E2E_FIREFOX_PATH ||
+                (existsSync('/usr/bin/zen-browser') ? '/usr/bin/zen-browser' : undefined);
+            if (zenPath) {
+                const zenResult = await runFirefoxTemporaryInstallSmoke(zenPath);
+                expect(zenResult.sawTemporaryInstall, zenResult.output).toBe(true);
+                expect(zenResult.timedOut, zenResult.output).toBe(false);
+                expect(zenResult.output).not.toMatch(/ValidationError|WebExtError|Error:/i);
+                expect(
+                    zenResult.code === 0 || zenResult.signal === 'SIGTERM',
+                    zenResult.output
+                ).toBe(true);
+            }
         },
         WEB_EXT_RUN_TIMEOUT_MS + 5_000
     );
