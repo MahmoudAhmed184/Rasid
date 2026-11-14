@@ -395,4 +395,125 @@ describe('polling cycle orchestration', () => {
             })
         );
     });
+
+    it('fetches feeds in parallel and hydrates new jobs per-platform without cross-platform blocking', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response('<main>fixture</main>'))
+        );
+        const notifyJobs = vi.fn(async () => undefined);
+        const playNotificationSound = vi.fn(async () => undefined);
+        const storage = createStorage(createSnapshot());
+
+        const mostaqlAdapter = createAdapter({
+            id: 'mostaql',
+            displayName: 'مستقل',
+            resolveFeeds: () => ['https://mostaql.com/projects'],
+            parseListingHtml: vi.fn(async () => [
+                {
+                    id: 'm1',
+                    platformId: 'mostaql' as const,
+                    title: 'مشروع مستقل',
+                    url: 'https://mostaql.com/project/m1',
+                },
+            ]),
+            parseProjectHtml: vi.fn(async () => ({
+                budget: '$300',
+                description: 'وصف مستقل',
+            })),
+        });
+
+        const nafezlyAdapter = createAdapter({
+            id: 'nafezly',
+            displayName: 'نفذلي',
+            resolveFeeds: () => ['https://nafezly.com/projects'],
+            parseListingHtml: vi.fn(async () => [
+                {
+                    id: 'n1',
+                    platformId: 'nafezly' as const,
+                    title: 'مشروع نفذلي',
+                    url: 'https://nafezly.com/project/n1',
+                },
+            ]),
+            parseProjectHtml: vi.fn(async () => ({
+                budget: '$150',
+                description: 'وصف نفذلي',
+            })),
+        });
+
+        const result = await runPollingCycle({
+            storage: storage as unknown as ExtensionStorage,
+            notifyJobs,
+            playNotificationSound,
+            reason: 'manual-check',
+            monitoring: [mostaqlAdapter, nafezlyAdapter],
+        });
+
+        expect(result).toMatchObject({
+            kind: 'published',
+            source: 'polling',
+            newJobs: 2,
+        });
+
+        expect(notifyJobs).toHaveBeenCalledWith([
+            expect.objectContaining({ id: 'm1', budget: '$300' }),
+            expect.objectContaining({ id: 'n1', budget: '$150' }),
+        ]);
+        expect(playNotificationSound).toHaveBeenCalledOnce();
+    });
+
+    it('bypasses hydration serial delays during manual-check scans for instant responsiveness', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response('<main>fixture</main>'))
+        );
+        const notifyJobs = vi.fn(async () => undefined);
+        const storage = createStorage(createSnapshot());
+
+        const mostaqlAdapter = createAdapter({
+            id: 'mostaql',
+            displayName: 'مستقل',
+            hydrationDelayMs: 3000,
+            resolveFeeds: () => ['https://mostaql.com/projects'],
+            parseListingHtml: vi.fn(async () => [
+                {
+                    id: 'm1',
+                    platformId: 'mostaql' as const,
+                    title: 'مشروع 1',
+                    url: 'https://mostaql.com/projects/m1',
+                },
+                {
+                    id: 'm2',
+                    platformId: 'mostaql' as const,
+                    title: 'مشروع 2',
+                    url: 'https://mostaql.com/projects/m2',
+                },
+            ]),
+            parseProjectHtml: vi.fn(async () => ({
+                budget: '$200',
+                description: 'تفاصيل سريعة',
+            })),
+        });
+
+        const start = Date.now();
+        const result = await runPollingCycle({
+            storage: storage as unknown as ExtensionStorage,
+            notifyJobs,
+            reason: 'manual-check',
+            monitoring: [mostaqlAdapter],
+        });
+        const elapsed = Date.now() - start;
+
+        expect(result).toMatchObject({
+            kind: 'published',
+            source: 'polling',
+            newJobs: 2,
+        });
+        // Both jobs should be hydrated promptly in parallel, taking well under the 3000ms delay per job
+        expect(elapsed).toBeLessThan(1000);
+        expect(notifyJobs).toHaveBeenCalledWith([
+            expect.objectContaining({ id: 'm1', budget: '$200' }),
+            expect.objectContaining({ id: 'm2', budget: '$200' }),
+        ]);
+    });
 });

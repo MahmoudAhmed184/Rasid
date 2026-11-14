@@ -69,34 +69,39 @@ export async function runPollingCycle(options: {
 
     const successfulPlatforms = new Set<PlatformId>();
 
-    for (const adapter of activeMonitoring) {
-        for (const url of adapter.resolveFeeds(settings)) {
-            const result = await fetchPlatformFeedJobsResult(adapter, url);
+    await Promise.all(
+        activeMonitoring.map(async (adapter) => {
+            const feeds = adapter.resolveFeeds(settings);
+            const results = await Promise.all(
+                feeds.map((url) => fetchPlatformFeedJobsResult(adapter, url))
+            );
 
-            if (result.kind !== 'success') {
-                monitoringErrors[adapter.id] = {
-                    message: `${adapter.displayName}: ${result.reason}`,
-                    failedAt: attemptedAt,
-                };
-                continue;
+            for (const result of results) {
+                if (result.kind !== 'success') {
+                    monitoringErrors[adapter.id] = {
+                        message: `${adapter.displayName}: ${result.reason}`,
+                        failedAt: attemptedAt,
+                    };
+                    continue;
+                }
+
+                successfulPlatforms.add(adapter.id);
+
+                for (const job of result.jobs) {
+                    const jobWithPlatform = {
+                        ...job,
+                        platformId: job.platformId ?? adapter.id,
+                    } satisfies JobRecord;
+                    const jobKey = getJobRecordKey(jobWithPlatform);
+
+                    feedJobs.set(jobKey, {
+                        ...feedJobs.get(jobKey),
+                        ...jobWithPlatform,
+                    });
+                }
             }
-
-            successfulPlatforms.add(adapter.id);
-
-            for (const job of result.jobs) {
-                const jobWithPlatform = {
-                    ...job,
-                    platformId: job.platformId ?? adapter.id,
-                } satisfies JobRecord;
-                const jobKey = getJobRecordKey(jobWithPlatform);
-
-                feedJobs.set(jobKey, {
-                    ...feedJobs.get(jobKey),
-                    ...jobWithPlatform,
-                });
-            }
-        }
-    }
+        })
+    );
 
     if (successfulPlatforms.size === 0) {
         await storage.patchRuntimeState({
@@ -120,44 +125,74 @@ export async function runPollingCycle(options: {
     const staleKhamsatJobs: JobRecord[] = [];
     const unseenCandidates = await storage.getUnseenJobs(feedJobList);
     const freshnessNow = new Date(attemptedAt);
+    const isManualScan = reason === 'manual-check' || reason.startsWith('manual');
+    const khamsatCandidates = unseenCandidates.filter(
+        (job) => resolveJobPlatformId(job) === 'khamsat'
+    );
 
-    for (const job of unseenCandidates) {
-        if (resolveJobPlatformId(job) !== 'khamsat') {
-            continue;
-        }
-
-        const jobKey = getJobRecordKey(job);
+    if (isManualScan && khamsatCandidates.length > 0) {
         const monitoringAdapter = monitoringById.get('khamsat');
-        let hydrated = job;
-        if (monitoringAdapter) {
-            if (monitoringAdapter.hydrationDelayMs) {
-                const last = lastHydrationTime.get('khamsat') ?? 0;
-                const elapsed = Date.now() - last;
-                if (elapsed < monitoringAdapter.hydrationDelayMs) {
-                    await delay(monitoringAdapter.hydrationDelayMs - elapsed);
+        const hydrationResults = await Promise.all(
+            khamsatCandidates.map(async (job) => {
+                const jobKey = getJobRecordKey(job);
+                const hydrated = monitoringAdapter
+                    ? await hydratePlatformJob(monitoringAdapter, job)
+                    : job;
+                const freshness = classifyKhamsatFreshness(hydrated, freshnessNow);
+                return { jobKey, job: hydrated, status: freshness };
+            })
+        );
+
+        for (const res of hydrationResults) {
+            if (res.status === 'fresh') {
+                eligibleJobs.set(res.jobKey, res.job);
+            } else {
+                eligibleJobs.delete(res.jobKey);
+                if (res.status === 'stale') {
+                    staleKhamsatJobs.push(res.job);
+                } else {
+                    monitoringErrors.khamsat = {
+                        message: `Khamsat: missing publish date after detail hydration for job ${res.job.id}.`,
+                        failedAt: attemptedAt,
+                    };
                 }
             }
-            hydrated = await hydratePlatformJob(monitoringAdapter, job);
-            lastHydrationTime.set('khamsat', Date.now());
         }
-        const freshness = classifyKhamsatFreshness(hydrated, freshnessNow);
+    } else {
+        for (const job of khamsatCandidates) {
+            const jobKey = getJobRecordKey(job);
+            const monitoringAdapter = monitoringById.get('khamsat');
+            let hydrated = job;
+            if (monitoringAdapter) {
+                if (monitoringAdapter.hydrationDelayMs) {
+                    const last = lastHydrationTime.get('khamsat') ?? 0;
+                    const elapsed = Date.now() - last;
+                    if (elapsed < monitoringAdapter.hydrationDelayMs) {
+                        await delay(monitoringAdapter.hydrationDelayMs - elapsed);
+                    }
+                }
+                hydrated = await hydratePlatformJob(monitoringAdapter, job);
+                lastHydrationTime.set('khamsat', Date.now());
+            }
+            const freshness = classifyKhamsatFreshness(hydrated, freshnessNow);
 
-        if (freshness === 'fresh') {
-            eligibleJobs.set(jobKey, hydrated);
-            continue;
+            if (freshness === 'fresh') {
+                eligibleJobs.set(jobKey, hydrated);
+                continue;
+            }
+
+            eligibleJobs.delete(jobKey);
+
+            if (freshness === 'stale') {
+                staleKhamsatJobs.push(hydrated);
+                continue;
+            }
+
+            monitoringErrors.khamsat = {
+                message: `Khamsat: missing publish date after detail hydration for job ${job.id}.`,
+                failedAt: attemptedAt,
+            };
         }
-
-        eligibleJobs.delete(jobKey);
-
-        if (freshness === 'stale') {
-            staleKhamsatJobs.push(hydrated);
-            continue;
-        }
-
-        monitoringErrors.khamsat = {
-            message: `Khamsat: missing publish date after detail hydration for job ${job.id}.`,
-            failedAt: attemptedAt,
-        };
     }
 
     if (staleKhamsatJobs.length > 0) {
@@ -172,29 +207,57 @@ export async function runPollingCycle(options: {
         lastMonitoringErrors: monitoringErrors,
     });
 
-    const hydratedJobs: JobRecord[] = [];
-
+    const jobsByPlatform = new Map<PlatformId, JobRecord[]>();
     for (const job of ingested.newJobs) {
         const platformId = resolveJobPlatformId(job);
-        const monitoringAdapter = monitoringById.get(platformId);
-        let hydrated = job;
+        const list = jobsByPlatform.get(platformId) ?? [];
+        list.push(job);
+        jobsByPlatform.set(platformId, list);
+    }
 
-        if (platformId !== 'khamsat' && monitoringAdapter) {
-            if (monitoringAdapter.hydrationDelayMs) {
-                const last = lastHydrationTime.get(platformId) ?? 0;
-                const elapsed = Date.now() - last;
-                if (elapsed < monitoringAdapter.hydrationDelayMs) {
-                    await delay(monitoringAdapter.hydrationDelayMs - elapsed);
+    const platformHydrationResults = await Promise.all(
+        [...jobsByPlatform.entries()].map(async ([platformId, jobs]) => {
+            const monitoringAdapter = monitoringById.get(platformId);
+
+            if (isManualScan) {
+                const hydratedList = await Promise.all(
+                    jobs.map(async (job) => {
+                        if (platformId === 'khamsat' || !monitoringAdapter) {
+                            return job;
+                        }
+                        return hydratePlatformJob(monitoringAdapter, job);
+                    })
+                );
+                return hydratedList.filter((hydrated) => applyJobFilters(hydrated, settings));
+            }
+
+            const platformHydrated: JobRecord[] = [];
+
+            for (const job of jobs) {
+                let hydrated = job;
+
+                if (platformId !== 'khamsat' && monitoringAdapter) {
+                    if (monitoringAdapter.hydrationDelayMs) {
+                        const last = lastHydrationTime.get(platformId) ?? 0;
+                        const elapsed = Date.now() - last;
+                        if (elapsed < monitoringAdapter.hydrationDelayMs) {
+                            await delay(monitoringAdapter.hydrationDelayMs - elapsed);
+                        }
+                    }
+                    hydrated = await hydratePlatformJob(monitoringAdapter, job);
+                    lastHydrationTime.set(platformId, Date.now());
+                }
+
+                if (applyJobFilters(hydrated, settings)) {
+                    platformHydrated.push(hydrated);
                 }
             }
-            hydrated = await hydratePlatformJob(monitoringAdapter, job);
-            lastHydrationTime.set(platformId, Date.now());
-        }
 
-        if (applyJobFilters(hydrated, settings)) {
-            hydratedJobs.push(hydrated);
-        }
-    }
+            return platformHydrated;
+        })
+    );
+
+    const hydratedJobs = platformHydrationResults.flat();
 
     if (hydratedJobs.length > 0) {
         await storage.mergeRecentJobs(hydratedJobs);
