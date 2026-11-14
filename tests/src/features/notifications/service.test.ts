@@ -243,7 +243,6 @@ describe('notification service', () => {
             title: 'مشروع جديد: تطوير تطبيق ويب',
             message:
                 'الميزانية: $500 - $1000\nمطلوب مطور React خبير لبناء منصة إدارة أعمال متكاملة وسريعة الاستجابة...',
-            contextMessage: 'Rasid - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
@@ -262,7 +261,6 @@ describe('notification service', () => {
             title: 'مشروع جديد: تصميم واجهة متجر',
             message:
                 'الميزانية: 25 $\nمطلوب تصميم واجهة احترافية لمتجر سلة مع ملفات فيجما مفتوحة المصدر...',
-            contextMessage: 'Rasid - خمسات',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
@@ -281,7 +279,6 @@ describe('notification service', () => {
             title: 'مشروع جديد: برمجة سكريبت أتمتة',
             message:
                 'الميزانية: 150 $\nسكريبت بلغة بايثون لجلب البيانات وتنظيفها وتصديرها إلى ملف إكسل...',
-            contextMessage: 'Rasid - نفذلي',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
