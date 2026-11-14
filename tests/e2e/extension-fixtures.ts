@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { chromium, expect, type BrowserContext } from '@playwright/test';
@@ -35,6 +35,15 @@ export async function launchChromiumExtension(): Promise<LoadedExtensionContext>
             `--load-extension=${chromeExtensionPath}`,
         ],
     });
+
+    context.on('close', () => {
+        try {
+            rmSync(userDataDir, { recursive: true, force: true });
+        } catch {
+            // Ignore cleanup failure
+        }
+    });
+
     let [serviceWorker] = context.serviceWorkers();
 
     if (!serviceWorker) {

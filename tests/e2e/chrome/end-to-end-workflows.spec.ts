@@ -369,20 +369,18 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
                         iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
                         title: 'مشروع مستقل الأول',
                         message: 'الميزانية: $500\nتفاصيل المشروع الأول...',
-                        contextMessage: 'Rasid - مستقل',
                         buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
                         priority: 2,
                         requireInteraction: true,
                     });
 
-                    await new Promise((r) => setTimeout(r, 100));
+                    await new Promise((r) => setTimeout(r, 300));
 
                     await chromeObj.notifications.create(id2, {
                         type: 'basic',
                         iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
                         title: 'مشروع مستقل الثاني',
                         message: 'الميزانية: $1000\nتفاصيل المشروع الثاني...',
-                        contextMessage: 'Rasid - مستقل',
                         buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
                         priority: 2,
                         requireInteraction: true,
