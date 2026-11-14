@@ -135,7 +135,8 @@ test.describe('Dashboard screenshots', () => {
         });
 
         // Reload to apply seeded data
-        await page.reload();
+        await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+        await page.waitForLoadState('domcontentloaded');
         await page.waitForTimeout(600);
 
         // 1. Overview tab
@@ -209,7 +210,8 @@ test.describe('Dashboard screenshots', () => {
                 });
             }
         });
-        await popupPage.reload();
+        await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+        await popupPage.waitForLoadState('domcontentloaded');
         await popupPage.waitForTimeout(500);
         await popupPage.screenshot({ path: resolve(popupDir, '02-popup-admin-msg.png') });
 
