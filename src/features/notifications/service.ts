@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 
 import type { JobRecord } from '../../entities/job/model';
 import {
+    getPlatformDisplayName,
     inferSupportedPlatformIdFromUrl,
     isPlatformId,
     type PlatformId,
@@ -11,7 +12,7 @@ import type { ExtensionStorage } from '../../shared/storage/extension-storage';
 
 const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
 const JOB_NOTIFICATION_BUTTON_TITLE = '🔗 عرض تفاصيل المشروع';
-export const NOTIFICATION_STAGGER_MS = 300;
+export const NOTIFICATION_STAGGER_MS = 25;
 
 export interface NotificationServiceOptions {
     readonly staggerMs?: number;
@@ -100,9 +101,12 @@ function buildNotificationOptions(options: {
 function buildJobNotificationBody(job: JobRecord): {
     title: string;
     message: string;
+    contextMessage: string;
     platformId: PlatformId | undefined;
 } {
     const platformId = resolveNotificationPlatformId(job);
+    const platformLabel = platformId ? getPlatformDisplayName(platformId) : 'منصات العمل الحر';
+    const contextMessage = `Rasid - ${platformLabel}`;
 
     const title = job.title?.trim() ? `مشروع جديد: ${job.title.trim()}` : 'مشروع جديد';
     const budgetStr = job.budget?.trim() ? `الميزانية: ${job.budget.trim()}` : '';
@@ -114,6 +118,7 @@ function buildJobNotificationBody(job: JobRecord): {
     return {
         title,
         message,
+        contextMessage,
         platformId,
     };
 }
@@ -183,7 +188,7 @@ export function createNotificationService(
                 await new Promise<void>((resolve) => setTimeout(resolve, index * staggerMs));
             }
 
-            const { title, message, platformId } = buildJobNotificationBody(job);
+            const { title, message, contextMessage, platformId } = buildJobNotificationBody(job);
             const notificationId = `rasid-${Date.now()}-${++notificationSequence}-${Math.random().toString(36).slice(2) || '0'}`;
             const payloadUrl = normalizeNotificationUrl(job.url);
 
@@ -209,6 +214,7 @@ export function createNotificationService(
                                   iconUrl: getNotificationIcon(platformId),
                                   title,
                                   message,
+                                  contextMessage,
                                   buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
                               }
                     )
@@ -254,6 +260,7 @@ export function createNotificationService(
                               iconUrl: getNotificationIcon(undefined),
                               title: '📢 تنبيهات من المطورين',
                               message: msg.message,
+                              contextMessage: 'Rasid',
                               buttons: msg.url ? [{ title: '🔗 فتح الرابط' }] : undefined,
                           }
                 )
@@ -296,6 +303,7 @@ export function createNotificationService(
                       iconUrl,
                       title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
                       message: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
+                      contextMessage: 'Rasid - مستقل',
                       buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
                   }
         );

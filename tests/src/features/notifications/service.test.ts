@@ -121,6 +121,7 @@ describe('notification service', () => {
             type: 'basic',
             iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
             title: 'مشروع جديد: فرصة كروم',
+            contextMessage: 'Rasid - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
         });
     });
@@ -243,6 +244,7 @@ describe('notification service', () => {
             title: 'مشروع جديد: تطوير تطبيق ويب',
             message:
                 'الميزانية: $500 - $1000\nمطلوب مطور React خبير لبناء منصة إدارة أعمال متكاملة وسريعة الاستجابة...',
+            contextMessage: 'Rasid - مستقل',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
@@ -261,6 +263,7 @@ describe('notification service', () => {
             title: 'مشروع جديد: تصميم واجهة متجر',
             message:
                 'الميزانية: 25 $\nمطلوب تصميم واجهة احترافية لمتجر سلة مع ملفات فيجما مفتوحة المصدر...',
+            contextMessage: 'Rasid - خمسات',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
@@ -279,6 +282,7 @@ describe('notification service', () => {
             title: 'مشروع جديد: برمجة سكريبت أتمتة',
             message:
                 'الميزانية: 150 $\nسكريبت بلغة بايثون لجلب البيانات وتنظيفها وتصديرها إلى ملف إكسل...',
+            contextMessage: 'Rasid - نفذلي',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
             priority: 2,
             requireInteraction: true,
@@ -380,6 +384,7 @@ describe('notification service', () => {
             expect.objectContaining({
                 iconUrl: fakeBrowser.runtime.getURL('/icons/icon128.png'),
                 title: 'مشروع جديد: مشروع منصة خارجية',
+                contextMessage: 'Rasid - منصات العمل الحر',
             })
         );
     });
@@ -433,6 +438,7 @@ describe('notification service', () => {
     });
 
     it('creates a test notification and returns its notification ID', async () => {
+        useBrowserBuild('chrome');
         const create = vi.spyOn(fakeBrowser.notifications, 'create');
         const { storage, payloads } = createStorage();
         const service = createNotificationService(storage as unknown as ExtensionStorage);
@@ -444,12 +450,14 @@ describe('notification service', () => {
             testId,
             expect.objectContaining({
                 title: expect.stringContaining('إشعار تجريبي'),
+                contextMessage: 'Rasid - مستقل',
             })
         );
         expect(payloads.has(testId)).toBe(true);
     });
 
     it('creates admin message notification with developer broadcast title and payload', async () => {
+        useBrowserBuild('chrome');
         const create = vi.spyOn(fakeBrowser.notifications, 'create');
         const { storage, payloads } = createStorage();
         const service = createNotificationService(storage as unknown as ExtensionStorage);
@@ -468,6 +476,7 @@ describe('notification service', () => {
             expect.objectContaining({
                 title: '📢 تنبيهات من المطورين',
                 message: 'تحديث أمني مهم للنظام',
+                contextMessage: 'Rasid',
             })
         );
         expect(payloads.get(adminId)).toMatchObject({
