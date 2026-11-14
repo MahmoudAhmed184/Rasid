@@ -12,7 +12,7 @@ export default defineConfig(
         name: 'Imported .gitignore patterns',
     }),
     globalIgnores(
-        ['**/vendor/**', '**/*.min.js', 'package-lock.json', '.agents/**'],
+        ['**/vendor/**', '**/*.min.js', 'package-lock.json', '.agents/**', 'server/**'],
         'Rasid lint-only ignores'
     ),
     {
