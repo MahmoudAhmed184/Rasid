@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Text;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Rasid.Server.Contracts;
@@ -31,12 +32,14 @@ public sealed class SqliteSeenJobCache : ISeenJobCache, IAsyncDisposable, IDispo
     public SqliteSeenJobCache(
         IOptions<JobScraperOptions> options,
         TimeProvider timeProvider,
-        ILogger<SqliteSeenJobCache> logger)
+        ILogger<SqliteSeenJobCache> logger,
+        IHostEnvironment? hostEnvironment = null)
     {
-        var dbPath = string.IsNullOrWhiteSpace(options.Value.DbPath)
+        var rawPath = string.IsNullOrWhiteSpace(options.Value.DbPath)
             ? "seen_jobs.db"
             : options.Value.DbPath;
 
+        var dbPath = ResolveDbPath(rawPath, hostEnvironment);
         EnsureDirectoryExists(dbPath);
 
         _connectionString = new SqliteConnectionStringBuilder
@@ -50,6 +53,17 @@ public sealed class SqliteSeenJobCache : ISeenJobCache, IAsyncDisposable, IDispo
         _retentionDays = Math.Max(1, options.Value.SeenJobRetentionDays);
         _timeProvider = timeProvider;
         _logger = logger;
+    }
+
+    public static string ResolveDbPath(string rawPath, IHostEnvironment? hostEnvironment)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath) || rawPath == ":memory:" || Path.IsPathRooted(rawPath))
+        {
+            return rawPath;
+        }
+
+        var baseDir = hostEnvironment?.ContentRootPath ?? AppContext.BaseDirectory;
+        return Path.Combine(baseDir, rawPath);
     }
 
     // Constructor for testing with custom connection string

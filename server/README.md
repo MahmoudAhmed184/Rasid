@@ -142,6 +142,7 @@ dotnet publish server/src/Rasid.Server.csproj -c Release --no-restore -o /tmp/ra
 - [`src/Workers/JobPollingWorker.cs`](src/Workers/JobPollingWorker.cs): hosted polling scheduler
 - [`src/Workers/ScrapeCycleRunner.cs`](src/Workers/ScrapeCycleRunner.cs): listing fetch, deduplication, enrichment, and broadcast orchestration
 - [`src/Storage/SqliteSeenJobCache.cs`](src/Storage/SqliteSeenJobCache.cs): persistent SQLite seen-job cache
+- [`src/Storage/InMemorySeenJobCache.cs`](src/Storage/InMemorySeenJobCache.cs): in-memory seen-job cache (zero file dependencies fallback)
 - [`src/Hubs/SignalRJobBroadcaster.cs`](src/Hubs/SignalRJobBroadcaster.cs): SignalR broadcaster
 - [`src/Platforms/`](src/Platforms): per-platform scraper implementations
 - [`tests/Rasid.Server.Tests`](tests/Rasid.Server.Tests): xUnit v3 tests run through Microsoft Testing Platform for endpoints, admin broadcasts, startup validation, Khamsat freshness, and scraping behavior

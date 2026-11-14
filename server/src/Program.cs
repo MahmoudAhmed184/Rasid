@@ -129,8 +129,20 @@ builder.Services.AddSingleton<PerDomainRateLimiter>();
 builder.Services.AddSingleton<IHeadlessBrowserService, PlaywrightHeadlessBrowserService>();
 builder.Services.AddSingleton<ICrawlerEngine, CrawlerEngine>();
 
-// Persistent SQLite Storage
-builder.Services.AddSingleton<ISeenJobCache, SqliteSeenJobCache>();
+// Seen Job Cache (SQLite persistent storage with in-memory option)
+builder.Services.AddSingleton<ISeenJobCache>(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<JobScraperOptions>>();
+    if (options.Value.UseInMemoryCache || string.Equals(options.Value.DbPath, ":memory:", StringComparison.OrdinalIgnoreCase))
+    {
+        return new InMemorySeenJobCache(options);
+    }
+
+    var env = sp.GetRequiredService<IHostEnvironment>();
+    var timeProvider = sp.GetRequiredService<TimeProvider>();
+    var logger = sp.GetRequiredService<ILogger<SqliteSeenJobCache>>();
+    return new SqliteSeenJobCache(options, timeProvider, logger, env);
+});
 
 // SignalR Broadcasting
 builder.Services.AddSingleton<IJobBroadcaster, SignalRJobBroadcaster>();

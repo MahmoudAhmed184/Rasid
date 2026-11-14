@@ -16,5 +16,7 @@ public sealed class JobScraperOptions
 
     public string DbPath { get; set; } = "seen_jobs.db";
 
+    public bool UseInMemoryCache { get; set; } = false;
+
     public int SeenJobRetentionDays { get; set; } = 14;
 }

@@ -53,7 +53,7 @@ Bootstraps the app and registers:
 - explicit CORS policy options for extension clients
 - the polling worker
 - the scrape cycle runner
-- the in-memory seen-job cache
+- the seen-job cache (persistent SQLite with in-memory option)
 - the SignalR broadcaster
 - the per-platform scrapers
 - Swagger in development
@@ -512,8 +512,9 @@ Current server tests use xUnit v3 with the Microsoft Testing Platform runner and
 
 ## Operational Notes
 
-- The seen-job cache is in memory only. A process restart clears it.
-- The baseline-on-first-scrape behavior avoids replaying the current first page after restart.
+- The default seen-job cache is SQLite (`SqliteSeenJobCache`), persisting seen jobs across IIS worker process recycles and restarts with automated pruning by retention days and max entries.
+- If in-memory behavior is preferred (e.g. read-only environments without local disk write access), set `JobScraper:UseInMemoryCache: true`.
+- The baseline-on-first-scrape behavior avoids replaying the current first page after startup when cache is unpopulated.
 - CORS is intentionally permissive for extension development and fails fast in production unless explicit origins are configured.
 - Production admin broadcasts require a non-default `AdminToken`.
 - Khamsat listing pages are scrapeable with plain HTTP requests, but detail pages may be blocked by upstream WAF challenges.
