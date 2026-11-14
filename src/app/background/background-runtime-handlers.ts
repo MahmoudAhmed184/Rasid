@@ -25,7 +25,7 @@ import type { ProposalRepository } from '../../features/proposals/proposal-repos
 
 const CHATGPT_BRIDGE_SCRIPT_FILE = '/chatgpt-bridge.js';
 const TAB_COMPLETE_WAIT_TIMEOUT_MS = 10_000;
-const TAB_NAVIGATION_MONITOR_TIMEOUT_MS = 15_000;
+const TAB_NAVIGATION_MONITOR_TIMEOUT_MS = 30_000;
 
 interface BackgroundRuntimeHandlerDependencies {
     readonly storage: ExtensionStorage;
@@ -232,22 +232,46 @@ function monitorBridgeTabNavigation(
                 // Ignore listener removal errors
             }
         }
+        if (browser.tabs?.onRemoved?.removeListener) {
+            try {
+                browser.tabs.onRemoved.removeListener(onRemovedListener);
+            } catch {
+                // Ignore listener removal errors
+            }
+        }
     };
 
     const timer = setTimeout(cleanup, timeoutMs);
 
+    const onRemovedListener = (removedTabId: number) => {
+        if (removedTabId === tabId) {
+            cleanup();
+        }
+    };
+
     const onUpdatedListener = (
         updatedTabId: number,
-        changeInfo: { status?: string },
+        changeInfo: { status?: string; url?: string },
         tab?: { status?: string; url?: string }
     ) => {
-        if (updatedTabId !== tabId || changeInfo.status !== 'complete') {
+        if (updatedTabId !== tabId) {
+            return;
+        }
+
+        const hasStatusComplete = changeInfo.status === 'complete';
+        const hasUrlChange = Boolean(changeInfo.url);
+
+        if (!hasStatusComplete && !hasUrlChange) {
+            return;
+        }
+
+        if (changeInfo.status === 'loading') {
             return;
         }
 
         const checkAndInject = async () => {
             let currentTab = tab;
-            if (!currentTab?.url && browser.tabs?.get) {
+            if ((!currentTab?.url || !currentTab?.status) && browser.tabs?.get) {
                 try {
                     currentTab = await browser.tabs.get(tabId);
                 } catch {
@@ -255,7 +279,7 @@ function monitorBridgeTabNavigation(
                 }
             }
 
-            if (currentTab && !isTabReady(currentTab)) {
+            if (!currentTab || !isTabReady(currentTab)) {
                 return;
             }
 
@@ -276,11 +300,15 @@ function monitorBridgeTabNavigation(
     };
 
     browser.tabs.onUpdated.addListener(onUpdatedListener);
+    if (browser.tabs?.onRemoved?.addListener) {
+        browser.tabs.onRemoved.addListener(onRemovedListener);
+    }
 }
 
 async function resolveChatBridgeTab(chatUrl: string): Promise<{
     readonly tabId: number;
     readonly tabStatus: 'created' | 'focused';
+    readonly chatUrl?: string;
 }> {
     if (!browser.tabs?.create || !browser.tabs.query || !browser.tabs.update) {
         throw new Error('Tabs API is unavailable.');
@@ -320,6 +348,7 @@ async function resolveChatBridgeTab(chatUrl: string): Promise<{
         return {
             tabId: existingTab.id,
             tabStatus: 'focused',
+            chatUrl: existingTab.url,
         };
     }
 
@@ -347,6 +376,7 @@ async function resolveChatBridgeTab(chatUrl: string): Promise<{
     return {
         tabId: createdTab.id,
         tabStatus: 'created',
+        chatUrl: createdTab.url,
     };
 }
 
@@ -414,7 +444,8 @@ async function openChatBridgePrompt(
     }
 
     try {
-        await deps.proposalRepository.setPendingBridgePrompt(message.prompt, chatUrl);
+        const targetChatUrl = tab.chatUrl || chatUrl;
+        await deps.proposalRepository.setPendingBridgePrompt(message.prompt, targetChatUrl);
         monitorBridgeTabNavigation(deps, tab.tabId);
         await injectChatBridge(tab.tabId);
     } catch (error) {

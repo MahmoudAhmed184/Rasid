@@ -441,9 +441,9 @@ describe('ChatGPT bridge', () => {
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith('bridge-scoped');
     });
 
-    it('clears stale pending prompts when the ChatGPT input never appears', async () => {
+    it('preserves pending prompt when the ChatGPT input does not appear before timeout', async () => {
         vi.useFakeTimers();
-        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         installTestDom('<!doctype html><main></main>');
         setWindowHost('chatgpt.com');
         const record: PendingBridgePrompt = {
@@ -457,13 +457,120 @@ describe('ChatGPT bridge', () => {
 
         initChatgptBridge({ proposalRepository });
 
-        await vi.advanceTimersByTimeAsync(12_000);
+        await vi.advanceTimersByTimeAsync(26_000);
 
-        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
-            'bridge-missing-input'
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('preserving pending prompt'));
+    });
+
+    it('waits for hidden or display:none input to become visible before injecting', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><textarea id="prompt-textarea" style="display: none;"></textarea>'
         );
-        expect(error).toHaveBeenCalledWith(
-            'Mostaql Job Notifier: Could not find ChatGPT input field before timeout.'
+        setWindowHost('chatgpt.com');
+
+        const textarea = document.getElementById('prompt-textarea') as HTMLTextAreaElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-hidden-visibility',
+            prompt: 'Visible after hydration',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance initial delay
+        await vi.advanceTimersByTimeAsync(1_500);
+
+        // While display is none, input must not be injected
+        expect(textarea.value).toBe('');
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+
+        // Simulate hydration revealing the textarea
+        textarea.style.display = 'block';
+
+        // Advance to allow MutationObserver / polling to detect visibility
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(textarea.value).toBe('Visible after hydration');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-hidden-visibility'
+        );
+    });
+
+    it('waits for contenteditable=false to become editable before injecting', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="false" class="ProseMirror"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.getElementById('prompt-textarea')!;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-initially-uneditable',
+            prompt: 'Editable after hydration',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance initial delay
+        await vi.advanceTimersByTimeAsync(1_500);
+
+        // While contenteditable="false", input must not be injected
+        expect(editor.textContent).toBe('');
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+
+        // Simulate hydration enabling the editor
+        editor.setAttribute('contenteditable', 'true');
+
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(editor.textContent).toBe('Editable after hydration');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-initially-uneditable'
+        );
+    });
+
+    it('successfully injects within the extended retry window when input mounts late', async () => {
+        vi.useFakeTimers();
+        installTestDom('<!doctype html><main id="chat-root"></main>');
+        setWindowHost('chatgpt.com');
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-late-mount',
+            prompt: 'Late mounted prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance 15 seconds (well beyond old 10s timeout, but within extended 25s window)
+        await vi.advanceTimersByTimeAsync(15_000);
+
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+
+        // SPA mounts the input at 15s
+        const main = document.getElementById('chat-root')!;
+        const textarea = document.createElement('textarea');
+        textarea.id = 'prompt-textarea';
+        main.appendChild(textarea);
+
+        // Advance 200ms for observer/polling
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(textarea.value).toBe('Late mounted prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-late-mount'
         );
     });
 
@@ -561,6 +668,114 @@ describe('ChatGPT bridge', () => {
         expect(inner.textContent).toBe('Target inner ProseMirror');
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
             'bridge-nested-editable-priority'
+        );
+    });
+
+    it('waits for hidden ancestor container to become visible before injecting', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="parent-box" style="display: none;"><textarea id="prompt-textarea"></textarea></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const parentBox = document.getElementById('parent-box')!;
+        const textarea = document.getElementById('prompt-textarea') as HTMLTextAreaElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-ancestor-hidden',
+            prompt: 'Visible after parent unhides',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance 1.5s
+        await vi.advanceTimersByTimeAsync(1_500);
+        expect(textarea.value).toBe('');
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+
+        // Reveal parent container
+        parentBox.style.display = 'block';
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(textarea.value).toBe('Visible after parent unhides');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-ancestor-hidden'
+        );
+    });
+
+    it('waits for disabled ancestor fieldset to become enabled before injecting', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><fieldset disabled id="composer-fieldset"><textarea id="prompt-textarea"></textarea></fieldset>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const fieldset = document.getElementById('composer-fieldset') as HTMLFieldSetElement;
+        const textarea = document.getElementById('prompt-textarea') as HTMLTextAreaElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-fieldset-disabled',
+            prompt: 'Enabled after fieldset ready',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        await vi.advanceTimersByTimeAsync(1_500);
+        expect(textarea.value).toBe('');
+        expect(proposalRepository.clearPendingBridgePrompt).not.toHaveBeenCalled();
+
+        // Enable fieldset
+        fieldset.removeAttribute('disabled');
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(textarea.value).toBe('Enabled after fieldset ready');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-fieldset-disabled'
+        );
+    });
+
+    it('injects immediately on warm tab when input is already present without waiting for initial delay', async () => {
+        vi.useFakeTimers();
+        installTestDom('<!doctype html><textarea id="prompt-textarea"></textarea>');
+        setWindowHost('chatgpt.com');
+
+        const textarea = document.getElementById('prompt-textarea') as HTMLTextAreaElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-warm-tab',
+            prompt: 'Immediate warm injection',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository, emit } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Should inject at next tick (0ms) rather than waiting 1000ms
+        await vi.advanceTimersByTimeAsync(10);
+        expect(textarea.value).toBe('Immediate warm injection');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith('bridge-warm-tab');
+
+        // Storage change on warm tab also injects immediately
+        const secondRecord: PendingBridgePrompt = {
+            id: 'bridge-warm-second',
+            prompt: 'Second warm injection',
+            createdAt: 2,
+            expiresAt: 302_000,
+            targetHost: 'chatgpt.com',
+        };
+        emit(secondRecord);
+
+        await vi.advanceTimersByTimeAsync(10);
+        expect(textarea.value).toBe('Second warm injection');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-warm-second'
         );
     });
 });

@@ -30,7 +30,7 @@ declare global {
     }
 }
 
-const CHAT_INPUT_WAIT_TIMEOUT_MS = 10_000;
+const CHAT_INPUT_WAIT_TIMEOUT_MS = 25_000;
 const INITIAL_INJECTION_DELAY_MS = 1_000;
 const STORAGE_CHANGE_INJECTION_DELAY_MS = 500;
 const STABILITY_WINDOW_MS = 2_500;
@@ -51,22 +51,86 @@ function getBridgeRuntimeState(): ChatgptBridgeRuntimeState {
     return state;
 }
 
-function isEditableChatInput(element: Element | null): boolean {
+function isElementMounted(element: Element | null): boolean {
     if (!element || !(element instanceof HTMLElement)) {
+        return false;
+    }
+    return element.isConnected ?? (document.contains ? document.contains(element) : true);
+}
+
+export function isElementVisible(element: Element | null): boolean {
+    if (!element || !(element instanceof HTMLElement)) {
+        return false;
+    }
+    if (!isElementMounted(element)) {
+        return false;
+    }
+    if (element.hidden || element.getAttribute('aria-hidden') === 'true') {
+        return false;
+    }
+    if (element.style?.display === 'none' || element.style?.visibility === 'hidden') {
+        return false;
+    }
+    let current: HTMLElement | null = element.parentElement;
+    while (current) {
+        if (current.hidden || current.getAttribute('aria-hidden') === 'true') {
+            return false;
+        }
+        if (current.style?.display === 'none' || current.style?.visibility === 'hidden') {
+            return false;
+        }
+        current = current.parentElement;
+    }
+    if (typeof element.checkVisibility === 'function') {
+        try {
+            if (!element.checkVisibility()) {
+                return false;
+            }
+        } catch {
+            // Ignore checkVisibility errors in mock environments
+        }
+    }
+    if (typeof window.getComputedStyle === 'function') {
+        try {
+            const style = window.getComputedStyle(element);
+            if (style && (style.display === 'none' || style.visibility === 'hidden')) {
+                return false;
+            }
+        } catch {
+            // Ignore getComputedStyle errors
+        }
+    }
+    return true;
+}
+
+export function isEditableChatInput(element: Element | null): boolean {
+    if (!element || !(element instanceof HTMLElement)) {
+        return false;
+    }
+    if (element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true') {
+        return false;
+    }
+    if (typeof element.closest === 'function') {
+        if (element.closest('fieldset[disabled], [aria-disabled="true"]')) {
+            return false;
+        }
+    }
+    if (element.getAttribute('contenteditable') === 'false') {
         return false;
     }
     if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
         return !element.disabled && !element.readOnly;
     }
-    if (element.getAttribute('aria-disabled') === 'true') {
-        return false;
-    }
-    return (
+    return Boolean(
         element.isContentEditable ||
         element.getAttribute('contenteditable') === 'true' ||
         element.classList.contains('ProseMirror') ||
         element.getAttribute('role') === 'textbox'
     );
+}
+
+function isReadyChatInput(element: Element | null): element is HTMLTextAreaElement | HTMLElement {
+    return isEditableChatInput(element) && isElementVisible(element);
 }
 
 export function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
@@ -78,11 +142,11 @@ export function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
         const innerEditable = promptTextarea.querySelector<HTMLElement>(
             'div.ProseMirror, [contenteditable="true"][role="textbox"], [contenteditable="true"]'
         );
-        if (innerEditable && isEditableChatInput(innerEditable)) {
+        if (innerEditable && isReadyChatInput(innerEditable)) {
             return innerEditable;
         }
 
-        if (isEditableChatInput(promptTextarea)) {
+        if (isReadyChatInput(promptTextarea)) {
             return promptTextarea;
         }
     }
@@ -100,7 +164,7 @@ export function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
             '#prompt-textarea, div[contenteditable="true"]#prompt-textarea, textarea, div.ProseMirror, [contenteditable="true"][role="textbox"], [contenteditable="true"]'
         );
 
-        if (formInput instanceof HTMLElement && isEditableChatInput(formInput)) {
+        if (formInput instanceof HTMLElement && isReadyChatInput(formInput)) {
             return formInput;
         }
     }
@@ -108,7 +172,7 @@ export function findChatInput(): HTMLTextAreaElement | HTMLElement | null {
     const fallbackProseMirror = document.querySelector<HTMLElement>(
         'div[contenteditable="true"]#prompt-textarea, div.ProseMirror[contenteditable="true"], div.ProseMirror'
     );
-    if (fallbackProseMirror instanceof HTMLElement && isEditableChatInput(fallbackProseMirror)) {
+    if (fallbackProseMirror instanceof HTMLElement && isReadyChatInput(fallbackProseMirror)) {
         return fallbackProseMirror;
     }
 
@@ -151,7 +215,8 @@ function waitForChatInput(timeoutMs: number): Promise<HTMLTextAreaElement | HTML
             }
         }, 100);
 
-        if (typeof MutationObserver === 'function' && document.documentElement) {
+        const targetNode = document.documentElement || document.body;
+        if (typeof MutationObserver === 'function' && targetNode) {
             observer = new MutationObserver(() => {
                 const input = findChatInput();
 
@@ -160,11 +225,20 @@ function waitForChatInput(timeoutMs: number): Promise<HTMLTextAreaElement | HTML
                 }
             });
 
-            observer.observe(document.documentElement, {
+            observer.observe(targetNode, {
                 childList: true,
                 subtree: true,
                 attributes: true,
-                attributeFilter: ['contenteditable', 'class'],
+                attributeFilter: [
+                    'contenteditable',
+                    'class',
+                    'disabled',
+                    'aria-disabled',
+                    'hidden',
+                    'style',
+                    'aria-hidden',
+                    'readonly',
+                ],
             });
         }
     });
@@ -408,14 +482,20 @@ async function injectPrompt(
         const inputField = await waitForChatInput(CHAT_INPUT_WAIT_TIMEOUT_MS);
 
         if (!inputField) {
-            void deps.proposalRepository.clearPendingBridgePrompt(record.id);
-            console.error(
-                'Mostaql Job Notifier: Could not find ChatGPT input field before timeout.'
+            console.warn(
+                'Mostaql Job Notifier: Could not find ChatGPT input field before timeout; preserving pending prompt for retry.'
             );
             return;
         }
 
         applyPromptToInput(inputField, record.prompt);
+
+        if (!isPromptInElement(inputField, record.prompt)) {
+            console.warn(
+                'Mostaql Job Notifier: Prompt injection did not take effect; preserving pending prompt for retry.'
+            );
+            return;
+        }
 
         state.injectedPromptIds.add(record.id);
         void deps.proposalRepository.clearPendingBridgePrompt(record.id);
@@ -431,9 +511,10 @@ export function initChatgptBridge(deps: ChatgptBridgeDependencies) {
 
     if (!state.storageListenerRegistered) {
         deps.proposalRepository.onPendingBridgePromptChanged((record) => {
+            const delay = findChatInput() ? 0 : STORAGE_CHANGE_INJECTION_DELAY_MS;
             setTimeout(() => {
                 void injectPrompt(deps, state, record);
-            }, STORAGE_CHANGE_INJECTION_DELAY_MS);
+            }, delay);
         });
         state.storageListenerRegistered = true;
     }
@@ -445,7 +526,8 @@ export function initChatgptBridge(deps: ChatgptBridgeDependencies) {
         return;
     }
 
+    const initialDelay = findChatInput() ? 0 : INITIAL_INJECTION_DELAY_MS;
     setTimeout(() => {
         void injectPrompt(deps, state);
-    }, INITIAL_INJECTION_DELAY_MS);
+    }, initialDelay);
 }

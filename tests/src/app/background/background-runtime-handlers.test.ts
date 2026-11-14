@@ -593,6 +593,124 @@ describe('background runtime handlers', () => {
         expect(executeScript).toHaveBeenCalledTimes(2);
     });
 
+    it('re-injects bridge script on tab URL change event when prompt is pending', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 79,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const pendingRecord = {
+            id: 'bridge-redirect-url-change',
+            prompt: 'Pending prompt after url change',
+            createdAt: 1,
+            expiresAt: 300_000,
+            targetHost: 'chatgpt.com',
+        };
+        const deps = createDeps({
+            proposalRepository: {
+                setPendingBridgePrompt: vi.fn(async () => undefined),
+                getPendingBridgePrompt: vi.fn(async () => pendingRecord),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Pending prompt after url change',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(executeScript).toHaveBeenCalledTimes(1);
+
+        // Simulate client SPA route transition with url change where status is already complete
+        await fakeBrowser.tabs.onUpdated.trigger(79, { url: 'https://chatgpt.com/c/new-chat' }, {
+            id: 79,
+            status: 'complete',
+            url: 'https://chatgpt.com/c/new-chat',
+        } as Browser.tabs.Tab);
+
+        expect(executeScript).toHaveBeenCalledTimes(2);
+    });
+
+    it('cleans up navigation listener when tab is closed before injection completes', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 80,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const removeListenerSpy = spyOn(fakeBrowser.tabs.onUpdated, 'removeListener');
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Prompt on tab to close',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        // Trigger tab removal
+        await fakeBrowser.tabs.onRemoved.trigger(80, { windowId: 1, isWindowClosing: false });
+
+        expect(removeListenerSpy).toHaveBeenCalled();
+    });
+
+    it('does not re-inject when pending prompt has already been cleared from storage', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 81,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const removeListenerSpy = spyOn(fakeBrowser.tabs.onUpdated, 'removeListener');
+        let currentPendingPrompt: unknown = {
+            id: 'bridge-cleared',
+            prompt: 'Prompt to clear',
+            createdAt: 1,
+            expiresAt: 300_000,
+            targetHost: 'chatgpt.com',
+        };
+        const deps = createDeps({
+            proposalRepository: {
+                setPendingBridgePrompt: vi.fn(async () => undefined),
+                getPendingBridgePrompt: vi.fn(async () => currentPendingPrompt),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Prompt to clear',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(executeScript).toHaveBeenCalledTimes(1);
+
+        // Prompt is successfully cleared by the first injection
+        currentPendingPrompt = null;
+
+        // Simulate subsequent navigation
+        await fakeBrowser.tabs.onUpdated.trigger(81, { status: 'complete' }, {
+            id: 81,
+            status: 'complete',
+            url: 'https://chatgpt.com/?model=auto',
+        } as Browser.tabs.Tab);
+
+        // Should not have injected a second time
+        expect(executeScript).toHaveBeenCalledTimes(1);
+        expect(removeListenerSpy).toHaveBeenCalled();
+    });
+
     it('focuses existing ChatGPT tab when open on alternate allowed host (chat.openai.com)', async () => {
         spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
         spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
@@ -630,11 +748,58 @@ describe('background runtime handlers', () => {
             tabStatus: 'focused',
             injected: true,
         });
+        expect(deps.proposalRepository.setPendingBridgePrompt).toHaveBeenCalledWith(
+            'Prompt for alternate host tab',
+            'https://chat.openai.com/'
+        );
         expect(updateTabSpy).toHaveBeenCalledWith(44, { active: true });
         expect(updateWindowSpy).toHaveBeenCalledWith(1, { focused: true });
         expect(executeScript).toHaveBeenCalledWith({
             target: { tabId: 44 },
             files: ['/chatgpt-bridge.js'],
         });
+    });
+
+    it('does not re-inject bridge script when onUpdated status is loading', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 95,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const pendingRecord = {
+            id: 'bridge-loading-status',
+            prompt: 'Pending prompt',
+            createdAt: 1,
+            expiresAt: 300_000,
+            targetHost: 'chatgpt.com',
+        };
+        const deps = createDeps({
+            proposalRepository: {
+                setPendingBridgePrompt: vi.fn(async () => undefined),
+                getPendingBridgePrompt: vi.fn(async () => pendingRecord),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Pending prompt',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(executeScript).toHaveBeenCalledTimes(1);
+
+        // onUpdated with loading status must not trigger injection
+        await fakeBrowser.tabs.onUpdated.trigger(95, { status: 'loading' }, {
+            id: 95,
+            status: 'loading',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+
+        expect(executeScript).toHaveBeenCalledTimes(1);
     });
 });
