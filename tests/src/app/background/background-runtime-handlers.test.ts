@@ -45,6 +45,7 @@ function createDeps(overrides: Record<string, unknown> = {}) {
         },
         proposalRepository: {
             setPendingBridgePrompt: vi.fn(async () => undefined),
+            getPendingBridgePrompt: vi.fn(async () => null),
         },
         runPolling: vi.fn(async (): Promise<JobBatchResult> => {
             return {
@@ -239,6 +240,7 @@ describe('background runtime handlers', () => {
         spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
         spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
             id: 23,
+            status: 'complete',
             url: 'https://chat.openai.com/',
         } as Browser.tabs.Tab);
         spyOn(fakeBrowser.scripting, 'executeScript').mockRejectedValue(
@@ -262,6 +264,135 @@ describe('background runtime handlers', () => {
             'Draft proposal',
             'https://chat.openai.com/'
         );
+    });
+
+    it('waits for tab completion via onUpdated before injecting bridge script into newly created tabs', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 88,
+            status: 'loading',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const openPromise = handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Draft proposal',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(executeScript).not.toHaveBeenCalled();
+
+        await fakeBrowser.tabs.onUpdated.trigger(88, { status: 'complete' }, {
+            id: 88,
+            status: 'complete',
+        } as Browser.tabs.Tab);
+
+        const result = await openPromise;
+        expect(result).toEqual({
+            success: true,
+            tabId: 88,
+            tabStatus: 'created',
+            injected: true,
+        });
+        expect(executeScript).toHaveBeenCalledWith({
+            target: { tabId: 88 },
+            files: ['/chatgpt-bridge.js'],
+        });
+        expect(deps.proposalRepository.setPendingBridgePrompt).toHaveBeenCalledWith(
+            'Draft proposal',
+            'https://chatgpt.com/'
+        );
+    });
+
+    it('waits for tab completion via active status polling before injecting bridge script', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 99,
+            status: 'loading',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        let pollCount = 0;
+        spyOn(fakeBrowser.tabs, 'get').mockImplementation(async (tabId: number) => {
+            pollCount++;
+            return {
+                id: tabId,
+                status: pollCount >= 2 ? 'complete' : 'loading',
+                url: 'https://chatgpt.com/',
+            } as Browser.tabs.Tab;
+        });
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const result = await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Draft proposal',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(result).toEqual({
+            success: true,
+            tabId: 99,
+            tabStatus: 'created',
+            injected: true,
+        });
+        expect(executeScript).toHaveBeenCalledWith({
+            target: { tabId: 99 },
+            files: ['/chatgpt-bridge.js'],
+        });
+    });
+
+    it('waits for existing loading tab to reach complete before injecting bridge script', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([
+            {
+                id: 55,
+                status: 'loading',
+                url: 'https://chatgpt.com/',
+            } as Browser.tabs.Tab,
+        ]);
+        spyOn(fakeBrowser.tabs, 'update').mockResolvedValue({
+            id: 55,
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const openPromise = handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Draft proposal',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(executeScript).not.toHaveBeenCalled();
+
+        await fakeBrowser.tabs.onUpdated.trigger(55, { status: 'complete' }, {
+            id: 55,
+            status: 'complete',
+        } as Browser.tabs.Tab);
+
+        const result = await openPromise;
+        expect(result).toEqual({
+            success: true,
+            tabId: 55,
+            tabStatus: 'focused',
+            injected: true,
+        });
+        expect(executeScript).toHaveBeenCalledWith({
+            target: { tabId: 55 },
+            files: ['/chatgpt-bridge.js'],
+        });
     });
 
     it('updates settings and reboots SignalR when alarm settings change', async () => {
@@ -374,5 +505,136 @@ describe('background runtime handlers', () => {
             '[background] failed to persist download cleanup record',
             expect.any(Error)
         );
+    });
+
+    it('waits for navigation when newly created tab starts with about:blank status complete before injecting', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 77,
+            status: 'complete',
+            url: 'about:blank',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const openPromise = handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Prompt on fresh tab',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        // Script must NOT be injected into about:blank
+        expect(executeScript).not.toHaveBeenCalled();
+
+        // Simulate navigation completing to chatgpt.com
+        await fakeBrowser.tabs.onUpdated.trigger(77, { status: 'complete' }, {
+            id: 77,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+
+        const result = await openPromise;
+        expect(result).toEqual({
+            success: true,
+            tabId: 77,
+            tabStatus: 'created',
+            injected: true,
+        });
+        expect(executeScript).toHaveBeenCalledWith({
+            target: { tabId: 77 },
+            files: ['/chatgpt-bridge.js'],
+        });
+    });
+
+    it('re-injects bridge script on redirected tab when prompt is still pending in storage', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([]);
+        spyOn(fakeBrowser.tabs, 'create').mockResolvedValue({
+            id: 78,
+            status: 'complete',
+            url: 'https://chatgpt.com/',
+        } as Browser.tabs.Tab);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const pendingRecord = {
+            id: 'bridge-redirect-1',
+            prompt: 'Pending prompt after redirect',
+            createdAt: 1,
+            expiresAt: 300_000,
+            targetHost: 'chatgpt.com',
+        };
+        const deps = createDeps({
+            proposalRepository: {
+                setPendingBridgePrompt: vi.fn(async () => undefined),
+                getPendingBridgePrompt: vi.fn(async () => pendingRecord),
+            },
+        });
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Pending prompt after redirect',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(executeScript).toHaveBeenCalledTimes(1);
+
+        // Simulate subsequent redirect navigation finishing
+        await fakeBrowser.tabs.onUpdated.trigger(78, { status: 'complete' }, {
+            id: 78,
+            status: 'complete',
+            url: 'https://chatgpt.com/?model=auto',
+        } as Browser.tabs.Tab);
+
+        expect(executeScript).toHaveBeenCalledTimes(2);
+    });
+
+    it('focuses existing ChatGPT tab when open on alternate allowed host (chat.openai.com)', async () => {
+        spyOn(fakeBrowser.permissions, 'contains').mockResolvedValue(true);
+        spyOn(fakeBrowser.permissions, 'request').mockResolvedValue(true);
+        // Query for https://chatgpt.com/* returns empty, but https://chat.openai.com/* returns existing tab
+        spyOn(fakeBrowser.tabs, 'query').mockImplementation(async (queryInfo: { url?: string }) => {
+            if (queryInfo.url === 'https://chat.openai.com/*') {
+                return [
+                    {
+                        id: 44,
+                        windowId: 1,
+                        status: 'complete',
+                        url: 'https://chat.openai.com/',
+                    } as Browser.tabs.Tab,
+                ];
+            }
+            return [];
+        });
+        const updateTabSpy = spyOn(fakeBrowser.tabs, 'update').mockResolvedValue({
+            id: 44,
+        } as Browser.tabs.Tab);
+        const updateWindowSpy = spyOn(fakeBrowser.windows, 'update').mockResolvedValue({} as never);
+        const executeScript = spyOn(fakeBrowser.scripting, 'executeScript').mockResolvedValue([]);
+        const deps = createDeps();
+        const handlers = createBackgroundRuntimeHandlers(deps as never);
+
+        const result = await handlers.openChatBridgePrompt({
+            action: 'openChatBridgePrompt',
+            prompt: 'Prompt for alternate host tab',
+            chatUrl: 'https://chatgpt.com/',
+        });
+
+        expect(result).toEqual({
+            success: true,
+            tabId: 44,
+            tabStatus: 'focused',
+            injected: true,
+        });
+        expect(updateTabSpy).toHaveBeenCalledWith(44, { active: true });
+        expect(updateWindowSpy).toHaveBeenCalledWith(1, { focused: true });
+        expect(executeScript).toHaveBeenCalledWith({
+            target: { tabId: 44 },
+            files: ['/chatgpt-bridge.js'],
+        });
     });
 });

@@ -8,7 +8,7 @@ import {
     hasChatBridgePermission,
     requestChatBridgePermission,
 } from '../../shared/browser/permissions';
-import { normalizeAiChatUrl } from '../../entities/ai/chat-url';
+import { isAllowedAiChatHost, normalizeAiChatUrl } from '../../entities/ai/chat-url';
 import type {
     BackgroundMessageHandlerMap,
     BackgroundMessageRequestMap,
@@ -24,6 +24,8 @@ import type { PlatformMonitoringAdapter } from '../../platforms/contracts';
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
 
 const CHATGPT_BRIDGE_SCRIPT_FILE = '/chatgpt-bridge.js';
+const TAB_COMPLETE_WAIT_TIMEOUT_MS = 10_000;
+const TAB_NAVIGATION_MONITOR_TIMEOUT_MS = 15_000;
 
 interface BackgroundRuntimeHandlerDependencies {
     readonly storage: ExtensionStorage;
@@ -34,7 +36,10 @@ interface BackgroundRuntimeHandlerDependencies {
     readonly signalr: SignalRManager;
     readonly monitoring: readonly PlatformMonitoringAdapter[];
     readonly proposals: ProposalGenerator;
-    readonly proposalRepository: Pick<ProposalRepository, 'setPendingBridgePrompt'>;
+    readonly proposalRepository: Pick<
+        ProposalRepository,
+        'setPendingBridgePrompt' | 'getPendingBridgePrompt'
+    >;
     readonly runPolling: (reason: string) => Promise<JobBatchResult>;
 }
 
@@ -58,6 +63,221 @@ async function ensureChatBridgePermission(chatUrl: string): Promise<boolean | 'u
     return requestChatBridgePermission(chatUrl);
 }
 
+function isTabReady(tab?: { status?: string; url?: string }): boolean {
+    if (!tab || tab.status !== 'complete') {
+        return false;
+    }
+
+    if (tab.url) {
+        if (
+            tab.url === 'about:blank' ||
+            tab.url.startsWith('chrome://') ||
+            tab.url.startsWith('edge://')
+        ) {
+            return false;
+        }
+
+        try {
+            const url = new URL(tab.url);
+            return isAllowedAiChatHost(url.hostname);
+        } catch {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+async function waitForTabComplete(
+    tabId: number,
+    timeoutMs = TAB_COMPLETE_WAIT_TIMEOUT_MS
+): Promise<void> {
+    if (!browser.tabs?.onUpdated && !browser.tabs?.get) {
+        return;
+    }
+
+    if (browser.tabs.get) {
+        try {
+            const currentTab = await browser.tabs.get(tabId);
+            if (isTabReady(currentTab)) {
+                return;
+            }
+        } catch {
+            // Ignore tab retrieval errors
+        }
+    }
+
+    return new Promise((resolve) => {
+        let settled = false;
+        let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+        const cleanup = () => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            clearTimeout(timer);
+            if (pollTimer) {
+                clearInterval(pollTimer);
+            }
+            if (browser.tabs?.onUpdated?.removeListener) {
+                try {
+                    browser.tabs.onUpdated.removeListener(onUpdatedListener);
+                } catch {
+                    // Ignore listener removal errors
+                }
+            }
+            if (browser.tabs?.onRemoved?.removeListener) {
+                try {
+                    browser.tabs.onRemoved.removeListener(onRemovedListener);
+                } catch {
+                    // Ignore listener removal errors
+                }
+            }
+            resolve();
+        };
+
+        const timer = setTimeout(() => {
+            cleanup();
+        }, timeoutMs);
+
+        const onUpdatedListener = (
+            updatedTabId: number,
+            changeInfo: { status?: string },
+            tab?: { status?: string; url?: string }
+        ) => {
+            if (updatedTabId !== tabId) {
+                return;
+            }
+
+            if (isTabReady(tab)) {
+                cleanup();
+                return;
+            }
+
+            if (changeInfo.status === 'complete') {
+                if (tab && isTabReady(tab)) {
+                    cleanup();
+                    return;
+                }
+
+                if (browser.tabs?.get) {
+                    void browser.tabs
+                        .get(tabId)
+                        .then((fetchedTab) => {
+                            if (isTabReady(fetchedTab)) {
+                                cleanup();
+                            }
+                        })
+                        .catch(() => undefined);
+                }
+            }
+        };
+
+        const onRemovedListener = (removedTabId: number) => {
+            if (removedTabId === tabId) {
+                cleanup();
+            }
+        };
+
+        if (browser.tabs?.onUpdated?.addListener) {
+            browser.tabs.onUpdated.addListener(onUpdatedListener);
+        }
+
+        if (browser.tabs?.onRemoved?.addListener) {
+            browser.tabs.onRemoved.addListener(onRemovedListener);
+        }
+
+        if (browser.tabs?.get) {
+            pollTimer = setInterval(() => {
+                if (settled) {
+                    return;
+                }
+                void browser.tabs
+                    ?.get?.(tabId)
+                    .then((tab) => {
+                        if (isTabReady(tab)) {
+                            cleanup();
+                        }
+                    })
+                    .catch(() => {
+                        // Ignore polling errors
+                    });
+            }, 100);
+        }
+    });
+}
+
+function monitorBridgeTabNavigation(
+    deps: BackgroundRuntimeHandlerDependencies,
+    tabId: number,
+    timeoutMs = TAB_NAVIGATION_MONITOR_TIMEOUT_MS
+): void {
+    if (!browser.tabs?.onUpdated?.addListener) {
+        return;
+    }
+
+    let settled = false;
+
+    const cleanup = () => {
+        if (settled) {
+            return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        if (browser.tabs?.onUpdated?.removeListener) {
+            try {
+                browser.tabs.onUpdated.removeListener(onUpdatedListener);
+            } catch {
+                // Ignore listener removal errors
+            }
+        }
+    };
+
+    const timer = setTimeout(cleanup, timeoutMs);
+
+    const onUpdatedListener = (
+        updatedTabId: number,
+        changeInfo: { status?: string },
+        tab?: { status?: string; url?: string }
+    ) => {
+        if (updatedTabId !== tabId || changeInfo.status !== 'complete') {
+            return;
+        }
+
+        const checkAndInject = async () => {
+            let currentTab = tab;
+            if (!currentTab?.url && browser.tabs?.get) {
+                try {
+                    currentTab = await browser.tabs.get(tabId);
+                } catch {
+                    // Ignore tab fetch error
+                }
+            }
+
+            if (currentTab && !isTabReady(currentTab)) {
+                return;
+            }
+
+            try {
+                const pending = await deps.proposalRepository.getPendingBridgePrompt();
+                if (!pending) {
+                    cleanup();
+                    return;
+                }
+
+                await injectChatBridge(tabId);
+            } catch {
+                // Script injection may fail if tab was closed or host permissions revoked
+            }
+        };
+
+        void checkAndInject();
+    };
+
+    browser.tabs.onUpdated.addListener(onUpdatedListener);
+}
+
 async function resolveChatBridgeTab(chatUrl: string): Promise<{
     readonly tabId: number;
     readonly tabStatus: 'created' | 'focused';
@@ -68,12 +288,34 @@ async function resolveChatBridgeTab(chatUrl: string): Promise<{
 
     const hostPermission = getChatBridgeHostPermission(chatUrl);
     const existingTabs = await browser.tabs.query({ url: hostPermission });
-    const existingTab = existingTabs.find((tab) => typeof tab.id === 'number');
+    let existingTab = existingTabs.find((tab) => typeof tab.id === 'number');
+
+    if (!existingTab) {
+        const alternateHost = chatUrl.includes('chatgpt.com') ? 'chat.openai.com' : 'chatgpt.com';
+        try {
+            const alternateTabs = await browser.tabs.query({ url: `https://${alternateHost}/*` });
+            existingTab = alternateTabs.find((tab) => typeof tab.id === 'number');
+        } catch {
+            // Ignore alternate host query error
+        }
+    }
 
     if (typeof existingTab?.id === 'number') {
         await browser.tabs.update(existingTab.id, {
             active: true,
         });
+
+        if (typeof existingTab.windowId === 'number' && browser.windows?.update) {
+            try {
+                await browser.windows.update(existingTab.windowId, { focused: true });
+            } catch {
+                // Ignore window focus errors
+            }
+        }
+
+        if (existingTab.status === 'loading') {
+            await waitForTabComplete(existingTab.id);
+        }
 
         return {
             tabId: existingTab.id,
@@ -88,6 +330,18 @@ async function resolveChatBridgeTab(chatUrl: string): Promise<{
 
     if (typeof createdTab.id !== 'number') {
         throw new Error('Created ChatGPT tab did not include an id.');
+    }
+
+    if (typeof createdTab.windowId === 'number' && browser.windows?.update) {
+        try {
+            await browser.windows.update(createdTab.windowId, { focused: true });
+        } catch {
+            // Ignore window focus errors
+        }
+    }
+
+    if (!isTabReady(createdTab)) {
+        await waitForTabComplete(createdTab.id);
     }
 
     return {
@@ -161,6 +415,7 @@ async function openChatBridgePrompt(
 
     try {
         await deps.proposalRepository.setPendingBridgePrompt(message.prompt, chatUrl);
+        monitorBridgeTabNavigation(deps, tab.tabId);
         await injectChatBridge(tab.tabId);
     } catch (error) {
         return {
