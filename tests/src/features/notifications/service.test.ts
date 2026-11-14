@@ -102,7 +102,7 @@ describe('notification service', () => {
         });
     });
 
-    it('keeps Chrome job notification context and action buttons', async () => {
+    it('keeps Chrome job notification action buttons and omits context message to prevent aggregation', async () => {
         useBrowserBuild('chrome');
         const create = vi.spyOn(fakeBrowser.notifications, 'create');
         const { storage } = createStorage();
@@ -117,12 +117,14 @@ describe('notification service', () => {
             },
         ]);
 
-        expect(create.mock.calls[0]?.[1]).toMatchObject({
+        const options = create.mock.calls[0]?.[1];
+        expect(options).toMatchObject({
             type: 'basic',
             iconUrl: fakeBrowser.runtime.getURL('/platforms/Mostql.png'),
             title: 'مشروع جديد: فرصة كروم',
             buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
         });
+        expect(options).not.toHaveProperty('contextMessage');
     });
 
     it('removes stored click payloads when browser notification creation fails', async () => {
@@ -518,7 +520,7 @@ describe('notification service', () => {
         expect(timestamps[2]! - timestamps[1]!).toBeGreaterThanOrEqual(75);
     });
 
-    it('does not stagger notification creation in Firefox builds', async () => {
+    it('staggers notification creation across batches in Firefox builds to prevent notification aggregation', async () => {
         useBrowserBuild('firefox');
         const timestamps: number[] = [];
         vi.spyOn(fakeBrowser.notifications, 'create').mockImplementation(async () => {
@@ -526,7 +528,9 @@ describe('notification service', () => {
             return 'ok';
         });
         const { storage } = createStorage();
-        const service = createNotificationService(storage as unknown as ExtensionStorage);
+        const service = createNotificationService(storage as unknown as ExtensionStorage, {
+            staggerMs: 80,
+        });
 
         const jobs = [
             {
@@ -547,8 +551,35 @@ describe('notification service', () => {
 
         expect(ids).toHaveLength(2);
         expect(timestamps).toHaveLength(2);
-        // Synchronous / non-delayed execution completes in less than 50ms
-        expect(timestamps[1]! - timestamps[0]!).toBeLessThan(50);
+        expect(timestamps[1]! - timestamps[0]!).toBeGreaterThanOrEqual(75);
+    });
+
+    it('opens project URL on notification click in Firefox builds and cleans up consumed payload', async () => {
+        useBrowserBuild('firefox');
+        const tabsCreate = vi.spyOn(fakeBrowser.tabs, 'create');
+        const { storage, payloads } = createStorage();
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+        service.registerHandlers();
+
+        const [id] = await service.showJobsNotification([
+            {
+                id: 'f-job-1',
+                platformId: 'mostaql' as const,
+                title: 'مشروع مستقل فيرفوكس',
+                url: 'https://mostaql.com/project/firefox-1',
+            },
+        ]);
+
+        expect(id).toBeDefined();
+        expect(payloads.get(id!)?.url).toBe('https://mostaql.com/project/firefox-1');
+
+        await fakeBrowser.notifications.onClicked.trigger(id!);
+        await vi.waitFor(() =>
+            expect(tabsCreate).toHaveBeenCalledWith({
+                url: 'https://mostaql.com/project/firefox-1',
+            })
+        );
+        expect(payloads.has(id!)).toBe(false);
     });
 
     it('creates independent notifications and click routing for multiple jobs from the same platform', async () => {

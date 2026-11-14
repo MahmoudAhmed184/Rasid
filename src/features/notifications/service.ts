@@ -26,7 +26,8 @@ export interface NotificationService {
 
 function normalizeNotificationUrl(value: string): string | null {
     try {
-        const url = new URL(value);
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        const url = new URL(trimmed);
         const hostname = url.hostname.toLowerCase();
         const isAllowedHost = NOTIFICATION_ALLOWED_HOSTS.some(
             (allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`)
@@ -124,7 +125,7 @@ export function createNotificationService(
 ): NotificationService {
     let handlersRegistered = false;
     let notificationSequence = 0;
-    const defaultStaggerMs = import.meta.env.BROWSER === 'firefox' ? 0 : NOTIFICATION_STAGGER_MS;
+    const defaultStaggerMs = NOTIFICATION_STAGGER_MS;
     const staggerMs = options?.staggerMs !== undefined ? options.staggerMs : defaultStaggerMs;
 
     function registerHandlers(): void {
