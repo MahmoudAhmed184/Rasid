@@ -2,11 +2,20 @@ import { browser } from 'wxt/browser';
 
 import { getAiChatTargetHost } from '../../entities/ai/chat-url';
 import type { AiProviderId } from '../../entities/ai/model';
-import {
-    AI_PROVIDER_HOST_PERMISSIONS,
-    getAiProviderHostPermission,
-    isUnsafeDirectAiEnabled,
-} from '../../features/proposals/ai-provider-host-permissions';
+
+export const AI_PROVIDER_HOST_PERMISSIONS = {
+    openai: 'https://api.openai.com/*',
+    gemini: 'https://generativelanguage.googleapis.com/*',
+    claude: 'https://api.anthropic.com/*',
+} as const satisfies Record<AiProviderId, string>;
+
+export function isUnsafeDirectAiEnabled(): boolean {
+    return import.meta.env.WXT_ENABLE_UNSAFE_DIRECT_AI === 'true';
+}
+
+export function getAiProviderHostPermission(providerId: AiProviderId): string {
+    return AI_PROVIDER_HOST_PERMISSIONS[providerId];
+}
 
 export function getChatBridgeHostPermission(chatUrl?: string): string {
     const host = chatUrl ? getAiChatTargetHost(chatUrl) : 'chatgpt.com';
@@ -39,8 +48,6 @@ export async function requestChatBridgePermission(chatUrl?: string): Promise<boo
     }
 }
 
-export { AI_PROVIDER_HOST_PERMISSIONS, getAiProviderHostPermission, isUnsafeDirectAiEnabled };
-
 export async function hasAiProviderHostPermission(providerId: AiProviderId): Promise<boolean> {
     const origin = getAiProviderHostPermission(providerId);
 
@@ -48,7 +55,11 @@ export async function hasAiProviderHostPermission(providerId: AiProviderId): Pro
         return false;
     }
 
-    return browser.permissions.contains({ origins: [origin] });
+    try {
+        return (await browser.permissions.contains({ origins: [origin] })) ?? false;
+    } catch {
+        return false;
+    }
 }
 
 export async function requestAiProviderHostPermission(providerId: AiProviderId): Promise<boolean> {
@@ -58,5 +69,9 @@ export async function requestAiProviderHostPermission(providerId: AiProviderId):
         return false;
     }
 
-    return browser.permissions.request({ origins: [origin] });
+    try {
+        return (await browser.permissions.request({ origins: [origin] })) ?? false;
+    } catch {
+        return false;
+    }
 }

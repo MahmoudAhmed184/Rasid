@@ -95,5 +95,33 @@ describe('permissions helper', () => {
                 origins: ['https://api.anthropic.com/*'],
             });
         });
+
+        it('returns false when direct provider permissions API throws or is unavailable', async () => {
+            vi.spyOn(fakeBrowser.permissions, 'contains').mockRejectedValue(
+                new Error('Contains error') as never
+            );
+            vi.spyOn(fakeBrowser.permissions, 'request').mockRejectedValue(
+                new Error('Request error') as never
+            );
+
+            await expect(hasAiProviderHostPermission('openai')).resolves.toBe(false);
+            await expect(requestAiProviderHostPermission('openai')).resolves.toBe(false);
+
+            const originalContains = fakeBrowser.permissions.contains;
+            const originalRequest = fakeBrowser.permissions.request;
+
+            // @ts-expect-error force undefined for test
+            fakeBrowser.permissions.contains = undefined;
+            // @ts-expect-error force undefined for test
+            fakeBrowser.permissions.request = undefined;
+
+            try {
+                await expect(hasAiProviderHostPermission('openai')).resolves.toBe(false);
+                await expect(requestAiProviderHostPermission('openai')).resolves.toBe(false);
+            } finally {
+                fakeBrowser.permissions.contains = originalContains;
+                fakeBrowser.permissions.request = originalRequest;
+            }
+        });
     });
 });
