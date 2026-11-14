@@ -46,6 +46,10 @@ const minHiringRateRule: JobFilterRule = ({ job, settings }) => {
         return null;
     }
 
+    if (!job.hiringRate || !job.hiringRate.trim() || job.hiringRate.includes('بعد')) {
+        return null;
+    }
+
     const hiringRate = parseHiringRate(job.hiringRate);
 
     if (hiringRate >= settings.minHiringRate) {
@@ -64,7 +68,8 @@ const includeKeywordRule: JobFilterRule = ({ job, settings }) => {
     }
 
     const includeTerms = parseTerms(settings.keywordsInclude);
-    const text = `${job.title} ${job.description ?? ''}`.toLowerCase();
+    const tagsText = (job.tags ?? []).join(' ');
+    const text = `${job.title} ${job.description ?? ''} ${tagsText}`.toLowerCase();
 
     if (includeTerms.some((term) => text.includes(term))) {
         return null;
@@ -82,7 +87,8 @@ const excludeKeywordRule: JobFilterRule = ({ job, settings }) => {
     }
 
     const excludeTerms = parseTerms(settings.keywordsExclude);
-    const text = `${job.title} ${job.description ?? ''}`.toLowerCase();
+    const tagsText = (job.tags ?? []).join(' ');
+    const text = `${job.title} ${job.description ?? ''} ${tagsText}`.toLowerCase();
 
     const matchedTerm = excludeTerms.find((term) => text.includes(term));
 

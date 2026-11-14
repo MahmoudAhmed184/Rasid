@@ -104,11 +104,10 @@ export async function publishJobBatch(options: {
     const notificationsSent = notificationsEnabled;
 
     if (notificationsSent) {
-        await notifyJobs([...jobs]);
-
-        if (settings.sound) {
-            await playNotificationSound?.();
-        }
+        const notifyPromise = notifyJobs([...jobs]);
+        const soundPromise =
+            settings.sound && playNotificationSound ? playNotificationSound() : Promise.resolve();
+        await Promise.all([notifyPromise, soundPromise]);
     }
 
     return {

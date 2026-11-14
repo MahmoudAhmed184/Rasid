@@ -437,7 +437,9 @@ export function createSignalRManager(options: SignalRManagerOptions): SignalRMan
                 const healingReason = await healSuspendedLiveSession(reason);
 
                 if (healingReason) {
-                    await options.onPollingFallback(healingReason);
+                    void options.onPollingFallback(healingReason).catch((error) => {
+                        logger.error('[signalr] healing fallback polling failed:', error);
+                    });
                 }
 
                 await connectLiveTransport(reason);

@@ -57,7 +57,7 @@ const factoryMocks = vi.hoisted(() => {
     const createProposalTemplateCatalog = vi.fn(() => proposalTemplates);
     const createProposalRepository = vi.fn(() => proposalRepository);
     const createProposalGenerator = vi.fn(() => proposalGenerator);
-    const runPollingCycle = vi.fn(async () => noopBatchResult);
+    const runPollingCycle = vi.fn(async (_options?: unknown) => noopBatchResult);
     const processRealtimeJobBatch = vi.fn(async () => ({
         ...noopBatchResult,
         source: 'signalr',
@@ -389,5 +389,45 @@ describe('background app factory', () => {
                 reason: 'signalr-fallback',
             })
         );
+    });
+
+    it('bypasses background ingestion queue for manual scans and deduplicates in-flight calls', async () => {
+        let resolveBackgroundCycle: (() => void) | undefined;
+        let backgroundStarted = false;
+
+        factoryMocks.state.runPollingCycle.mockImplementation(async (options: unknown) => {
+            const opts = options as { reason: string };
+            if (opts.reason === 'background-slow') {
+                backgroundStarted = true;
+                return new Promise((resolve) => {
+                    resolveBackgroundCycle = () => resolve(factoryMocks.state.noopBatchResult);
+                });
+            }
+            return factoryMocks.state.noopBatchResult;
+        });
+
+        const { createBackgroundApp } =
+            await import('../../../../src/app/background/create-background-services');
+        createBackgroundApp();
+
+        // 1. Kick off a background fallback cycle that hangs / takes long
+        const backgroundPromise =
+            factoryMocks.state.signalROptions?.onPollingFallback('background-slow');
+        await vi.waitFor(() => expect(backgroundStarted).toBe(true));
+
+        // 2. User clicks "Scan Now" (manual-check). It should execute immediately without waiting
+        // for backgroundPromise to resolve!
+        const manualPromise1 = getRuntimeDeps().runPolling('manual-check');
+        const manualPromise2 = getRuntimeDeps().runPolling('manual-check');
+
+        // Concurrent manual clicks must share the same in-flight promise
+        expect(manualPromise1).toBe(manualPromise2);
+
+        // manual-check should resolve immediately even while background is still pending
+        await expect(manualPromise1).resolves.toEqual(factoryMocks.state.noopBatchResult);
+
+        // Now resolve background task
+        resolveBackgroundCycle?.();
+        await backgroundPromise;
     });
 });

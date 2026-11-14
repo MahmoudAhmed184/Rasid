@@ -138,22 +138,31 @@ export function createExtensionStorage(
         return normalized;
     }
 
+    let ingestQueue: Promise<void> = Promise.resolve();
+
     async function ingestJobs(jobs: JobRecord[]): Promise<IngestedJobsResult> {
-        const raw = await client.get([
-            STORAGE_FIELDS.seenJobs,
-            STORAGE_FIELDS.recentJobs,
-            STORAGE_FIELDS.stats,
-            STORAGE_FIELDS.settings,
-            STORAGE_FIELDS.notificationsEnabled,
-        ]);
-        const snapshot = {
-            settings: sanitizeSettingsForPersistentStorage(
-                normalizeSettings(raw[STORAGE_FIELDS.settings])
-            ),
-            notificationsEnabled: raw[STORAGE_FIELDS.notificationsEnabled] !== false,
-            ...normalizeMonitoringFields(raw),
-        };
-        return monitoringStorage.ingestJobs(snapshot, jobs);
+        const run = ingestQueue.then(async () => {
+            const raw = await client.get([
+                STORAGE_FIELDS.seenJobs,
+                STORAGE_FIELDS.recentJobs,
+                STORAGE_FIELDS.stats,
+                STORAGE_FIELDS.settings,
+                STORAGE_FIELDS.notificationsEnabled,
+            ]);
+            const snapshot = {
+                settings: sanitizeSettingsForPersistentStorage(
+                    normalizeSettings(raw[STORAGE_FIELDS.settings])
+                ),
+                notificationsEnabled: raw[STORAGE_FIELDS.notificationsEnabled] !== false,
+                ...normalizeMonitoringFields(raw),
+            };
+            return monitoringStorage.ingestJobs(snapshot, jobs);
+        });
+        ingestQueue = run.then(
+            () => undefined,
+            () => undefined
+        );
+        return run;
     }
 
     async function getUnseenJobs(jobs: JobRecord[]): Promise<JobRecord[]> {

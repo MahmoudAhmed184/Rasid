@@ -18,11 +18,51 @@ import { parseJobPostedAt } from '../../shared/parsing/arabic-date';
 export const KHAMSAT_PUBLISH_FRESHNESS_HOURS = 48;
 const KHAMSAT_PUBLISH_FRESHNESS_WINDOW_MS = KHAMSAT_PUBLISH_FRESHNESS_HOURS * 60 * 60 * 1000;
 
+export const MANUAL_SCAN_TOTAL_BUDGET_MS = 3800;
+export const MANUAL_SCAN_FETCH_TIMEOUT_MS = 2000;
+export const MANUAL_SCAN_HYDRATION_BUDGET_MS = 1500;
+export const MANUAL_SCAN_CONCURRENCY = 4;
+export const MAX_MANUAL_SCAN_SYNC_HYDRATION_PER_PLATFORM = 4;
+
+export function isManualMonitoringScan(reason: string): boolean {
+    const normalized = reason.toLowerCase();
+    return (
+        normalized.includes('manual') ||
+        normalized.includes('checknow') ||
+        normalized.includes('check-now') ||
+        normalized.includes('scan')
+    );
+}
+
+export async function mapConcurrent<T, R>(
+    items: readonly T[],
+    concurrency: number,
+    fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+    if (items.length === 0) {
+        return [];
+    }
+    const results = new Array<R>(items.length);
+    let nextIndex = 0;
+
+    async function worker(): Promise<void> {
+        while (nextIndex < items.length) {
+            const current = nextIndex++;
+            results[current] = await fn(items[current], current);
+        }
+    }
+
+    const workerCount = Math.min(concurrency, items.length);
+    const workers = Array.from({ length: workerCount }, () => worker());
+    await Promise.all(workers);
+    return results;
+}
+
 function classifyKhamsatFreshness(
     job: Readonly<JobRecord>,
     now: Date
 ): 'fresh' | 'stale' | 'retry' {
-    const postedAt = parseJobPostedAt(job.postedAt);
+    const postedAt = parseJobPostedAt(job.postedAt, now) ?? parseJobPostedAt(job.time, now);
 
     if (!postedAt) {
         return 'retry';
@@ -41,6 +81,9 @@ export async function runPollingCycle(options: {
     playNotificationSound?: () => Promise<void>;
 }): Promise<JobBatchResult> {
     const { storage, notifyJobs, reason, monitoring, playNotificationSound } = options;
+    const scanStartTime = Date.now();
+    const isManualScan = isManualMonitoringScan(reason);
+    const scanDeadline = isManualScan ? scanStartTime + MANUAL_SCAN_TOTAL_BUDGET_MS : Infinity;
     const snapshot = await storage.getSnapshot();
     const settings = snapshot.settings;
     const attemptedAt = new Date().toISOString();
@@ -69,11 +112,13 @@ export async function runPollingCycle(options: {
 
     const successfulPlatforms = new Set<PlatformId>();
 
+    const feedFetchOptions = isManualScan ? { timeoutMs: MANUAL_SCAN_FETCH_TIMEOUT_MS } : undefined;
+
     await Promise.all(
         activeMonitoring.map(async (adapter) => {
             const feeds = adapter.resolveFeeds(settings);
             const results = await Promise.all(
-                feeds.map((url) => fetchPlatformFeedJobsResult(adapter, url))
+                feeds.map((url) => fetchPlatformFeedJobsResult(adapter, url, feedFetchOptions))
             );
 
             for (const result of results) {
@@ -125,22 +170,31 @@ export async function runPollingCycle(options: {
     const staleKhamsatJobs: JobRecord[] = [];
     const unseenCandidates = await storage.getUnseenJobs(feedJobList);
     const freshnessNow = new Date(attemptedAt);
-    const isManualScan = reason === 'manual-check' || reason.startsWith('manual');
+    const hydrationDeadline = isManualScan
+        ? Math.min(scanDeadline, Date.now() + MANUAL_SCAN_HYDRATION_BUDGET_MS)
+        : Infinity;
     const khamsatCandidates = unseenCandidates.filter(
         (job) => resolveJobPlatformId(job) === 'khamsat'
     );
 
     if (isManualScan && khamsatCandidates.length > 0) {
         const monitoringAdapter = monitoringById.get('khamsat');
-        const hydrationResults = await Promise.all(
-            khamsatCandidates.map(async (job) => {
+        const hydrationResults = await mapConcurrent(
+            khamsatCandidates,
+            MANUAL_SCAN_CONCURRENCY,
+            async (job) => {
                 const jobKey = getJobRecordKey(job);
+                const remainingBudget = hydrationDeadline - Date.now();
+                if (remainingBudget <= 200) {
+                    return { jobKey, job, status: 'retry' as const };
+                }
+                const timeoutMs = Math.min(MANUAL_SCAN_FETCH_TIMEOUT_MS, remainingBudget);
                 const hydrated = monitoringAdapter
-                    ? await hydratePlatformJob(monitoringAdapter, job)
+                    ? await hydratePlatformJob(monitoringAdapter, job, { timeoutMs })
                     : job;
                 const freshness = classifyKhamsatFreshness(hydrated, freshnessNow);
                 return { jobKey, job: hydrated, status: freshness };
-            })
+            }
         );
 
         for (const res of hydrationResults) {
@@ -150,7 +204,7 @@ export async function runPollingCycle(options: {
                 eligibleJobs.delete(res.jobKey);
                 if (res.status === 'stale') {
                     staleKhamsatJobs.push(res.job);
-                } else {
+                } else if (res.status !== 'retry') {
                     monitoringErrors.khamsat = {
                         message: `Khamsat: missing publish date after detail hydration for job ${res.job.id}.`,
                         failedAt: attemptedAt,
@@ -220,13 +274,23 @@ export async function runPollingCycle(options: {
             const monitoringAdapter = monitoringById.get(platformId);
 
             if (isManualScan) {
-                const hydratedList = await Promise.all(
-                    jobs.map(async (job) => {
+                const hydratedList = await mapConcurrent(
+                    jobs,
+                    MANUAL_SCAN_CONCURRENCY,
+                    async (job, index) => {
                         if (platformId === 'khamsat' || !monitoringAdapter) {
                             return job;
                         }
-                        return hydratePlatformJob(monitoringAdapter, job);
-                    })
+                        if (index >= MAX_MANUAL_SCAN_SYNC_HYDRATION_PER_PLATFORM) {
+                            return job;
+                        }
+                        const remainingBudget = hydrationDeadline - Date.now();
+                        if (remainingBudget <= 200) {
+                            return job;
+                        }
+                        const timeoutMs = Math.min(MANUAL_SCAN_FETCH_TIMEOUT_MS, remainingBudget);
+                        return hydratePlatformJob(monitoringAdapter, job, { timeoutMs });
+                    }
                 );
                 return hydratedList.filter((hydrated) => applyJobFilters(hydrated, settings));
             }
@@ -261,6 +325,31 @@ export async function runPollingCycle(options: {
 
     if (hydratedJobs.length > 0) {
         await storage.mergeRecentJobs(hydratedJobs);
+    }
+
+    if (isManualScan && jobsByPlatform.size > 0) {
+        const partiallyHydrated = hydratedJobs.filter(
+            (job) =>
+                resolveJobPlatformId(job) !== 'khamsat' &&
+                (!job.description || job.budget === 'غير محدد')
+        );
+        if (partiallyHydrated.length > 0) {
+            void Promise.resolve()
+                .then(async () => {
+                    const backgroundUpdated = await mapConcurrent(
+                        partiallyHydrated,
+                        2,
+                        async (job) => {
+                            const adapter = monitoringById.get(resolveJobPlatformId(job));
+                            return adapter ? hydratePlatformJob(adapter, job) : job;
+                        }
+                    );
+                    await storage.mergeRecentJobs(backgroundUpdated);
+                })
+                .catch((error) => {
+                    console.warn('[monitoring] background hydration error:', error);
+                });
+        }
     }
 
     return publishJobBatch({

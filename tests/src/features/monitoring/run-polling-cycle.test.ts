@@ -4,6 +4,8 @@ import type { JobRecord } from '../../../../src/entities/job/model';
 import type { PlatformMonitoringAdapter } from '../../../../src/platforms/contracts';
 import {
     KHAMSAT_PUBLISH_FRESHNESS_HOURS,
+    isManualMonitoringScan,
+    mapConcurrent,
     runPollingCycle,
 } from '../../../../src/features/monitoring/run-polling-cycle';
 import { DEFAULT_RUNTIME_STATE, DEFAULT_SETTINGS } from '../../../../src/shared/storage/schema';
@@ -515,5 +517,91 @@ describe('polling cycle orchestration', () => {
             expect.objectContaining({ id: 'm1', budget: '$200' }),
             expect.objectContaining({ id: 'm2', budget: '$200' }),
         ]);
+    });
+
+    it('identifies manual scan reasons reliably across variants', () => {
+        expect(isManualMonitoringScan('manual-check')).toBe(true);
+        expect(isManualMonitoringScan('manual')).toBe(true);
+        expect(isManualMonitoringScan('manual_scan')).toBe(true);
+        expect(isManualMonitoringScan('checkNow')).toBe(true);
+        expect(isManualMonitoringScan('check-now')).toBe(true);
+        expect(isManualMonitoringScan('scan-now')).toBe(true);
+        expect(isManualMonitoringScan('alarm')).toBe(false);
+        expect(isManualMonitoringScan('jobs-poll-alarm')).toBe(false);
+        expect(isManualMonitoringScan('signalr-connect-failed')).toBe(false);
+        expect(isManualMonitoringScan('worker-start')).toBe(false);
+    });
+
+    it('mapConcurrent bounds maximum concurrent workers and preserves order', async () => {
+        let activeWorkers = 0;
+        let peakWorkers = 0;
+        const items = [10, 20, 30, 40, 50, 60, 70];
+
+        const results = await mapConcurrent(items, 3, async (item) => {
+            activeWorkers++;
+            peakWorkers = Math.max(peakWorkers, activeWorkers);
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            activeWorkers--;
+            return item * 2;
+        });
+
+        expect(peakWorkers).toBeLessThanOrEqual(3);
+        expect(results).toEqual([20, 40, 60, 80, 100, 120, 140]);
+
+        const empty = await mapConcurrent([], 3, async () => 'never');
+        expect(empty).toEqual([]);
+    });
+
+    it('enforces fast fetch timeouts during manual scans and does not record false Khamsat errors on budget exhaustion', async () => {
+        const fetchSpy = vi.fn(async () => new Response('<main>job feed</main>'));
+        vi.stubGlobal('fetch', fetchSpy);
+
+        const notifyJobs = vi.fn(async () => undefined);
+        const storage = createStorage(createSnapshot());
+
+        const khamsatAdapter = createAdapter({
+            id: 'khamsat',
+            displayName: 'خمسات',
+            resolveFeeds: () => ['https://khamsat.com/community/requests'],
+            parseListingHtml: vi.fn(async () => [
+                {
+                    id: 'k-budget-exhausted',
+                    platformId: 'khamsat' as const,
+                    title: 'طلب خمسات',
+                    url: 'https://khamsat.com/community/requests/1',
+                },
+            ]),
+            parseProjectHtml: vi.fn(async () => ({
+                postedAt: 'منذ ساعتين',
+                description: 'وصف',
+            })),
+        });
+
+        let currentTime = 1_000_000;
+        const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+            const time = currentTime;
+            currentTime += 10_000;
+            return time;
+        });
+
+        try {
+            const result = await runPollingCycle({
+                storage: storage as unknown as ExtensionStorage,
+                notifyJobs,
+                reason: 'manual-check',
+                monitoring: [khamsatAdapter],
+            });
+
+            // The job timed out out of budget, so it was excluded from eligibleJobs without falsely marking monitoringErrors.khamsat
+            expect(result).toMatchObject({
+                kind: 'noop',
+                source: 'polling',
+                reason: 'no-new-jobs',
+            });
+            const snapshot = await storage.getSnapshot();
+            expect(snapshot.runtime.lastMonitoringErrors.khamsat).toBeUndefined();
+        } finally {
+            dateSpy.mockRestore();
+        }
     });
 });

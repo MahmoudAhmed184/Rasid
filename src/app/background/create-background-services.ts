@@ -71,6 +71,7 @@ export function createBackgroundApp(): BackgroundApp {
             : {}),
     });
     let ingestionQueue: Promise<void> = Promise.resolve();
+    let inFlightManualScan: Promise<JobBatchResult> | null = null;
 
     function enqueueIngestion<T>(task: () => Promise<T>): Promise<T> {
         const run = ingestionQueue.then(task, task);
@@ -81,16 +82,45 @@ export function createBackgroundApp(): BackgroundApp {
         return run;
     }
 
-    async function runPolling(reason: string): Promise<JobBatchResult> {
-        return enqueueIngestion(() =>
-            runPollingCycle({
-                storage,
-                notifyJobs: (jobs) => notifications.showJobsNotification(jobs),
-                playNotificationSound: () => audio.playNotification(),
-                reason,
-                monitoring: platformMonitoring,
-            })
+    function isManualScanReason(reason: string): boolean {
+        const normalized = reason.toLowerCase();
+        return (
+            normalized.includes('manual') ||
+            normalized.includes('checknow') ||
+            normalized.includes('check-now') ||
+            normalized.includes('scan')
         );
+    }
+
+    async function executePollingCycle(reason: string): Promise<JobBatchResult> {
+        return runPollingCycle({
+            storage,
+            notifyJobs: (jobs) => notifications.showJobsNotification(jobs),
+            playNotificationSound: () => audio.playNotification(),
+            reason,
+            monitoring: platformMonitoring,
+        });
+    }
+
+    function runPolling(reason: string): Promise<JobBatchResult> {
+        if (isManualScanReason(reason)) {
+            // User-initiated manual checks bypass background queues for immediate responsiveness
+            // within the target <= 5s SLA, deduplicating concurrent clicks.
+            if (inFlightManualScan) {
+                return inFlightManualScan;
+            }
+
+            const scanPromise = executePollingCycle(reason).finally(() => {
+                if (inFlightManualScan === scanPromise) {
+                    inFlightManualScan = null;
+                }
+            });
+
+            inFlightManualScan = scanPromise;
+            return scanPromise;
+        }
+
+        return enqueueIngestion(() => executePollingCycle(reason));
     }
 
     const signalr = createSignalRManager({

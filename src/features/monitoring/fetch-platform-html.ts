@@ -43,13 +43,21 @@ function sanitizeFetchError(error: unknown): string {
     return error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240);
 }
 
-function createFetchTimeoutSignal(): {
+export interface FetchHtmlOptions {
+    readonly timeoutMs?: number;
+    readonly signal?: AbortSignal;
+}
+
+function createFetchTimeoutSignal(
+    timeoutMs = MONITORING_FETCH_TIMEOUT_MS,
+    externalSignal?: AbortSignal
+): {
     readonly signal: AbortSignal;
     cleanup(): void;
 } {
-    if (typeof AbortSignal.timeout === 'function') {
+    if (!externalSignal && typeof AbortSignal.timeout === 'function') {
         return {
-            signal: AbortSignal.timeout(MONITORING_FETCH_TIMEOUT_MS),
+            signal: AbortSignal.timeout(timeoutMs),
             cleanup() {
                 // Native timeout signals clean themselves up.
             },
@@ -59,24 +67,36 @@ function createFetchTimeoutSignal(): {
     const controller = new AbortController();
     const timerId = setTimeout(() => {
         controller.abort(
-            new DOMException(
-                `Request timed out after ${MONITORING_FETCH_TIMEOUT_MS}ms.`,
-                'TimeoutError'
-            )
+            new DOMException(`Request timed out after ${timeoutMs}ms.`, 'TimeoutError')
         );
-    }, MONITORING_FETCH_TIMEOUT_MS);
+    }, timeoutMs);
+
+    function onExternalAbort() {
+        controller.abort(externalSignal?.reason);
+    }
+
+    if (externalSignal) {
+        if (externalSignal.aborted) {
+            controller.abort(externalSignal.reason);
+        } else {
+            externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+        }
+    }
 
     return {
         signal: controller.signal,
         cleanup() {
             clearTimeout(timerId);
+            if (externalSignal) {
+                externalSignal.removeEventListener('abort', onExternalAbort);
+            }
         },
     };
 }
 
-async function fetchHtml(url: string): Promise<HtmlFetchResult> {
+async function fetchHtml(url: string, options?: FetchHtmlOptions): Promise<HtmlFetchResult> {
     let response: Response;
-    const timeout = createFetchTimeoutSignal();
+    const timeout = createFetchTimeoutSignal(options?.timeoutMs, options?.signal);
 
     try {
         response = await fetch(url, {
@@ -97,6 +117,14 @@ async function fetchHtml(url: string): Promise<HtmlFetchResult> {
         return {
             kind: 'error',
             reason: sanitizeFetchError(error),
+        };
+    }
+
+    if (response.status === 202) {
+        timeout.cleanup();
+        return {
+            kind: 'error',
+            reason: 'Upstream challenge page detected (HTTP 202).',
         };
     }
 
@@ -161,9 +189,13 @@ function mergeDefinedJobDetails(
 
 export async function fetchPlatformFeedJobsResult(
     monitoring: PlatformMonitoringAdapter,
-    url: string
+    url: string,
+    options?: FetchHtmlOptions
 ): Promise<PlatformFeedJobsResult> {
-    const result = await fetchHtml(`${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`);
+    const result = await fetchHtml(
+        `${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`,
+        options
+    );
 
     if (result.kind !== 'success') {
         return {
@@ -180,9 +212,10 @@ export async function fetchPlatformFeedJobsResult(
 
 export async function hydratePlatformJob(
     monitoring: PlatformMonitoringAdapter,
-    job: Readonly<JobRecord>
+    job: Readonly<JobRecord>,
+    options?: FetchHtmlOptions
 ): Promise<JobRecord> {
-    const result = await fetchHtml(job.url);
+    const result = await fetchHtml(job.url, options);
 
     if (result.kind !== 'success') {
         return { ...job };

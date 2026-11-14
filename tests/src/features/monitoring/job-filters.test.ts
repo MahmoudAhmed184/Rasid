@@ -61,6 +61,57 @@ describe('monitoring job filters', () => {
         ]);
     });
 
+    it('does not filter out jobs when hiring rate is not applicable or uncalculated', () => {
+        const khamsatJob: JobRecord = {
+            id: 'k1',
+            platformId: 'khamsat',
+            title: 'مطلوب تصميم شعار احترافي',
+            url: 'https://khamsat.com/community/requests/1',
+        };
+        const freshMostaqlJob: JobRecord = {
+            ...baseJob,
+            hiringRate: 'لم يحسب بعد',
+        };
+
+        expect(
+            applyJobFilters(khamsatJob, {
+                ...DEFAULT_SETTINGS,
+                minHiringRate: 80,
+            })
+        ).toBe(true);
+
+        expect(
+            applyJobFilters(freshMostaqlJob, {
+                ...DEFAULT_SETTINGS,
+                minHiringRate: 80,
+            })
+        ).toBe(true);
+    });
+
+    it('matches include and exclude keywords against job tags', () => {
+        const taggedJob: JobRecord = {
+            id: 't1',
+            platformId: 'nafezly',
+            title: 'مشروع تطوير موقع',
+            url: 'https://nafezly.com/project/t1',
+            tags: ['React', 'Next.js', 'Tailwind'],
+        };
+
+        expect(
+            applyJobFilters(taggedJob, {
+                ...DEFAULT_SETTINGS,
+                keywordsInclude: 'next.js',
+            })
+        ).toBe(true);
+
+        expect(
+            applyJobFilters(taggedJob, {
+                ...DEFAULT_SETTINGS,
+                keywordsExclude: 'tailwind',
+            })
+        ).toBe(false);
+    });
+
     it('handles quiet-hour windows that cross midnight', () => {
         const settings = {
             ...DEFAULT_SETTINGS,
