@@ -350,14 +350,14 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
                         }
                     ).chrome;
 
-                    // Store notification payloads for project URL routing
+                    // Store notification payloads using the extension's real storage key prefix
                     await chromeObj.storage.local.set({
-                        [`rasid:notif:${id1}`]: {
+                        [`notification:${id1}`]: {
                             url: url1,
                             jobId: 'b-1',
                             createdAt: new Date().toISOString(),
                         },
-                        [`rasid:notif:${id2}`]: {
+                        [`notification:${id2}`]: {
                             url: url2,
                             jobId: 'b-2',
                             createdAt: new Date().toISOString(),
@@ -400,34 +400,22 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             expect(res.all[res.id2]).toBe(true);
             expect(Object.keys(res.all).length).toBeGreaterThanOrEqual(2);
 
-            // Verify clicking notification 1 directs directly to project 1 link
+            // Verify clicking notification 1 banner triggers the real onClicked listener and navigates directly to project 1 link
             const page1Promise = context.waitForEvent('page');
             await serviceWorker.evaluate(
-                async ({ id1 }) => {
+                ({ id1 }) => {
                     const chromeObj = (
                         globalThis as unknown as {
                             chrome: {
-                                storage: {
-                                    local: {
-                                        get: (
-                                            key: string
-                                        ) => Promise<Record<string, { url?: string }>>;
-                                        remove: (key: string) => Promise<void>;
+                                notifications: {
+                                    onClicked: {
+                                        dispatch: (notificationId: string) => void;
                                     };
-                                };
-                                tabs: {
-                                    create: (opts: { url: string }) => Promise<unknown>;
                                 };
                             };
                         }
                     ).chrome;
-                    const key = `rasid:notif:${id1}`;
-                    const data = await chromeObj.storage.local.get(key);
-                    const payload = data[key];
-                    if (payload?.url) {
-                        await chromeObj.storage.local.remove(key);
-                        await chromeObj.tabs.create({ url: payload.url });
-                    }
+                    chromeObj.notifications.onClicked.dispatch(id1);
                 },
                 { id1 }
             );
@@ -437,34 +425,25 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             expect(page1.url()).toBe(url1);
             await page1.close();
 
-            // Verify clicking notification 2 directs directly to project 2 link
+            // Verify clicking notification 2 action button triggers the real onButtonClicked listener and navigates directly to project 2 link
             const page2Promise = context.waitForEvent('page');
             await serviceWorker.evaluate(
-                async ({ id2 }) => {
+                ({ id2 }) => {
                     const chromeObj = (
                         globalThis as unknown as {
                             chrome: {
-                                storage: {
-                                    local: {
-                                        get: (
-                                            key: string
-                                        ) => Promise<Record<string, { url?: string }>>;
-                                        remove: (key: string) => Promise<void>;
+                                notifications: {
+                                    onButtonClicked: {
+                                        dispatch: (
+                                            notificationId: string,
+                                            buttonIndex: number
+                                        ) => void;
                                     };
-                                };
-                                tabs: {
-                                    create: (opts: { url: string }) => Promise<unknown>;
                                 };
                             };
                         }
                     ).chrome;
-                    const key = `rasid:notif:${id2}`;
-                    const data = await chromeObj.storage.local.get(key);
-                    const payload = data[key];
-                    if (payload?.url) {
-                        await chromeObj.storage.local.remove(key);
-                        await chromeObj.tabs.create({ url: payload.url });
-                    }
+                    chromeObj.notifications.onButtonClicked.dispatch(id2, 0);
                 },
                 { id2 }
             );
@@ -473,6 +452,30 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             await page2.waitForLoadState('domcontentloaded');
             expect(page2.url()).toBe(url2);
             await page2.close();
+
+            // Verify payload storage was consumed and cleaned up upon notification clicks
+            const remainingPayloads = await serviceWorker.evaluate(
+                async ({ id1, id2 }) => {
+                    const chromeObj = (
+                        globalThis as unknown as {
+                            chrome: {
+                                storage: {
+                                    local: {
+                                        get: (keys: string[]) => Promise<Record<string, unknown>>;
+                                    };
+                                };
+                            };
+                        }
+                    ).chrome;
+                    return chromeObj.storage.local.get([
+                        `notification:${id1}`,
+                        `notification:${id2}`,
+                    ]);
+                },
+                { id1, id2 }
+            );
+            expect(remainingPayloads[`notification:${id1}`]).toBeUndefined();
+            expect(remainingPayloads[`notification:${id2}`]).toBeUndefined();
         } finally {
             await context.close();
         }
