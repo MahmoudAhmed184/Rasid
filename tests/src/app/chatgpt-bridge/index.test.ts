@@ -35,6 +35,7 @@ describe('ChatGPT bridge', () => {
     });
 
     afterEach(() => {
+        window.__rasidChatgptBridgeState__?.stabilityCleanup?.();
         vi.useRealTimers();
         vi.restoreAllMocks();
     });
@@ -115,8 +116,7 @@ describe('ChatGPT bridge', () => {
         await vi.advanceTimersByTimeAsync(1_500);
 
         const editor = document.getElementById('prompt-textarea');
-        expect(editor?.textContent).toBe('Line oneLine two');
-        expect(editor?.querySelectorAll('br')).toHaveLength(1);
+        expect(editor?.textContent).toBe('Line one\nLine two');
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
             'bridge-contenteditable'
         );
@@ -124,6 +124,261 @@ describe('ChatGPT bridge', () => {
         emit(changedRecord);
         await vi.advanceTimersByTimeAsync(1_500);
 
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledTimes(1);
+    });
+
+    it('injects prompt into contenteditable ProseMirror using execCommand and dispatches input event', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="true" class="ProseMirror"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.getElementById('prompt-textarea')!;
+        const inputSpy = vi.fn();
+        editor.addEventListener('input', inputSpy);
+
+        const execCommandSpy = vi.fn((_cmd: string, _ui: boolean, value?: string) => {
+            editor.textContent = value ?? '';
+            return true;
+        });
+        document.execCommand = execCommandSpy as unknown as typeof document.execCommand;
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-prosemirror-exec',
+            prompt: 'ProseMirror prompt\nLine 2',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(execCommandSpy).toHaveBeenCalledWith(
+            'insertText',
+            false,
+            'ProseMirror prompt\nLine 2'
+        );
+        expect(inputSpy).toHaveBeenCalled();
+        expect(editor.textContent).toBe('ProseMirror prompt\nLine 2');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-prosemirror-exec'
+        );
+    });
+
+    it('falls back to InputEvent beforeinput when execCommand returns false', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="true" class="ProseMirror"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.getElementById('prompt-textarea')!;
+        const beforeInputSpy = vi.fn();
+        const inputSpy = vi.fn();
+        editor.addEventListener('beforeinput', (event) => {
+            const inputEv = event as InputEvent;
+            beforeInputSpy({
+                inputType: inputEv.inputType,
+                data: inputEv.data,
+            });
+        });
+        editor.addEventListener('input', inputSpy);
+
+        document.execCommand = vi
+            .fn()
+            .mockReturnValue(false) as unknown as typeof document.execCommand;
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-prosemirror-fallback',
+            prompt: 'Fallback beforeinput prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(beforeInputSpy).toHaveBeenCalledWith({
+            inputType: 'insertText',
+            data: 'Fallback beforeinput prompt',
+        });
+        expect(inputSpy).toHaveBeenCalled();
+        expect(editor.textContent).toBe('Fallback beforeinput prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-prosemirror-fallback'
+        );
+    });
+
+    it('dispatches both input and change events when injecting into contenteditable', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="true" class="ProseMirror"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.getElementById('prompt-textarea')!;
+        const inputSpy = vi.fn();
+        const changeSpy = vi.fn();
+        editor.addEventListener('input', inputSpy);
+        editor.addEventListener('change', changeSpy);
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-events-check',
+            prompt: 'Event test prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(inputSpy).toHaveBeenCalled();
+        expect(changeSpy).toHaveBeenCalled();
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-events-check'
+        );
+    });
+
+    it('detects and injects into fallback standalone div.ProseMirror elements', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><main><div class="ProseMirror" contenteditable="true"></div></main>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.querySelector('div.ProseMirror') as HTMLElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-prosemirror-selector',
+            prompt: 'ProseMirror selector prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(editor.textContent).toBe('ProseMirror selector prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-prosemirror-selector'
+        );
+    });
+
+    it('detects nested ProseMirror inside wrapper div#prompt-textarea', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea"><div class="ProseMirror" contenteditable="true"></div></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const innerEditor = document.querySelector('div.ProseMirror') as HTMLElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-nested-prosemirror',
+            prompt: 'Nested ProseMirror prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(innerEditor.textContent).toBe('Nested ProseMirror prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-nested-prosemirror'
+        );
+    });
+
+    it('bypasses an uneditable #prompt-textarea placeholder and detects sibling ProseMirror', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" class="skeleton-wrapper"></div><div class="ProseMirror" contenteditable="true"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.querySelector('div.ProseMirror') as HTMLElement;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-sibling-prosemirror',
+            prompt: 'Sibling ProseMirror prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(editor.textContent).toBe('Sibling ProseMirror prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-sibling-prosemirror'
+        );
+    });
+
+    it('detects input when contenteditable attribute is added dynamically after initial render', async () => {
+        vi.useFakeTimers();
+        installTestDom('<!doctype html><div id="prompt-textarea"></div>');
+        setWindowHost('chatgpt.com');
+
+        const placeholder = document.getElementById('prompt-textarea')!;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-dynamic-attribute',
+            prompt: 'Hydrated prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance 1000ms: prompt injection starts waiting for chat input
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        // Dynamically simulate React hydration adding contenteditable="true"
+        placeholder.setAttribute('contenteditable', 'true');
+
+        // Allow MutationObserver/polling to detect the attribute change
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(placeholder.textContent).toBe('Hydrated prompt');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-dynamic-attribute'
+        );
+    });
+
+    it('prevents concurrent in-flight injection race conditions for the same prompt', async () => {
+        vi.useFakeTimers();
+        installTestDom('<!doctype html><textarea id="prompt-textarea"></textarea>');
+        setWindowHost('chatgpt.com');
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-inflight-lock',
+            prompt: 'In-flight prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository, emit } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Trigger storage change listener before initial timeout finishes
+        emit(record);
+
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        const textarea = document.getElementById('prompt-textarea') as HTMLTextAreaElement;
+        expect(textarea.value).toBe('In-flight prompt');
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledTimes(1);
     });
 
@@ -208,6 +463,103 @@ describe('ChatGPT bridge', () => {
         );
         expect(error).toHaveBeenCalledWith(
             'Mostaql Job Notifier: Could not find ChatGPT input field before timeout.'
+        );
+    });
+
+    it('restores prompt if React hydration clears the editor shortly after injection', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="true" class="ProseMirror"></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const editor = document.getElementById('prompt-textarea')!;
+        const record: PendingBridgePrompt = {
+            id: 'bridge-react-hydration-wipe',
+            prompt: 'Cold load hydrated prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+
+        // Advance 1200ms: initial injection occurs and sets textContent
+        await vi.advanceTimersByTimeAsync(1_200);
+        expect(editor.textContent).toBe('Cold load hydrated prompt');
+
+        // Simulate React mounting and wiping editor state during hydration
+        editor.textContent = '';
+        expect(editor.textContent).toBe('');
+
+        // Advance stability check interval (200ms)
+        await vi.advanceTimersByTimeAsync(300);
+
+        // Bridge stability watcher must detect the wipe and restore prompt
+        expect(editor.textContent).toBe('Cold load hydrated prompt');
+    });
+
+    it('restores prompt if React hydration replaces the editor element with a new empty one', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><main><div id="prompt-textarea" contenteditable="true"></div></main>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-react-element-replace',
+            prompt: 'Replaced element prompt',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(1_200);
+
+        // Initial element received prompt
+        const initialEditor = document.getElementById('prompt-textarea')!;
+        expect(initialEditor.textContent).toBe('Replaced element prompt');
+
+        // Simulate React replacing the container with a brand new empty editor element
+        const main = document.querySelector('main')!;
+        main.innerHTML =
+            '<div id="prompt-textarea" contenteditable="true" class="ProseMirror"></div>';
+
+        // Advance stability check interval (200ms)
+        await vi.advanceTimersByTimeAsync(300);
+
+        const newEditor = document.getElementById('prompt-textarea')!;
+        expect(newEditor.textContent).toBe('Replaced element prompt');
+    });
+
+    it('prioritizes inner ProseMirror editor when outer container has contenteditable', async () => {
+        vi.useFakeTimers();
+        installTestDom(
+            '<!doctype html><div id="prompt-textarea" contenteditable="true"><div class="ProseMirror" contenteditable="true"></div></div>'
+        );
+        setWindowHost('chatgpt.com');
+
+        const outer = document.getElementById('prompt-textarea')!;
+        const inner = outer.querySelector('div.ProseMirror') as HTMLElement;
+
+        const record: PendingBridgePrompt = {
+            id: 'bridge-nested-editable-priority',
+            prompt: 'Target inner ProseMirror',
+            createdAt: 1,
+            expiresAt: 301_000,
+            targetHost: 'chatgpt.com',
+        };
+        const { deps: proposalRepository } = createDeps(record);
+
+        initChatgptBridge({ proposalRepository });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(inner.textContent).toBe('Target inner ProseMirror');
+        expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
+            'bridge-nested-editable-priority'
         );
     });
 });

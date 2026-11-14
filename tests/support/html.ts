@@ -31,6 +31,7 @@ export function installTestDom(markup = DEFAULT_MARKUP): Document {
         'HTMLSelectElement',
         'HTMLTextAreaElement',
         'HTMLTimeElement',
+        'InputEvent',
         'KeyboardEvent',
         'MouseEvent',
         'Node',
