@@ -71,7 +71,7 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     title.style.fontSize = '13px';
     titleIcon.className = 'fa fa-fw fa-plug';
     titleIcon.style.color = '#2386c8';
-    title.append(titleIcon, ' أدوات فرلانسيا');
+    title.append(titleIcon, ' أدوات راصد');
 
     clearfix.className = 'clearfix';
 
