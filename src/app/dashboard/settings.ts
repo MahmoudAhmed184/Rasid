@@ -15,6 +15,11 @@ import {
     type SupportedMonitoringPlatformId,
 } from '../../entities/settings/model';
 import { isAllowedAiChatHost } from '../../entities/ai/chat-url';
+import {
+    hasChatBridgePermission,
+    requestAiProviderHostPermission,
+    requestChatBridgePermission,
+} from '../../shared/browser/permissions';
 import type { BackupRepository } from '../../features/backup/repository';
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
 import type { SettingsRepository } from '../../features/settings/repository';
@@ -522,8 +527,6 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             return true;
         }
 
-        const { requestAiProviderHostPermission } =
-            await import('../../features/proposals/ai-provider-host-permissions');
         const granted = await requestAiProviderHostPermission(settings.aiProvider);
 
         if (!granted) {
@@ -543,9 +546,6 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         if (settings.aiExecutionMode !== 'bridge') {
             return true;
         }
-
-        const { hasChatBridgePermission, requestChatBridgePermission } =
-            await import('../../shared/browser/permissions');
 
         if (await hasChatBridgePermission(settings.aiChatUrl)) {
             return true;
@@ -571,7 +571,6 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         }
 
         try {
-            const { hasChatBridgePermission } = await import('../../shared/browser/permissions');
             const targetUrl =
                 chatUrl ?? String(getFieldValue('aiChatUrl') ?? 'https://chatgpt.com/');
             const granted = await hasChatBridgePermission(targetUrl);
@@ -583,8 +582,8 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
                 statusEl.textContent = 'صلاحية ChatGPT غير ممنوحة بعد (انقر للطلب).';
                 statusEl.className = 'help-text text-warning';
             }
-        } catch {
-            // Ignore if permissions API is unavailable
+        } catch (error) {
+            console.warn('Failed to update ChatGPT permission status:', error);
         }
     }
 
@@ -899,8 +898,6 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
 
             try {
                 const chatUrl = String(getFieldValue('aiChatUrl') ?? 'https://chatgpt.com/');
-                const { requestChatBridgePermission } =
-                    await import('../../shared/browser/permissions');
                 const granted = await requestChatBridgePermission(chatUrl);
                 const statusEl = root.getElementById('chatGptPermissionStatus');
 
@@ -915,7 +912,8 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
                         showSaveStatus('تم رفض منح صلاحية ChatGPT.', 'error', false);
                     }
                 }
-            } catch {
+            } catch (error) {
+                console.warn('Failed to grant ChatGPT permission:', error);
                 const statusEl = root.getElementById('chatGptPermissionStatus');
                 if (statusEl) {
                     statusEl.textContent = 'تعذر طلب الصلاحية من المتصفح.';

@@ -30,7 +30,8 @@ export async function hasChatBridgePermission(chatUrl?: string): Promise<boolean
     try {
         const origin = getChatBridgeHostPermission(chatUrl);
         return (await browser.permissions.contains({ origins: [origin] })) ?? false;
-    } catch {
+    } catch (error) {
+        console.warn('Failed to check chat bridge host permission:', error);
         return false;
     }
 }
@@ -43,7 +44,8 @@ export async function requestChatBridgePermission(chatUrl?: string): Promise<boo
     try {
         const origin = getChatBridgeHostPermission(chatUrl);
         return (await browser.permissions.request({ origins: [origin] })) ?? false;
-    } catch {
+    } catch (error) {
+        console.warn('Failed to request chat bridge host permission:', error);
         return false;
     }
 }
@@ -57,7 +59,8 @@ export async function hasAiProviderHostPermission(providerId: AiProviderId): Pro
 
     try {
         return (await browser.permissions.contains({ origins: [origin] })) ?? false;
-    } catch {
+    } catch (error) {
+        console.warn('Failed to check AI provider host permission:', error);
         return false;
     }
 }
@@ -71,7 +74,8 @@ export async function requestAiProviderHostPermission(providerId: AiProviderId):
 
     try {
         return (await browser.permissions.request({ origins: [origin] })) ?? false;
-    } catch {
+    } catch (error) {
+        console.warn('Failed to request AI provider host permission:', error);
         return false;
     }
 }

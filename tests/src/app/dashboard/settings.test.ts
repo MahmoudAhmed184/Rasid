@@ -595,10 +595,129 @@ describe('dashboard settings form', () => {
                     origins: ['https://chatgpt.com/*'],
                 })
             );
-            expect(document.getElementById('chatGptPermissionStatus')?.textContent).toContain(
-                'تم منح صلاحية ChatGPT بنجاح'
+            await vi.waitFor(() =>
+                expect(document.getElementById('chatGptPermissionStatus')?.textContent).toContain(
+                    'تم منح صلاحية ChatGPT بنجاح'
+                )
             );
         } finally {
+            Object.defineProperty(browser.permissions, 'contains', {
+                configurable: true,
+                value: originalContains,
+            });
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: originalRequest,
+            });
+        }
+    });
+
+    it('updates ChatGPT status to rejected when the user denies permission via explicit button', async () => {
+        const { browser } = await import('wxt/browser');
+        const originalRequest = browser.permissions.request;
+        const originalContains = browser.permissions.contains;
+
+        try {
+            const permissionsContains = vi.fn(async () => false);
+            const permissionsRequest = vi.fn(async () => false);
+
+            Object.defineProperty(browser.permissions, 'contains', {
+                configurable: true,
+                value: permissionsContains,
+            });
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: permissionsRequest,
+            });
+
+            const document = installSettingsDom();
+            const repositories = createRepositories({
+                ...DEFAULT_SETTINGS,
+                aiExecutionMode: 'bridge',
+                aiChatUrl: 'https://chatgpt.com/',
+            });
+            const form = createSettingsForm(document, { repositories });
+
+            form.bind();
+            form.apply(await repositories.settingsRepository.get());
+
+            document.getElementById('grantChatGptPermissionBtn')?.click();
+
+            await vi.waitFor(() =>
+                expect(permissionsRequest).toHaveBeenCalledWith({
+                    origins: ['https://chatgpt.com/*'],
+                })
+            );
+            await vi.waitFor(() =>
+                expect(document.getElementById('chatGptPermissionStatus')?.textContent).toBe(
+                    'تم رفض صلاحية ChatGPT.'
+                )
+            );
+            expect(document.getElementById('saveStatus')?.textContent).toContain(
+                'تم رفض منح صلاحية ChatGPT.'
+            );
+        } finally {
+            Object.defineProperty(browser.permissions, 'contains', {
+                configurable: true,
+                value: originalContains,
+            });
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: originalRequest,
+            });
+        }
+    });
+
+    it('handles unexpected browser permission errors gracefully when granting ChatGPT permission', async () => {
+        const { browser } = await import('wxt/browser');
+        const originalRequest = browser.permissions.request;
+        const originalContains = browser.permissions.contains;
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        try {
+            const permissionsContains = vi.fn(async () => false);
+            const permissionsRequest = vi.fn(() => {
+                throw new Error('permissions.request may only be called from a user input handler');
+            });
+
+            Object.defineProperty(browser.permissions, 'contains', {
+                configurable: true,
+                value: permissionsContains,
+            });
+            Object.defineProperty(browser.permissions, 'request', {
+                configurable: true,
+                value: permissionsRequest,
+            });
+
+            const document = installSettingsDom();
+            const repositories = createRepositories({
+                ...DEFAULT_SETTINGS,
+                aiExecutionMode: 'bridge',
+                aiChatUrl: 'https://chatgpt.com/',
+            });
+            const form = createSettingsForm(document, { repositories });
+
+            form.bind();
+            form.apply(await repositories.settingsRepository.get());
+
+            document.getElementById('grantChatGptPermissionBtn')?.click();
+
+            await vi.waitFor(() =>
+                expect(permissionsRequest).toHaveBeenCalledWith({
+                    origins: ['https://chatgpt.com/*'],
+                })
+            );
+            await vi.waitFor(() =>
+                expect(document.getElementById('chatGptPermissionStatus')?.textContent).toBe(
+                    'تم رفض صلاحية ChatGPT.'
+                )
+            );
+            expect(warnSpy).toHaveBeenCalledWith(
+                'Failed to request chat bridge host permission:',
+                expect.any(Error)
+            );
+        } finally {
+            warnSpy.mockRestore();
             Object.defineProperty(browser.permissions, 'contains', {
                 configurable: true,
                 value: originalContains,
