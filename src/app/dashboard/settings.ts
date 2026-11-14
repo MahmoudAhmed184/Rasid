@@ -551,17 +551,27 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             return true;
         }
 
-        const granted = await requestChatBridgePermission(settings.aiChatUrl);
+        try {
+            const granted = await requestChatBridgePermission(settings.aiChatUrl);
 
-        if (!granted) {
+            if (!granted) {
+                showSaveStatus(
+                    'تعذر حفظ إعدادات ChatGPT لأن صلاحية مضيف ChatGPT لم تُمنح.',
+                    'error',
+                    false
+                );
+            }
+
+            return granted;
+        } catch (error) {
+            console.warn('Failed to request ChatGPT permission before save:', error);
             showSaveStatus(
-                'تعذر حفظ إعدادات ChatGPT لأن صلاحية مضيف ChatGPT لم تُمنح.',
+                'تعذر حفظ إعدادات ChatGPT بسبب خطأ في طلب الصلاحية من المتصفح.',
                 'error',
                 false
             );
+            return false;
         }
-
-        return granted;
     }
 
     async function updateChatGptPermissionStatus(chatUrl?: string) {
@@ -894,6 +904,18 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         });
 
         async function handleGrantChatGptPermission(button: HTMLButtonElement) {
+            const aiChatUrlField = getField('aiChatUrl');
+            if (aiChatUrlField instanceof HTMLInputElement) {
+                validateAiChatUrl(aiChatUrlField);
+                if (!aiChatUrlField.checkValidity()) {
+                    aiChatUrlField.setAttribute('aria-invalid', 'true');
+                    aiChatUrlField.reportValidity();
+                    showSaveStatus('راجع رابط ChatGPT المحدد قبل طلب الصلاحية.', 'error', false);
+                    return;
+                }
+                aiChatUrlField.removeAttribute('aria-invalid');
+            }
+
             setButtonBusy(button, true);
 
             try {
@@ -919,10 +941,19 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
                     statusEl.textContent = 'تعذر طلب الصلاحية من المتصفح.';
                     statusEl.className = 'help-text text-danger';
                 }
+                showSaveStatus('تعذر طلب الصلاحية من المتصفح.', 'error', false);
             } finally {
                 setButtonBusy(button, false);
             }
         }
+
+        getField('aiChatUrl')?.addEventListener('input', () => {
+            void updateChatGptPermissionStatus();
+        });
+
+        getField('aiChatUrl')?.addEventListener('change', () => {
+            void updateChatGptPermissionStatus();
+        });
 
         root.getElementById('grantChatGptPermissionBtn')?.addEventListener('click', (event) => {
             void handleGrantChatGptPermission(event.currentTarget as HTMLButtonElement);

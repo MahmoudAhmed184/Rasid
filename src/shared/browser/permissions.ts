@@ -46,7 +46,7 @@ export async function requestChatBridgePermission(chatUrl?: string): Promise<boo
         return (await browser.permissions.request({ origins: [origin] })) ?? false;
     } catch (error) {
         console.warn('Failed to request chat bridge host permission:', error);
-        return false;
+        throw error;
     }
 }
 

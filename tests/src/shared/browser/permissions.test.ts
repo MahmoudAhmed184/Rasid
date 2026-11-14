@@ -66,6 +66,20 @@ describe('permissions helper', () => {
                 fakeBrowser.permissions.request = originalRequest;
             }
         });
+
+        it('rethrows and logs when browser.permissions.request throws', async () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            const testError = new Error('permissions.request failed');
+            vi.spyOn(fakeBrowser.permissions, 'request').mockRejectedValue(testError as never);
+
+            await expect(requestChatBridgePermission('https://chatgpt.com/')).rejects.toThrow(
+                'permissions.request failed'
+            );
+            expect(warnSpy).toHaveBeenCalledWith(
+                'Failed to request chat bridge host permission:',
+                testError
+            );
+        });
     });
 
     describe('Direct AI provider permissions', () => {
