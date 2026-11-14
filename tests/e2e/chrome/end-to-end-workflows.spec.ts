@@ -88,7 +88,7 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             });
 
             // Reload popup to pick up updated admin message storage
-            await page.reload();
+            await page.goto(`chrome-extension://${extensionId}/popup.html`);
             await page.waitForLoadState('domcontentloaded');
 
             const banner = page.locator('#adminMessagesBanner');
@@ -302,6 +302,115 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             // Verify bridge injects prompt into textarea
             const textarea = chatPage.locator('#prompt-textarea');
             await expect(textarea).toHaveValue(testPrompt, { timeout: 10_000 });
+        } finally {
+            await context.close();
+        }
+    });
+
+    test('Helium Notifications: creates separate individual notifications for batch jobs without aggregation', async () => {
+        const { context } = await launchChromiumExtension();
+
+        try {
+            let [serviceWorker] = context.serviceWorkers();
+            if (!serviceWorker) {
+                serviceWorker = await context.waitForEvent('serviceworker');
+            }
+
+            const res = await serviceWorker.evaluate(async () => {
+                const chromeObj = (
+                    globalThis as unknown as {
+                        chrome: {
+                            runtime: { getURL: (path: string) => string };
+                            notifications: {
+                                create: (id: string, options: unknown) => Promise<string>;
+                                getAll: (
+                                    callback: (notifications: Record<string, boolean>) => void
+                                ) => void;
+                            };
+                        };
+                    }
+                ).chrome;
+                const id1 = `rasid-batch-1-${Date.now()}`;
+                const id2 = `rasid-batch-2-${Date.now()}`;
+
+                await chromeObj.notifications.create(id1, {
+                    type: 'basic',
+                    iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
+                    title: 'مشروع مستقل الأول',
+                    message: 'الميزانية: $500\nتفاصيل المشروع الأول...',
+                    contextMessage: 'Rasid - مستقل',
+                    buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+                    priority: 2,
+                    requireInteraction: true,
+                });
+
+                await new Promise((r) => setTimeout(r, 100));
+
+                await chromeObj.notifications.create(id2, {
+                    type: 'basic',
+                    iconUrl: chromeObj.runtime.getURL('/platforms/Mostql.png'),
+                    title: 'مشروع مستقل الثاني',
+                    message: 'الميزانية: $1000\nتفاصيل المشروع الثاني...',
+                    contextMessage: 'Rasid - مستقل',
+                    buttons: [{ title: '🔗 عرض تفاصيل المشروع' }],
+                    priority: 2,
+                    requireInteraction: true,
+                });
+
+                const all = await new Promise<Record<string, boolean>>((r) =>
+                    chromeObj.notifications.getAll(r)
+                );
+
+                return { id1, id2, all };
+            });
+
+            expect(res.all[res.id1]).toBe(true);
+            expect(res.all[res.id2]).toBe(true);
+            expect(Object.keys(res.all).length).toBeGreaterThanOrEqual(2);
+        } finally {
+            await context.close();
+        }
+    });
+
+    test('Helium Live Scan: measures end-to-end latency of manual Scan Now without route mocks', async () => {
+        const { context, extensionId } = await launchChromiumExtension();
+
+        try {
+            let [serviceWorker] = context.serviceWorkers();
+            if (!serviceWorker) {
+                serviceWorker = await context.waitForEvent('serviceworker');
+            }
+
+            serviceWorker.on('console', (msg) => {
+                console.log(`[SW Console]:`, msg.text());
+            });
+
+            const page = await context.newPage();
+            page.on('console', (msg) => {
+                console.log(`[Popup Console]:`, msg.text());
+            });
+
+            await page.goto(`chrome-extension://${extensionId}/popup.html`);
+            await page.waitForLoadState('domcontentloaded');
+
+            const checkNowBtn = page.locator('#checkNowBtn');
+            await expect(checkNowBtn).toBeVisible();
+
+            const startTime = performance.now();
+            await checkNowBtn.click();
+
+            await expect(checkNowBtn).toBeEnabled({ timeout: 20_000 });
+            await expect(checkNowBtn).not.toHaveClass(/is-loading/, { timeout: 20_000 });
+
+            const elapsed = performance.now() - startTime;
+            console.log(`[LIVE HELIUM SCAN NOW LATENCY]: ${elapsed.toFixed(1)} ms`);
+
+            const report = page.locator('#connectionReport');
+            await expect(report).toBeVisible();
+            const text = await report.innerText();
+            console.log(`[REPORT TEXT]: "${text}"`);
+
+            expect(elapsed).toBeLessThanOrEqual(5000);
         } finally {
             await context.close();
         }
