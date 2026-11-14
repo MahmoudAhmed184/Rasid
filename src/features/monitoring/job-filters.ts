@@ -128,7 +128,7 @@ const minClientAgeRule: JobFilterRule = ({ job, settings, now }) => {
     };
 };
 
-export const jobFilterRules = [
+const jobFilterRules = [
     minBudgetRule,
     minHiringRateRule,
     includeKeywordRule,
@@ -173,11 +173,38 @@ export function isQuietHour(
         return false;
     }
 
-    const [startHour, startMinute] = settings.quietHoursStart.split(':').map(Number);
-    const [endHour, endMinute] = settings.quietHoursEnd.split(':').map(Number);
+    const [startHour, startMinute = 0] = settings.quietHoursStart.split(':').map(Number);
+    const [endHour, endMinute = 0] = settings.quietHoursEnd.split(':').map(Number);
+
+    if (
+        !Number.isFinite(startHour) ||
+        !Number.isFinite(startMinute) ||
+        !Number.isFinite(endHour) ||
+        !Number.isFinite(endMinute)
+    ) {
+        return false;
+    }
+
+    if (
+        startHour < 0 ||
+        startHour > 23 ||
+        startMinute < 0 ||
+        startMinute > 59 ||
+        endHour < 0 ||
+        endHour > 23 ||
+        endMinute < 0 ||
+        endMinute > 59
+    ) {
+        return false;
+    }
+
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
+
+    if (startMinutes === endMinutes) {
+        return false;
+    }
 
     if (startMinutes < endMinutes) {
         return currentMinutes >= startMinutes && currentMinutes <= endMinutes;

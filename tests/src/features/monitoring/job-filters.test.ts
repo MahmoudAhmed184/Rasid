@@ -71,5 +71,53 @@ describe('monitoring job filters', () => {
         expect(isQuietHour(settings, new Date('2026-05-22T23:00:00'))).toBe(true);
         expect(isQuietHour(settings, new Date('2026-05-22T05:30:00'))).toBe(true);
         expect(isQuietHour(settings, new Date('2026-05-22T12:00:00'))).toBe(false);
+
+        // Malformed or empty strings
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '', quietHoursEnd: '06:00' },
+                new Date('2026-05-22T05:30:00')
+            )
+        ).toBe(false);
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: 'invalid', quietHoursEnd: '06:00' },
+                new Date('2026-05-22T05:30:00')
+            )
+        ).toBe(false);
+
+        // Identical start and end times should not silence notifications 24/7
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '22:00', quietHoursEnd: '22:00' },
+                new Date('2026-05-22T12:00:00')
+            )
+        ).toBe(false);
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '00:00', quietHoursEnd: '00:00' },
+                new Date('2026-05-22T12:00:00')
+            )
+        ).toBe(false);
+
+        // Out-of-range hours or minutes
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '25:00', quietHoursEnd: '06:00' },
+                new Date('2026-05-22T05:30:00')
+            )
+        ).toBe(false);
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '22:70', quietHoursEnd: '06:00' },
+                new Date('2026-05-22T23:00:00')
+            )
+        ).toBe(false);
+        expect(
+            isQuietHour(
+                { ...DEFAULT_SETTINGS, quietHoursStart: '-1:00', quietHoursEnd: '06:00' },
+                new Date('2026-05-22T05:30:00')
+            )
+        ).toBe(false);
     });
 });
