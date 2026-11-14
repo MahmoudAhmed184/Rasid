@@ -34,6 +34,23 @@ describe('manifest permission policy', () => {
         expect(manifest.optional_host_permissions).not.toEqual(
             expect.arrayContaining([...PROVIDER_HOSTS])
         );
+
+        const firefoxManifest = createRasidManifest('firefox');
+        expect(firefoxManifest.host_permissions).not.toEqual(
+            expect.arrayContaining([...CHATGPT_HOSTS])
+        );
+        expect(firefoxManifest.host_permissions).not.toEqual(
+            expect.arrayContaining([...PROVIDER_HOSTS])
+        );
+        expect(firefoxManifest.optional_host_permissions).toEqual(
+            expect.arrayContaining([...CHATGPT_HOSTS])
+        );
+        expect(firefoxManifest.optional_permissions).toEqual(
+            expect.arrayContaining([...CHATGPT_HOSTS])
+        );
+        expect(firefoxManifest.optional_permissions).not.toEqual(
+            expect.arrayContaining([...PROVIDER_HOSTS])
+        );
     });
 
     it('adds provider hosts only to optional permissions for unsafe side-load builds', async () => {
@@ -43,6 +60,14 @@ describe('manifest permission policy', () => {
 
         expect(manifest.host_permissions).not.toEqual(expect.arrayContaining([...PROVIDER_HOSTS]));
         expect(manifest.optional_host_permissions).toEqual(
+            expect.arrayContaining([...CHATGPT_HOSTS, ...PROVIDER_HOSTS])
+        );
+
+        const firefoxManifest = createRasidManifest('firefox');
+        expect(firefoxManifest.optional_permissions).toEqual(
+            expect.arrayContaining([...CHATGPT_HOSTS, ...PROVIDER_HOSTS])
+        );
+        expect(firefoxManifest.optional_host_permissions).toEqual(
             expect.arrayContaining([...CHATGPT_HOSTS, ...PROVIDER_HOSTS])
         );
     });

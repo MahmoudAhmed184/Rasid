@@ -50,6 +50,12 @@ export function createRasidManifest(browser: string) {
         icons,
         permissions: isChrome ? [...sharedPermissions, 'offscreen'] : [...sharedPermissions],
         host_permissions: [...hostPermissions],
+        optional_permissions: isChrome
+            ? undefined
+            : [
+                  ...chatBridgeHostPermissions,
+                  ...(isUnsafeDirectAiEnabled() ? unsafeDirectAiHostPermissions : []),
+              ],
         optional_host_permissions: [
             ...chatBridgeHostPermissions,
             ...(isUnsafeDirectAiEnabled() ? unsafeDirectAiHostPermissions : []),
