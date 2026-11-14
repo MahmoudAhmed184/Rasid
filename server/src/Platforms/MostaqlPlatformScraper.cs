@@ -8,7 +8,7 @@ namespace Rasid.Server.Platforms;
 public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
 {
     private const string BaseUrl = "https://mostaql.com";
-    private static readonly Regex ProjectIdRegex = new(@"/project/(\d+)", RegexOptions.Compiled);
+    private static readonly Regex ProjectIdRegex = new(@"/projects?/(\d+)", RegexOptions.Compiled);
     private static readonly JobPlatformDescriptor Descriptor = new(
         "mostaql",
         "Mostaql",
@@ -35,7 +35,9 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         var jobs = new List<JobListing>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var row in SelectNodes(documentResult.Value.DocumentNode, "//tr[contains(@class, 'project-row')]"))
+        foreach (var row in SelectNodes(
+                     documentResult.Value.DocumentNode,
+                     "//div[contains(@class, 'list-group-item')] | //div[contains(@class, 'project-row')] | //tr[contains(@class, 'project-row')] | //li[contains(@class, 'project-row')]"))
         {
             var job = TryParseProjectRow(row, seenIds);
             if (job is not null)
@@ -44,17 +46,14 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             }
         }
 
-        if (jobs.Count == 0)
+        foreach (var row in SelectNodes(
+                     documentResult.Value.DocumentNode,
+                     "//tr[.//a[contains(@href, '/project/') or contains(@href, '/projects/')]]"))
         {
-            foreach (var row in SelectNodes(
-                         documentResult.Value.DocumentNode,
-                         "//tr[.//a[contains(@href, '/project/')]]"))
+            var job = TryParseClassicRow(row, seenIds);
+            if (job is not null)
             {
-                var job = TryParseClassicRow(row, seenIds);
-                if (job is not null)
-                {
-                    jobs.Add(job);
-                }
+                jobs.Add(job);
             }
         }
 
@@ -62,7 +61,7 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         {
             foreach (var link in SelectNodes(
                          documentResult.Value.DocumentNode,
-                         "//a[contains(@href, '/project/') and not(contains(@href, '/project/create'))]"))
+                         "//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]"))
             {
                 var job = TryParseFallbackLink(link, seenIds);
                 if (job is not null)
@@ -92,10 +91,10 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
 
         var document = documentResult.Value;
         var status = NullIfEmpty(document.DocumentNode
-            .SelectSingleNode("//span[contains(@class, 'label-prj')]")
+            .SelectSingleNode("//span[contains(@class, 'label-prj')] | //*[contains(@class, 'label-prj')]")
             ?.InnerText);
         var description = NullIfEmpty(document.DocumentNode
-            .SelectSingleNode("//div[contains(@class, 'project-post__body')]")
+            .SelectSingleNode("//*[contains(@class, 'project-post__body')]")
             ?.InnerText);
 
         string? communications = null;
@@ -178,6 +177,18 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             }
         }
 
+        var clientNode = document.DocumentNode.SelectSingleNode(
+            "//*[contains(@class, 'profile__name')]//bdi | " +
+            "//*[contains(@class, 'profile__name')]//a | " +
+            "//a[contains(@href, '/u/') and not(.//img)]");
+        var clientName = NullIfEmpty(clientNode?.InnerText);
+
+        var timeNode = document.DocumentNode.SelectSingleNode(
+            "//time[@itemprop='datePublished'] | " +
+            "//*[@id='project-meta-panel']//time | " +
+            "//time");
+        var postedAt = NullIfEmpty(GetAttribute(timeNode, "datetime") ?? GetAttribute(timeNode, "title"));
+
         var tags = SelectNodes(
                 document.DocumentNode,
                 "//a[contains(@class, 'skill') or contains(@class, 'tag')]")
@@ -195,15 +206,64 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
                 Duration: duration,
                 Budget: budget,
                 RegistrationDate: registrationDate,
+                ClientName: clientName,
+                PostedAt: postedAt,
                 Tags: tags.Length > 0 ? tags : null));
+    }
+
+    internal static string? ResolveMostaqlProjectUrl(string? href)
+    {
+        if (string.IsNullOrWhiteSpace(href))
+        {
+            return null;
+        }
+
+        Uri uri;
+        if (Uri.TryCreate(href, UriKind.Absolute, out var absoluteUri) &&
+            (absoluteUri.Scheme == Uri.UriSchemeHttp || absoluteUri.Scheme == Uri.UriSchemeHttps))
+        {
+            uri = absoluteUri;
+        }
+        else
+        {
+            try
+            {
+                uri = new Uri(new Uri(BaseUrl), href);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return null;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        if (host != "mostaql.com" && !host.EndsWith(".mostaql.com", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return uri.ToString();
     }
 
     private static JobListing? TryParseProjectRow(HtmlNode row, HashSet<string> seenIds)
     {
         var titleLink = row.SelectSingleNode(
-            ".//h2//a[contains(@href, '/project/') and not(contains(@href, '/project/create'))]");
+            ".//h2//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]")
+            ?? row.SelectSingleNode(
+                ".//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]");
         var href = GetAttribute(titleLink, "href");
-        var match = ProjectIdRegex.Match(href ?? string.Empty);
+        var resolvedUrl = ResolveMostaqlProjectUrl(href);
+        if (resolvedUrl is null)
+        {
+            return null;
+        }
+
+        var match = ProjectIdRegex.Match(resolvedUrl);
 
         if (!match.Success || !seenIds.Add(match.Groups[1].Value))
         {
@@ -211,17 +271,21 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
         }
 
         var timeNode = row.SelectSingleNode(".//time");
-        var metaItems = row.SelectNodes(".//ul[contains(@class, 'project__meta')]//li");
+        var metaItems = row.SelectNodes(".//ul[contains(@class, 'project__meta')]//li | .//*[contains(@class, 'project__meta')]//li");
         var posterNode = row.SelectSingleNode(
-            ".//ul[contains(@class, 'project__meta')]//li[.//i[contains(@class, 'fa-user')]]");
+            ".//ul[contains(@class, 'project__meta')]//li[.//i[contains(@class, 'fa-user')]] | " +
+            ".//*[.//i[contains(@class, 'fa-user')]] | " +
+            ".//a[contains(@href, '/u/') and not(.//img)]");
+        var budgetNode = row.SelectSingleNode(".//*[contains(@class, 'budget')] | .//td[4]");
+        var budget = CleanText(budgetNode?.InnerText);
 
         return new JobListing(
             Id: match.Groups[1].Value,
             PlatformId: Descriptor.Id,
             Title: CleanText(titleLink?.InnerText),
-            Budget: "غير محدد",
+            Budget: string.IsNullOrWhiteSpace(budget) ? "غير محدد" : budget,
             Time: CleanText(timeNode?.InnerText),
-            Url: AbsoluteUrl(BaseUrl, href),
+            Url: resolvedUrl,
             Poster: NullIfEmpty(posterNode?.InnerText),
             PostedAt: NullIfEmpty(GetAttribute(timeNode, "datetime") ?? GetAttribute(timeNode, "title")),
             BidsText: metaItems is { Count: >= 3 }
@@ -232,9 +296,15 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
     private static JobListing? TryParseClassicRow(HtmlNode row, HashSet<string> seenIds)
     {
         var titleLink = row.SelectSingleNode(
-            ".//a[contains(@href, '/project/') and not(contains(@href, '/project/create'))]");
+            ".//a[(contains(@href, '/project/') or contains(@href, '/projects/')) and not(contains(@href, 'create'))]");
         var href = GetAttribute(titleLink, "href");
-        var match = ProjectIdRegex.Match(href ?? string.Empty);
+        var resolvedUrl = ResolveMostaqlProjectUrl(href);
+        if (resolvedUrl is null)
+        {
+            return null;
+        }
+
+        var match = ProjectIdRegex.Match(resolvedUrl);
 
         if (!match.Success || !seenIds.Add(match.Groups[1].Value))
         {
@@ -250,13 +320,19 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             Title: CleanText(titleLink?.InnerText),
             Budget: string.IsNullOrWhiteSpace(budget) ? "غير محدد" : budget,
             Time: CleanText(timeNode?.InnerText),
-            Url: AbsoluteUrl(BaseUrl, href));
+            Url: resolvedUrl);
     }
 
     private static JobListing? TryParseFallbackLink(HtmlNode link, HashSet<string> seenIds)
     {
         var href = GetAttribute(link, "href");
-        var match = ProjectIdRegex.Match(href ?? string.Empty);
+        var resolvedUrl = ResolveMostaqlProjectUrl(href);
+        if (resolvedUrl is null)
+        {
+            return null;
+        }
+
+        var match = ProjectIdRegex.Match(resolvedUrl);
         var title = CleanText(link.InnerText);
 
         if (!match.Success || title.Length <= 5 || !seenIds.Add(match.Groups[1].Value))
@@ -270,6 +346,6 @@ public sealed class MostaqlPlatformScraper : JobPlatformScraperBase
             Title: title,
             Budget: "غير محدد",
             Time: string.Empty,
-            Url: AbsoluteUrl(BaseUrl, href));
+            Url: resolvedUrl);
     }
 }
