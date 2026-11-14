@@ -516,8 +516,8 @@ export async function extractProjectDetailsFull(): Promise<{
 
         const projectLinkSelectors = [
             'body > div.wrapper.hsoub-container > div > div.page-body > div > div.page-title > div:nth-child(2) > div > div > div > div > a',
-            "a[href*='/project/']",
-            ".page-title a[href*='/project/']",
+            "a[href*='/project/'], a[href*='/projects/']",
+            ".page-title a[href*='/project/'], .page-title a[href*='/projects/']",
         ];
 
         let projectLinkEl: HTMLAnchorElement | null = null;

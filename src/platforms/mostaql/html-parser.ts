@@ -28,8 +28,8 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
     const jobs: JobRecord[] = [];
     const seenIds = new Set<string>();
 
-    doc.querySelectorAll('.list-group-item').forEach((item) => {
-        const link = item.querySelector('a[href*="/project/"]');
+    doc.querySelectorAll('.list-group-item, .project-row').forEach((item) => {
+        const link = item.querySelector('a[href*="/project/"], a[href*="/projects/"]');
 
         if (!link) {
             return;
@@ -45,6 +45,10 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
         const userIcon = item.querySelector('.fa-user');
         const timeEl = item.querySelector('time');
         const metaItems = item.querySelectorAll('.project__meta li');
+        const budgetEl = item.querySelector(
+            '[data-type="project-budget_range"], .project__budget, .budget'
+        );
+        const descEl = item.querySelector('.project__brief, .project-brief, p');
 
         seenIds.add(id);
 
@@ -58,12 +62,13 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
             postedAt: timeEl?.getAttribute('datetime') ?? '',
             bidsText:
                 metaItems.length >= 3 ? metaItems[2]?.textContent?.replace(/\s+/g, ' ').trim() : '',
-            budget: 'غير محدد',
+            budget: budgetEl?.textContent?.trim() || 'غير محدد',
+            description: descEl?.textContent?.trim() || undefined,
         });
     });
 
     doc.querySelectorAll('tr').forEach((row) => {
-        const link = row.querySelector('a[href*="/project/"]');
+        const link = row.querySelector('a[href*="/project/"], a[href*="/projects/"]');
 
         if (!link) {
             return;
@@ -98,7 +103,7 @@ export function parseMostaqlListingHtml(html: string): JobRecord[] {
         return jobs;
     }
 
-    doc.querySelectorAll('a[href*="/project/"]').forEach((link) => {
+    doc.querySelectorAll('a[href*="/project/"], a[href*="/projects/"]').forEach((link) => {
         const url = resolveMostaqlProjectUrl(link.getAttribute('href'));
         const id = url ? extractMostaqlProjectId(url) : null;
         const title = link.textContent.trim();
@@ -129,7 +134,11 @@ export function parseMostaqlProjectHtml(html: string): Partial<JobRecord> | null
     const statusLabel = doc.querySelector(
         '.label-prj-open, .label-prj-closed, .label-prj-completed, .label-prj-cancelled, .label-prj-underway, .label-prj-processing'
     );
-    const descriptionEl = doc.querySelector('.project-post__body');
+    const descriptionEl = doc.querySelector('.project-post__body, #project-brief, .carda__content');
+    const clientNameEl = doc.querySelector('.profile__name bdi, .profile__name a, a[href*="/u/"]');
+    const timeEl = doc.querySelector(
+        'time[itemprop="datePublished"], #project-meta-panel time, time'
+    );
 
     let communications = '0';
     let hiringRate = '';
@@ -137,9 +146,9 @@ export function parseMostaqlProjectHtml(html: string): Partial<JobRecord> | null
     let budget = '';
     let registrationDate = '';
 
-    doc.querySelectorAll('.meta-row, .table-meta tr').forEach((row) => {
+    doc.querySelectorAll('.meta-row, .table-meta tr, li.meta-item').forEach((row) => {
         const text = row.textContent;
-        const value = row.querySelector('.meta-value, td:last-child');
+        const value = row.querySelector('.meta-value, td:last-child, .meta-item-value');
 
         if (!value) {
             return;
@@ -158,6 +167,13 @@ export function parseMostaqlProjectHtml(html: string): Partial<JobRecord> | null
         }
     });
 
+    if (!budget) {
+        const explicitBudget = doc.querySelector('[data-type="project-budget_range"]');
+        if (explicitBudget) {
+            budget = explicitBudget.textContent.trim();
+        }
+    }
+
     return {
         platformId: 'mostaql',
         status: statusLabel?.textContent?.trim() ?? 'غير معروف',
@@ -167,5 +183,7 @@ export function parseMostaqlProjectHtml(html: string): Partial<JobRecord> | null
         duration,
         budget,
         registrationDate,
+        clientName: clientNameEl?.textContent?.trim() || undefined,
+        postedAt: timeEl?.getAttribute('datetime') ?? timeEl?.getAttribute('title') ?? undefined,
     };
 }

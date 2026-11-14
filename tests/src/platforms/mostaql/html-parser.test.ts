@@ -21,6 +21,28 @@ describe('Mostaql HTML parser', () => {
         expect(jobs.map((job) => job.url).join('\n')).not.toContain('evil.example');
     });
 
+    it('parses project-row divs and handles /projects/ plural URL structures', () => {
+        const html = `
+            <div class="project-row">
+                <h2><a href="/projects/888-modern-arabic-job">مشروع جمع حديث</a></h2>
+                <span class="budget">$200 - $400</span>
+                <p class="project__brief">وصف مختصر من قائمة المشاريع</p>
+                <time datetime="2026-05-22T12:00:00Z">منذ ساعة</time>
+            </div>
+        `;
+        const jobs = parseMostaqlListingHtml(html);
+
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]).toMatchObject({
+            id: '888',
+            platformId: 'mostaql',
+            title: 'مشروع جمع حديث',
+            url: 'https://mostaql.com/projects/888-modern-arabic-job',
+            budget: '$200 - $400',
+            description: 'وصف مختصر من قائمة المشاريع',
+        });
+    });
+
     it('deduplicates listing rows and falls back to standalone project anchors when needed', () => {
         expect(
             parseMostaqlListingHtml(`
@@ -63,7 +85,7 @@ describe('Mostaql HTML parser', () => {
         ]);
     });
 
-    it('extracts project details from Arabic metadata rows', () => {
+    it('extracts project details from Arabic metadata rows and author containers', () => {
         const project = parseMostaqlProjectHtml(readTextFixture('mostaql', 'project.html'));
 
         expect(project).toMatchObject({
@@ -75,6 +97,19 @@ describe('Mostaql HTML parser', () => {
             communications: '3',
         });
         expect(project?.description).toContain('إضافة متصفح');
+
+        const richProject = parseMostaqlProjectHtml(`
+            <div class="profile__name"><bdi>خالد أحمد</bdi></div>
+            <time itemprop="datePublished" datetime="2026-05-22T10:00:00Z"></time>
+            <div data-type="project-budget_range">$300 - $600</div>
+            <article class="carda__content">تفاصيل كاملة</article>
+        `);
+        expect(richProject).toMatchObject({
+            clientName: 'خالد أحمد',
+            postedAt: '2026-05-22T10:00:00Z',
+            budget: '$300 - $600',
+            description: 'تفاصيل كاملة',
+        });
     });
 
     it('returns no jobs for challenge pages', () => {
