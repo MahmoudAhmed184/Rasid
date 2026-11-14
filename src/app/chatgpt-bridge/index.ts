@@ -170,6 +170,13 @@ function waitForChatInput(timeoutMs: number): Promise<HTMLTextAreaElement | HTML
     });
 }
 
+function getEditorText(element: HTMLElement): string {
+    if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+        return element.value;
+    }
+    return element.innerText || element.textContent || '';
+}
+
 export function writePromptToEditable(inputField: HTMLElement, prompt: string): void {
     try {
         window.focus();
@@ -183,25 +190,49 @@ export function writePromptToEditable(inputField: HTMLElement, prompt: string): 
         // Ignore focus errors
     }
 
-    const selection = window.getSelection?.();
-    if (selection && typeof document.createRange === 'function') {
-        try {
+    let inserted = false;
+    try {
+        const selection = window.getSelection?.();
+        if (selection && typeof document.createRange === 'function') {
             const range = document.createRange();
             range.selectNodeContents(inputField);
             selection.removeAllRanges();
             selection.addRange(range);
-        } catch {
-            // Ignore range selection errors
         }
+
+        if (typeof document.execCommand === 'function') {
+            inserted = document.execCommand('insertText', false, prompt);
+        }
+    } catch {
+        inserted = false;
     }
 
-    let inserted = false;
-    if (typeof document.execCommand === 'function') {
-        try {
-            inserted = document.execCommand('insertText', false, prompt);
-        } catch {
-            inserted = false;
+    const currentText = getEditorText(inputField);
+    if (!inserted || !currentText.trim()) {
+        const paragraph = document.createElement('p');
+        const lines = prompt.split('\n');
+
+        lines.forEach((line, index) => {
+            if (index > 0) {
+                paragraph.appendChild(document.createElement('br'));
+            }
+            paragraph.append(line);
+        });
+
+        inputField.replaceChildren(paragraph);
+    }
+
+    try {
+        const selection = window.getSelection?.();
+        if (selection && typeof document.createRange === 'function') {
+            const range = document.createRange();
+            range.selectNodeContents(inputField);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
+    } catch {
+        // Ignore selection error
     }
 
     const InputEventConstructor =
@@ -211,27 +242,20 @@ export function writePromptToEditable(inputField: HTMLElement, prompt: string): 
               ? InputEvent
               : null;
 
-    if (!inserted) {
-        if (InputEventConstructor) {
-            try {
-                const beforeInputEvent = new InputEventConstructor('beforeinput', {
+    if (InputEventConstructor) {
+        try {
+            inputField.dispatchEvent(
+                new InputEventConstructor('beforeinput', {
                     bubbles: true,
                     cancelable: true,
                     inputType: 'insertText',
                     data: prompt,
-                });
-                inputField.dispatchEvent(beforeInputEvent);
-            } catch {
-                // Ignore fallback event error
-            }
+                })
+            );
+        } catch {
+            // Ignore fallback event error
         }
 
-        if (inputField.textContent !== prompt) {
-            inputField.textContent = prompt;
-        }
-    }
-
-    if (InputEventConstructor) {
         try {
             inputField.dispatchEvent(
                 new InputEventConstructor('input', {
@@ -249,6 +273,7 @@ export function writePromptToEditable(inputField: HTMLElement, prompt: string): 
     }
 
     inputField.dispatchEvent(new Event('change', { bubbles: true }));
+    inputField.dispatchEvent(new Event('keyup', { bubbles: true }));
 }
 
 function applyPromptToInput(inputField: HTMLElement, prompt: string): void {
@@ -281,16 +306,19 @@ function applyPromptToInput(inputField: HTMLElement, prompt: string): void {
 }
 
 function isPromptInElement(element: HTMLElement, prompt: string): boolean {
-    const text =
-        element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement
-            ? element.value
-            : (element.textContent ?? '');
+    const text = getEditorText(element);
     const trimmed = text.trim();
     const promptTrimmed = prompt.trim();
     if (!promptTrimmed) {
         return true;
     }
-    return trimmed.length > 0 && (trimmed === promptTrimmed || trimmed.includes(promptTrimmed));
+    if (trimmed.length === 0) {
+        return false;
+    }
+    const normalizedText = trimmed.replace(/\s+/g, ' ');
+    const normalizedPrompt = promptTrimmed.replace(/\s+/g, ' ');
+    const promptPrefix = normalizedPrompt.slice(0, 30);
+    return normalizedText.includes(promptPrefix);
 }
 
 function startHydrationWatcher(
@@ -304,9 +332,9 @@ function startHydrationWatcher(
     const promptText = record.prompt;
     const promptId = record.id;
     let settled = false;
-    let observer: MutationObserver | null = null;
     let timer: ReturnType<typeof setInterval> | null = null;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isRestoring = false;
 
     const cleanup = () => {
         if (settled) {
@@ -319,7 +347,6 @@ function startHydrationWatcher(
         if (timeoutId) {
             clearTimeout(timeoutId);
         }
-        observer?.disconnect();
         if (state.lastInjectedPrompt?.id === promptId) {
             state.lastInjectedPrompt = undefined;
         }
@@ -332,7 +359,7 @@ function startHydrationWatcher(
     };
 
     const verifyAndRestore = () => {
-        if (settled) {
+        if (settled || isRestoring) {
             return;
         }
         const currentInput = findChatInput();
@@ -341,25 +368,16 @@ function startHydrationWatcher(
         }
 
         if (!isPromptInElement(currentInput, promptText)) {
-            applyPromptToInput(currentInput, promptText);
+            isRestoring = true;
+            try {
+                applyPromptToInput(currentInput, promptText);
+            } finally {
+                isRestoring = false;
+            }
         }
     };
 
     timer = setInterval(verifyAndRestore, checkIntervalMs);
-
-    if (typeof MutationObserver === 'function' && document.documentElement) {
-        observer = new MutationObserver(() => {
-            verifyAndRestore();
-        });
-
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['contenteditable', 'class'],
-        });
-    }
-
     timeoutId = setTimeout(cleanup, durationMs);
 }
 

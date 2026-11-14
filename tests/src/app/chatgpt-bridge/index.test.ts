@@ -116,7 +116,8 @@ describe('ChatGPT bridge', () => {
         await vi.advanceTimersByTimeAsync(1_500);
 
         const editor = document.getElementById('prompt-textarea');
-        expect(editor?.textContent).toBe('Line one\nLine two');
+        expect(editor?.textContent).toBe('Line oneLine two');
+        expect(editor?.querySelectorAll('br')).toHaveLength(1);
         expect(proposalRepository.clearPendingBridgePrompt).toHaveBeenCalledWith(
             'bridge-contenteditable'
         );
