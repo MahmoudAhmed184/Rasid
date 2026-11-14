@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.2.1 - 2026-11-14
+
+Maintenance and bug-fix release addressing Firefox/Gecko user-gesture permission loss, manifest optional permission alignment, notification delivery staggering, and UI/scraping refinements.
+
+### Release Artifacts
+
+- Chrome MV3 extension package: `rasid-v1.2.1-chrome-mv3.zip`.
+- Firefox MV3 extension package: `rasid-v1.2.1-firefox-mv3.zip`.
+- Firefox review source package: `rasid-v1.2.1-firefox-sources.zip`.
+- SHA-256 checksum manifest: `SHA256SUMS.txt`.
+- Build and manifest evidence: `release-evidence.json`.
+
+### Added & Improved
+
+- **Firefox & Zen Browser Permission Dialog**: Preserved the transient user activation gesture in Dashboard Settings by eliminating dynamic imports within click handlers, allowing `browser.permissions.request()` to present native prompt dialogs.
+- **Manifest Optional Permissions Compatibility**: Added `optional_permissions` declarations for Gecko MV3 alongside `optional_host_permissions` in `wxt.config.ts`.
+- **Permission Error Handling & Validation**: Upgraded error handling to log and propagate unexpected browser permissions API rejections, preventing unhandled exceptions from masking as intentional user denials, and added real-time URL validation and status updates for ChatGPT host inputs.
+- **Notification Aggregation Prevention**: Enforced a 300ms notification stagger in Firefox builds and refined notification payloads to avoid automatic aggregation by the OS notification center.
+- **Platform Scraping & UI Branding**: Updated Mostaql dashboard widget branding to Rasid and improved anti-bot challenge page detection with abortable delay support.
+
 ## v1.2.0 - 2026-11-14
 
 Release focusing on Arabic number/duration parsing accuracy, quiet hours notification reliability, content script autofill performance optimization, popup security hardening, and backend SQLite caching.
