@@ -369,4 +369,162 @@ describe('popup controller', () => {
         await vi.advanceTimersByTimeAsync(30_000);
         expect(monitoringRepository.getOverview).toHaveBeenCalledTimes(2);
     });
+
+    it('renders admin message banner, handles safe and unsafe links, and dismisses messages', async () => {
+        const root = installTestDom(`
+            <button id="open-dashboard-btn"></button>
+            <button id="checkNowBtn"></button>
+            <button id="toggleNotificationsBtn"></button>
+            <button id="checkConnectionBtn"></button>
+            <div id="connectionReport" class="hidden"></div>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+            <div id="adminMessagesBanner" class="hidden">
+                <span id="adminMessageText"></span>
+                <a id="adminMessageLink" class="hidden">تفاصيل</a>
+                <span id="adminMessagesBadge" class="hidden"></span>
+                <button id="dismissAdminMessageBtn"></button>
+            </div>
+        `);
+        const messages = [
+            {
+                id: 'adm-1',
+                message: 'Important system notice',
+                url: 'https://example.com/update',
+                receivedAt: '2026-05-22T10:00:00Z',
+                read: false,
+            },
+            {
+                id: 'adm-2',
+                message: 'Older unread message',
+                receivedAt: '2026-05-22T09:00:00Z',
+                read: false,
+            },
+        ];
+        const markAdminMessagesRead = vi.fn(async () => {
+            for (const m of messages) {
+                m.read = true;
+            }
+        });
+        const monitoringRepository = {
+            getOverview: vi.fn(async () => createOverview()),
+            getNotificationsEnabled: vi.fn(async () => true),
+            setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+        };
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+
+        bootstrapPopup(root, {
+            monitoringRepository,
+            adminMessages: {
+                getAdminMessages: vi.fn(async () => messages),
+                markAdminMessagesRead,
+            },
+        });
+
+        await vi.waitFor(() =>
+            expect(root.getElementById('adminMessageText')?.textContent).toBe(
+                'Important system notice'
+            )
+        );
+        const banner = root.getElementById('adminMessagesBanner');
+        expect(banner?.classList.contains('hidden')).toBe(false);
+
+        const link = root.getElementById('adminMessageLink') as HTMLAnchorElement;
+        expect(link.classList.contains('hidden')).toBe(false);
+        expect(link.href).toBe('https://example.com/update');
+
+        const badge = root.getElementById('adminMessagesBadge');
+        expect(badge?.classList.contains('hidden')).toBe(false);
+        expect(badge?.textContent).toBe('2');
+
+        // Dismiss messages
+        const dismissBtn = root.getElementById('dismissAdminMessageBtn') as HTMLButtonElement;
+        dismissBtn.click();
+        await vi.waitFor(() => expect(markAdminMessagesRead).toHaveBeenCalledOnce());
+        expect(banner?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('rejects unsafe admin message links like javascript: scheme', async () => {
+        const root = installTestDom(`
+            <button id="open-dashboard-btn"></button>
+            <button id="checkNowBtn"></button>
+            <button id="toggleNotificationsBtn"></button>
+            <button id="checkConnectionBtn"></button>
+            <div id="connectionReport" class="hidden"></div>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+            <div id="adminMessagesBanner" class="hidden">
+                <span id="adminMessageText"></span>
+                <a id="adminMessageLink" class="hidden">تفاصيل</a>
+                <span id="adminMessagesBadge" class="hidden"></span>
+                <button id="dismissAdminMessageBtn"></button>
+            </div>
+        `);
+        const messages = [
+            {
+                id: 'adm-bad',
+                message: 'Attack attempt',
+                url: 'javascript:alert(1)',
+                receivedAt: '2026-05-22T10:00:00Z',
+                read: false,
+            },
+        ];
+        const monitoringRepository = {
+            getOverview: vi.fn(async () => createOverview()),
+            getNotificationsEnabled: vi.fn(async () => true),
+            setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+        };
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+
+        bootstrapPopup(root, {
+            monitoringRepository,
+            adminMessages: {
+                getAdminMessages: vi.fn(async () => messages),
+                markAdminMessagesRead: vi.fn(async () => undefined),
+            },
+        });
+
+        await vi.waitFor(() =>
+            expect(root.getElementById('adminMessageText')?.textContent).toBe('Attack attempt')
+        );
+        const link = root.getElementById('adminMessageLink') as HTMLAnchorElement;
+        expect(link.classList.contains('hidden')).toBe(true);
+        expect(link.getAttribute('href')).toBeNull();
+    });
+
+    it('cleans up refresh timer and storage listeners when popup unloads via beforeunload', async () => {
+        vi.useFakeTimers();
+        const root = installTestDom(`
+            <button id="open-dashboard-btn"></button>
+            <button id="checkNowBtn"></button>
+            <button id="toggleNotificationsBtn"></button>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+        `);
+        const monitoringRepository = {
+            getOverview: vi.fn(async () => createOverview()),
+            getNotificationsEnabled: vi.fn(async () => true),
+            setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+        };
+        const removeListener = vi.spyOn(fakeBrowser.storage.onChanged, 'removeListener');
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+
+        bootstrapPopup(root, {
+            monitoringRepository,
+            adminMessages: stubAdminMessages(),
+        });
+
+        await vi.waitFor(() =>
+            expect(root.getElementById('lastCheck')?.textContent).toContain('آخر فحص:')
+        );
+
+        root.defaultView?.dispatchEvent(new Event('beforeunload'));
+        expect(removeListener).toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(30_000);
+        expect(monitoringRepository.getOverview).toHaveBeenCalledTimes(1);
+    });
 });

@@ -99,6 +99,15 @@ function hidePopupStatus() {
     report.textContent = '';
 }
 
+function isSafeHttpUrl(value: string): boolean {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 function renderAdminMessageBanner(messages: AdminMessage[]): void {
     const banner = getElement<HTMLElement>('adminMessagesBanner');
     const textEl = getElement<HTMLElement>('adminMessageText');
@@ -126,10 +135,11 @@ function renderAdminMessageBanner(messages: AdminMessage[]): void {
     textEl.textContent = latest.message;
 
     if (linkEl) {
-        if (latest.url) {
+        if (latest.url && isSafeHttpUrl(latest.url)) {
             linkEl.href = latest.url;
             linkEl.classList.remove('hidden');
         } else {
+            linkEl.removeAttribute('href');
             linkEl.classList.add('hidden');
         }
     }
@@ -175,7 +185,8 @@ async function syncNotificationToggle(deps: PopupDependencies) {
 
 function createPopupController(deps: PopupDependencies) {
     let refreshTimer: number | null = null;
-    let storageChangeListener: ((changes: Record<string, unknown>) => void) | null = null;
+    let storageChangeListener: Parameters<typeof browser.storage.onChanged.addListener>[0] | null =
+        null;
 
     async function loadAdminMessages(): Promise<void> {
         try {
@@ -331,10 +342,17 @@ function createPopupController(deps: PopupDependencies) {
         }, POPUP_REFRESH_INTERVAL_MS);
 
         // Re-render banner in real-time if a message arrives while popup is open
-        storageChangeListener = () => {
-            void loadAdminMessages();
+        const listener: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
+            changes,
+            areaName
+        ) => {
+            if ((!areaName || areaName === 'local') && (!changes || 'adminMessages' in changes)) {
+                void loadAdminMessages();
+            }
         };
-        browser.storage.local.onChanged.addListener(storageChangeListener);
+        storageChangeListener = listener;
+        const storageOnChanged = browser.storage?.onChanged ?? browser.storage?.local?.onChanged;
+        storageOnChanged?.addListener(listener);
     }
 
     function destroy() {
@@ -344,7 +362,9 @@ function createPopupController(deps: PopupDependencies) {
         }
 
         if (storageChangeListener) {
-            browser.storage.local.onChanged.removeListener(storageChangeListener);
+            const storageOnChanged =
+                browser.storage?.onChanged ?? browser.storage?.local?.onChanged;
+            storageOnChanged?.removeListener(storageChangeListener);
             storageChangeListener = null;
         }
     }
@@ -359,11 +379,10 @@ export function bootstrapPopup(root: Document = document, deps: PopupDependencie
     const controller = createPopupController(deps);
     void controller.init();
 
-    root.defaultView?.addEventListener(
-        'pagehide',
-        () => {
-            controller.destroy();
-        },
-        { once: true }
-    );
+    const cleanup = () => {
+        controller.destroy();
+    };
+
+    root.defaultView?.addEventListener('pagehide', cleanup, { once: true });
+    root.defaultView?.addEventListener('beforeunload', cleanup, { once: true });
 }

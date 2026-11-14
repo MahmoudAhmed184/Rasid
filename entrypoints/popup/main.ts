@@ -1,8 +1,8 @@
-import { createBrowserRepositories } from '../../src/app/repositories/browser-repositories';
+import { createPopupRepositories } from '../../src/app/repositories/browser-repositories';
 import { bootstrapPopup } from '../../src/app/popup';
 
 function mount(): void {
-    const repositories = createBrowserRepositories();
+    const repositories = createPopupRepositories();
 
     bootstrapPopup(document, {
         monitoringRepository: repositories.monitoringRepository,
