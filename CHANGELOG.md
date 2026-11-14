@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.2.0 - 2026-11-14
+
+Release focusing on Arabic number/duration parsing accuracy, quiet hours notification reliability, content script autofill performance optimization, popup security hardening, and backend SQLite caching.
+
+### Release Artifacts
+
+- Chrome MV3 extension package: `rasid-v1.2.0-chrome-mv3.zip`.
+- Firefox MV3 extension package: `rasid-v1.2.0-firefox-mv3.zip`.
+- Firefox review source package: `rasid-v1.2.0-firefox-sources.zip`.
+- SHA-256 checksum manifest: `SHA256SUMS.txt`.
+- Build and manifest evidence: `release-evidence.json`.
+
+### Added & Improved
+
+- **Arabic Number & Duration Parsing**: Added normalization for Persian/Urdu digits `[۰-۹]`, Arabic comma `،` and thousands separator `٬` stripping between digits, decimal separator `٫` conversion, and multi-week/month token parsing (`أسبوع`, `أسابيع`, `شهر`, `أشهر`).
+- **Monitoring & Quiet Hours Reliability**: Fixed quiet hours notification filtering so matching start and end times evaluate to inactive rather than muting notifications 24/7.
+- **Autofill Performance Optimization**: Resolved lifecycle leaks in content script autofill by permanently disconnecting mutation observers and terminating interval polling after successful autofill.
+- **Security & Lifecycle Hardening**: Guarded admin message URLs against unsafe protocol injection in popup, filtered storage change listeners, and ensured full cleanup on popup unload.
+- **Platform Selectors & Permission Deduplication**: Added array selector query fallback support with element deduplication in Nafezly, and consolidated duplicate AI host permission logic.
+- **Backend Infrastructure**: Added persistent SQLite seen-job cache with configurable fallback, resilient crawler engine, and modularized endpoints.
+
 ## v1.1.0 - 2026-11-14
 
 Feature release introducing individualized job notifications, modernized monochrome UI design, and platform stability fixes.
