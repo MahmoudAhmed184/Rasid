@@ -290,4 +290,99 @@ describe('platform autofill bootstrap', () => {
         await vi.advanceTimersByTimeAsync(25);
         expect(applyProposalAutofill).toHaveBeenCalledOnce();
     });
+
+    it('scopes mutation observation to adapter targets and disconnects when dormant', async () => {
+        vi.useFakeTimers();
+        const document = installAutofillDom('https://mostaql.com/project/123');
+        const formTarget = document.querySelector('form')!;
+        const instances: Array<{
+            observe: ReturnType<typeof vi.fn>;
+            disconnect: ReturnType<typeof vi.fn>;
+        }> = [];
+
+        Object.defineProperty(globalThis, 'MutationObserver', {
+            configurable: true,
+            value: class {
+                observe = vi.fn();
+                disconnect = vi.fn();
+                constructor() {
+                    instances.push(this);
+                }
+            },
+        });
+
+        const adapter = createAdapter();
+        adapter.getObservationTargets = vi.fn(() => [formTarget]);
+        const proposalRepository = {
+            getQueuedAutofill: vi.fn(async () => null),
+            clearQueuedAutofill: vi.fn(async () => undefined),
+        };
+
+        const dispose = bootstrapPlatformAutofill({
+            adapter,
+            proposalRepository,
+            document,
+            pollIntervalMs: 50,
+        });
+
+        const observerInstance = instances[0];
+        expect(observerInstance).toBeDefined();
+        expect(observerInstance?.observe).toHaveBeenCalledWith(formTarget, {
+            childList: true,
+            subtree: true,
+        });
+
+        dispose();
+        expect(observerInstance?.disconnect).toHaveBeenCalled();
+    });
+
+    it('disconnects observer and ceases polling permanently once autofill succeeds', async () => {
+        vi.useFakeTimers();
+        const document = installAutofillDom('https://mostaql.com/project/123');
+        const formTarget = document.querySelector('form')!;
+        const instances: Array<{
+            observe: ReturnType<typeof vi.fn>;
+            disconnect: ReturnType<typeof vi.fn>;
+        }> = [];
+
+        Object.defineProperty(globalThis, 'MutationObserver', {
+            configurable: true,
+            value: class {
+                observe = vi.fn();
+                disconnect = vi.fn();
+                constructor() {
+                    instances.push(this);
+                }
+            },
+        });
+
+        const applyProposalAutofill = vi.fn(async () => ({ kind: 'applied' as const }));
+        const adapter = createAdapter(applyProposalAutofill);
+        adapter.getObservationTargets = vi.fn(() => [formTarget]);
+        const proposalRepository = {
+            getQueuedAutofill: vi.fn(async () => createDraft()),
+            clearQueuedAutofill: vi.fn(async () => undefined),
+        };
+
+        bootstrapPlatformAutofill({
+            adapter,
+            proposalRepository,
+            document,
+            pollIntervalMs: 50,
+        });
+
+        const observerInstance = instances[0];
+        expect(observerInstance).toBeDefined();
+
+        await vi.waitFor(() => expect(applyProposalAutofill).toHaveBeenCalledOnce());
+        expect(observerInstance?.disconnect).toHaveBeenCalled();
+
+        const observeCallCount = observerInstance?.observe.mock.calls.length;
+        const getQueuedCallCount = proposalRepository.getQueuedAutofill.mock.calls.length;
+
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(observerInstance?.observe.mock.calls.length).toBe(observeCallCount);
+        expect(proposalRepository.getQueuedAutofill.mock.calls.length).toBe(getQueuedCallCount);
+    });
 });

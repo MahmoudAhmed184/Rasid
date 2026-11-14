@@ -10,6 +10,7 @@ import type {
     ProposalGenerationResult,
 } from '../../../../../src/platforms/contracts';
 import { installTestDom } from '../../../../support/html';
+import { fakeBrowser } from '../../../../support/fake-browser';
 
 function installMostaqlPage(pathname = '/project/321-browser-extension'): Document {
     const document = installTestDom(`
@@ -142,5 +143,27 @@ describe('Mostaql content autofill helpers', () => {
 
         expect(services.getQuickTemplate).not.toHaveBeenCalled();
         expect(services.queueAutofill).not.toHaveBeenCalled();
+    });
+
+    it('warns and returns early when extension context is invalid', async () => {
+        installMostaqlPage();
+        const services = createProposalServices();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const originalId = fakeBrowser.runtime.id;
+        try {
+            // @ts-expect-error force undefined runtime id
+            fakeBrowser.runtime.id = undefined;
+
+            await handleQuickBidClick(services.proposals);
+
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Extension context invalidated')
+            );
+            expect(services.getQuickTemplate).not.toHaveBeenCalled();
+        } finally {
+            fakeBrowser.runtime.id = originalId;
+            warnSpy.mockRestore();
+        }
     });
 });
