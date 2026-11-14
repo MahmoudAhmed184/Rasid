@@ -4,8 +4,15 @@ const CHALLENGE_PAGE_MARKERS = [
     'challenge-platform',
     'cf_chl_',
     '__cf_chl_',
-    'request blocked',
+    'cf-browser-verification',
+    'challenges.cloudflare.com',
+    'cf-turnstile',
     'x-amzn-waf-action',
+    'token.awswaf.com',
+    'awswafintegration',
+    'aws-waf-integration',
+    "verify that you're not a robot",
+    'ddos-guard',
 ] as const;
 
 export interface ChallengePageMatch {
