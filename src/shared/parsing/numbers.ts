@@ -1,9 +1,19 @@
+function normalizeNumerals(text: string): string {
+    return text
+        .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776));
+}
+
 function extractNumericValues(value: string | null | undefined): number[] {
     if (!value) {
         return [];
     }
 
-    const matches = value.replace(/,/g, '').match(/\d+(\.\d+)?/g);
+    const normalized = normalizeNumerals(value)
+        .replace(/\u066B/g, '.')
+        .replace(/[,\u066C]/g, '')
+        .replace(/(?<=\d)\u060C(?=\d)/g, '');
+    const matches = normalized.match(/\d+(\.\d+)?/g);
 
     if (!matches) {
         return [];
