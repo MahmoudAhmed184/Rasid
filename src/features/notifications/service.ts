@@ -8,9 +8,9 @@ import {
 } from '../../platforms/platform-ids';
 import type { AdminMessage } from '../../shared/storage/modules/admin-message-storage';
 import type { ExtensionStorage } from '../../shared/storage/extension-storage';
+import { setLanguage, t } from '../../shared/i18n';
 
 const NOTIFICATION_ALLOWED_HOSTS = ['mostaql.com', 'khamsat.com', 'nafezly.com'] as const;
-const JOB_NOTIFICATION_BUTTON_TITLE = '🔗 عرض تفاصيل المشروع';
 export const NOTIFICATION_STAGGER_MS = 300;
 
 export interface NotificationServiceOptions {
@@ -105,8 +105,12 @@ function buildJobNotificationBody(job: JobRecord): {
 } {
     const platformId = resolveNotificationPlatformId(job);
 
-    const title = job.title?.trim() ? `مشروع جديد: ${job.title.trim()}` : 'مشروع جديد';
-    const budgetStr = job.budget?.trim() ? `الميزانية: ${job.budget.trim()}` : '';
+    const title = job.title?.trim()
+        ? t('notification.new_project', { title: job.title.trim() })
+        : t('notification.new_project_plain');
+    const budgetStr = job.budget?.trim()
+        ? t('notification.budget_label', { budget: job.budget.trim() })
+        : '';
     const trimmedDesc = job.description?.slice(0, 100).trim();
     const descriptionStr = trimmedDesc ? `${trimmedDesc}...` : '';
 
@@ -127,6 +131,17 @@ export function createNotificationService(
     let notificationSequence = 0;
     const defaultStaggerMs = NOTIFICATION_STAGGER_MS;
     const staggerMs = options?.staggerMs !== undefined ? options.staggerMs : defaultStaggerMs;
+
+    async function syncLanguage(): Promise<void> {
+        try {
+            if (typeof storage.getLanguage === 'function') {
+                const lang = await storage.getLanguage();
+                setLanguage(lang);
+            }
+        } catch {
+            // keep current language
+        }
+    }
 
     function registerHandlers(): void {
         if (handlersRegistered) {
@@ -175,6 +190,8 @@ export function createNotificationService(
             return [];
         }
 
+        await syncLanguage();
+
         const notificationPromises = jobs.map(async (job, index) => {
             if (!job) {
                 return null;
@@ -210,7 +227,7 @@ export function createNotificationService(
                                   iconUrl: getNotificationIcon(platformId),
                                   title,
                                   message,
-                                  buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
+                                  buttons: [{ title: t('notification.view_details') }],
                               }
                     )
                 );
@@ -231,6 +248,7 @@ export function createNotificationService(
     }
 
     async function showAdminMessageNotification(msg: AdminMessage): Promise<string> {
+        await syncLanguage();
         const notificationId = `rasid-admin-${Date.now()}-${Math.random().toString(36).slice(2) || '0'}`;
         const payloadUrl = msg.url ? normalizeNotificationUrl(msg.url) : null;
 
@@ -248,14 +266,16 @@ export function createNotificationService(
                     import.meta.env.BROWSER === 'firefox'
                         ? {
                               iconUrl: getNotificationIcon(undefined),
-                              title: '📢 تنبيهات من المطورين',
+                              title: t('notification.dev_alert'),
                               message: msg.message,
                           }
                         : {
                               iconUrl: getNotificationIcon(undefined),
-                              title: '📢 تنبيهات من المطورين',
+                              title: t('notification.dev_alert'),
                               message: msg.message,
-                              buttons: msg.url ? [{ title: '🔗 فتح الرابط' }] : undefined,
+                              buttons: msg.url
+                                  ? [{ title: t('notification.open_link') }]
+                                  : undefined,
                           }
                 )
             );
@@ -272,6 +292,7 @@ export function createNotificationService(
     }
 
     async function showTestNotification(): Promise<string> {
+        await syncLanguage();
         const notificationId = `rasid-test-${Date.now()}-${++notificationSequence}`;
         const payloadUrl = 'https://mostaql.com/projects';
 
@@ -290,14 +311,14 @@ export function createNotificationService(
             import.meta.env.BROWSER === 'firefox'
                 ? {
                       iconUrl,
-                      title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
-                      message: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
+                      title: t('notification.test_title'),
+                      message: t('notification.test_message'),
                   }
                 : {
                       iconUrl,
-                      title: 'هذا إشعار تجريبي - مشروع تطوير موقع إلكتروني',
-                      message: 'هذا مثال للتأكد من أن مسار الإشعارات يعمل بعد إعادة هيكلة الخلفية.',
-                      buttons: [{ title: JOB_NOTIFICATION_BUTTON_TITLE }],
+                      title: t('notification.test_title'),
+                      message: t('notification.test_message'),
+                      buttons: [{ title: t('notification.view_details') }],
                   }
         );
 
