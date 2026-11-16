@@ -40,6 +40,56 @@ function resolveMostaqlProjectUrl(value: string | null | undefined): string | nu
     });
 }
 
+function _createRadarIcon(): SVGSVGElement {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2.2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+
+    const outerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    outerCircle.setAttribute('cx', '12');
+    outerCircle.setAttribute('cy', '12');
+    outerCircle.setAttribute('r', '8');
+
+    const lineV1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    lineV1.setAttribute('x1', '12');
+    lineV1.setAttribute('y1', '2');
+    lineV1.setAttribute('x2', '12');
+    lineV1.setAttribute('y2', '6');
+
+    const lineV2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    lineV2.setAttribute('x1', '12');
+    lineV2.setAttribute('y1', '18');
+    lineV2.setAttribute('x2', '12');
+    lineV2.setAttribute('y2', '22');
+
+    const lineH1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    lineH1.setAttribute('x1', '2');
+    lineH1.setAttribute('y1', '12');
+    lineH1.setAttribute('x2', '6');
+    lineH1.setAttribute('y2', '12');
+
+    const lineH2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    lineH2.setAttribute('x1', '18');
+    lineH2.setAttribute('y1', '12');
+    lineH2.setAttribute('x2', '22');
+    lineH2.setAttribute('y2', '12');
+
+    const centerDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    centerDot.setAttribute('cx', '12');
+    centerDot.setAttribute('cy', '12');
+    centerDot.setAttribute('r', '2');
+    centerDot.setAttribute('fill', 'currentColor');
+
+    svg.append(outerCircle, lineV1, lineV2, lineH1, lineH2, centerDot);
+    return svg;
+}
+
 export function injectDashboardStats(tracking: TrackingServices): PlatformDisposer | undefined {
     const target = document.querySelector<HTMLElement>(MOSTAQL_SELECTORS.home.target);
     if (!target) {
@@ -55,6 +105,7 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     const header = document.createElement('div');
     const title = document.createElement('h2');
     const titleIcon = document.createElement('i');
+    const brandBadge = document.createElement('span');
     const clearfix = document.createElement('div');
     const actions = document.createElement('div');
     const analyticsButton = document.createElement('button');
@@ -65,16 +116,47 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     box.id = 'mostaql-msg-tools';
     box.dir = getDirection();
     box.lang = getLanguage();
-    panel.className = 'panel panel-default';
-    panel.style.margin = '0 0 10px 0';
+    panel.className = 'panel panel-default rasid-tools-panel';
+    panel.style.margin = '0 0 16px 0';
+    panel.style.borderRadius = '10px';
+    panel.style.overflow = 'hidden';
+    panel.style.border = '1px solid var(--rasid-border, #e0e0e0)';
+    panel.style.background = 'var(--rasid-bg-card, #fff)';
+    panel.style.boxShadow = 'var(--rasid-card-shadow, 0 2px 8px rgba(0,0,0,0.05))';
 
-    header.className = 'heada';
+    header.className = 'heada rasid-tools-header';
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.justifyContent = 'space-between';
+    header.style.padding = '12px 16px';
+    header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
+    header.style.background = 'transparent';
+
+    title.className = 'rasid-tools-title';
+    title.style.margin = '0';
+    title.style.fontSize = '16px';
+    title.style.fontWeight = '600';
+    title.style.display = 'flex';
+    title.style.alignItems = 'center';
+    title.style.color = 'var(--rasid-text-primary, inherit)';
+    title.style.lineHeight = '1.4';
+
+    titleIcon.className = 'fa fa-crosshairs rasid-tools-icon';
+    titleIcon.setAttribute('aria-hidden', 'true');
+    titleIcon.replaceChildren(_createRadarIcon());
+    titleIcon.style.color = 'var(--rasid-primary, #2386c8)';
+    titleIcon.style.marginInlineEnd = '10px';
+    titleIcon.style.display = 'inline-flex';
+    titleIcon.style.alignItems = 'center';
+    titleIcon.style.justifyContent = 'center';
+
+    brandBadge.className = 'rasid-tools-badge';
 
     const updateLabels = () => {
         box.dir = getDirection();
         box.lang = getLanguage();
-        title.textContent = '';
-        title.append(titleIcon, ` ${t('content.mostaql.tools')}`);
+        title.replaceChildren(titleIcon, document.createTextNode(` ${t('content.mostaql.tools')}`));
+        brandBadge.textContent = getLanguage() === 'ar' ? 'راصد' : 'Rasid';
         analyticsButton.textContent = '';
         analyticsButton.append(analyticsIcon, ` ${t('content.mostaql.analytics')}`);
         monitoredButton.textContent = '';
@@ -85,22 +167,47 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
 
     clearfix.className = 'clearfix';
 
-    actions.style.padding = '10px 15px 12px';
+    actions.className = 'rasid-tools-actions';
+    actions.style.padding = '12px 16px';
     actions.style.display = 'flex';
-    actions.style.gap = '8px';
+    actions.style.gap = '10px';
 
     analyticsButton.id = 'rasid-show-analytics-btn';
-    analyticsButton.className = 'btn btn-sm btn-primary';
+    analyticsButton.className = 'btn btn-sm btn-primary rasid-tools-btn rasid-tools-btn-primary';
     analyticsButton.style.flex = '1';
+    analyticsButton.style.height = '38px';
+    analyticsButton.style.borderRadius = '8px';
+    analyticsButton.style.fontWeight = '600';
+    analyticsButton.style.fontSize = '13px';
+    analyticsButton.style.display = 'inline-flex';
+    analyticsButton.style.alignItems = 'center';
+    analyticsButton.style.justifyContent = 'center';
+    analyticsButton.style.gap = '8px';
+    analyticsButton.style.border = '1px solid var(--rasid-primary, #2386c8)';
+    analyticsButton.style.background = 'var(--rasid-primary, #2386c8)';
+    analyticsButton.style.color = '#ffffff';
+    analyticsButton.style.cursor = 'pointer';
     analyticsIcon.className = 'fa fa-bar-chart';
 
     monitoredButton.id = 'rasid-show-monitored-btn';
-    monitoredButton.className = 'btn btn-sm btn-default';
+    monitoredButton.className = 'btn btn-sm btn-default rasid-tools-btn rasid-tools-btn-secondary';
     monitoredButton.style.flex = '1';
+    monitoredButton.style.height = '38px';
+    monitoredButton.style.borderRadius = '8px';
+    monitoredButton.style.fontWeight = '600';
+    monitoredButton.style.fontSize = '13px';
+    monitoredButton.style.display = 'inline-flex';
+    monitoredButton.style.alignItems = 'center';
+    monitoredButton.style.justifyContent = 'center';
+    monitoredButton.style.gap = '8px';
+    monitoredButton.style.border = '1px solid var(--rasid-btn-border, #d5d5d5)';
+    monitoredButton.style.background = 'var(--rasid-btn-bg, #f8f9fa)';
+    monitoredButton.style.color = 'var(--rasid-btn-color, #333)';
+    monitoredButton.style.cursor = 'pointer';
     monitoredIcon.className = 'fa fa-eye';
 
     actions.append(analyticsButton, monitoredButton);
-    header.append(title, clearfix);
+    header.append(title, brandBadge);
     panel.append(header, actions);
     box.appendChild(panel);
     target.prepend(box);
@@ -165,52 +272,61 @@ function _injectAnalyticsModal() {
     const loadingText = document.createElement('p');
 
     modal.id = 'rasid-analytics-modal';
+    modal.className = 'rasid-modal';
     modal.style.cssText = `
         display: none; position: fixed; top: 0; left: 0;
         width: 100%; height: 100%; z-index: 99999;
-        background: rgba(0,0,0,0.55); overflow-y: auto;
+        background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+        overflow-y: auto;
     `;
 
-    card.style.background = '#fff';
+    card.className = 'rasid-modal-card';
+    card.style.background = 'var(--rasid-bg-modal, #fff)';
+    card.style.color = 'var(--rasid-text-primary, #222)';
+    card.style.border = '1px solid var(--rasid-border, #e5e5e5)';
     card.style.maxWidth = '980px';
     card.style.margin = '40px auto';
-    card.style.borderRadius = '8px';
-    card.style.padding = '28px';
+    card.style.borderRadius = '12px';
+    card.style.padding = '24px 28px';
     card.style.position = 'relative';
     card.style.direction = getDirection();
     card.lang = getLanguage();
-    card.style.boxShadow = '0 8px 40px rgba(0,0,0,0.18)';
+    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 12px 48px rgba(0,0,0,0.3))';
 
+    header.className = 'rasid-modal-header';
     header.style.display = 'flex';
     header.style.alignItems = 'center';
     header.style.justifyContent = 'space-between';
     header.style.marginBottom = '20px';
-    header.style.borderBottom = '1px solid #eee';
+    header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
     header.style.paddingBottom = '14px';
 
     title.style.margin = '0';
     title.style.fontSize = '18px';
     title.style.fontWeight = '600';
+    title.style.color = 'var(--rasid-text-primary, inherit)';
     titleIcon.className = 'fa fa-bar-chart';
-    titleIcon.style.color = '#2386c8';
+    titleIcon.style.color = 'var(--rasid-primary, #2386c8)';
     titleIcon.style.marginInlineEnd = '8px';
     title.append(titleIcon, ` ${t('content.mostaql.analytics_title')}`);
 
     closeButton.id = 'rasid-analytics-close';
+    closeButton.className = 'rasid-modal-close';
     closeButton.style.background = 'none';
     closeButton.style.border = 'none';
     closeButton.style.fontSize = '24px';
     closeButton.style.cursor = 'pointer';
-    closeButton.style.color = '#888';
+    closeButton.style.color = 'var(--rasid-text-muted, #888)';
     closeButton.style.lineHeight = '1';
     closeButton.style.padding = '0 4px';
     closeButton.textContent = '×';
 
     modalBody.id = 'rasid-analytics-modal-body';
 
+    loading.className = 'rasid-modal-loading';
     loading.style.textAlign = 'center';
     loading.style.padding = '50px';
-    loading.style.color = '#999';
+    loading.style.color = 'var(--rasid-text-muted, #999)';
     loadingIcon.className = 'fa fa-spinner fa-spin fa-2x';
     loadingText.style.marginTop = '14px';
     loadingText.style.fontSize = '15px';
@@ -265,34 +381,41 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     const loadingIcon = document.createElement('i');
 
     modal.id = 'rasid-monitored-modal';
+    modal.className = 'rasid-modal';
     modal.style.cssText = `
         display: none; position: fixed; top: 0; left: 0;
         width: 100%; height: 100%; z-index: 99999;
-        background: rgba(0,0,0,0.55); overflow-y: auto;
+        background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+        overflow-y: auto;
     `;
 
-    card.style.background = '#fff';
+    card.className = 'rasid-modal-card';
+    card.style.background = 'var(--rasid-bg-modal, #fff)';
+    card.style.color = 'var(--rasid-text-primary, #222)';
+    card.style.border = '1px solid var(--rasid-border, #e5e5e5)';
     card.style.maxWidth = '780px';
     card.style.margin = '40px auto';
-    card.style.borderRadius = '8px';
-    card.style.padding = '28px';
+    card.style.borderRadius = '12px';
+    card.style.padding = '24px 28px';
     card.style.position = 'relative';
     card.style.direction = getDirection();
     card.lang = getLanguage();
-    card.style.boxShadow = '0 8px 40px rgba(0,0,0,0.18)';
+    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 12px 48px rgba(0,0,0,0.3))';
 
+    header.className = 'rasid-modal-header';
     header.style.display = 'flex';
     header.style.alignItems = 'center';
     header.style.justifyContent = 'space-between';
     header.style.marginBottom = '20px';
-    header.style.borderBottom = '1px solid #eee';
+    header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
     header.style.paddingBottom = '14px';
 
     title.style.margin = '0';
     title.style.fontSize = '18px';
     title.style.fontWeight = '600';
+    title.style.color = 'var(--rasid-text-primary, inherit)';
     titleIcon.className = 'fa fa-fw fa-eye';
-    titleIcon.style.color = '#2386c8';
+    titleIcon.style.color = 'var(--rasid-primary, #2386c8)';
     titleIcon.style.marginInlineEnd = '8px';
     title.append(titleIcon, ` ${t('content.mostaql.monitored_title')}`);
 
@@ -301,16 +424,22 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     actions.style.alignItems = 'center';
 
     refreshButton.id = 'rasid-monitored-refresh';
-    refreshButton.className = 'btn btn-xs btn-default';
+    refreshButton.className = 'btn btn-xs btn-default rasid-refresh-btn';
+    refreshButton.style.background = 'var(--rasid-btn-bg, #f5f5f5)';
+    refreshButton.style.color = 'var(--rasid-btn-color, #333)';
+    refreshButton.style.border = '1px solid var(--rasid-btn-border, #d5d5d5)';
+    refreshButton.style.borderRadius = '6px';
+    refreshButton.style.padding = '4px 10px';
     refreshIcon.className = 'fa fa-refresh';
     refreshButton.append(refreshIcon, ` ${t('bids.refresh')}`);
 
     closeButton.id = 'rasid-monitored-close';
+    closeButton.className = 'rasid-modal-close';
     closeButton.style.background = 'none';
     closeButton.style.border = 'none';
     closeButton.style.fontSize = '24px';
     closeButton.style.cursor = 'pointer';
-    closeButton.style.color = '#888';
+    closeButton.style.color = 'var(--rasid-text-muted, #888)';
     closeButton.style.lineHeight = '1';
     closeButton.style.padding = '0 4px';
     closeButton.textContent = '×';
@@ -370,13 +499,15 @@ function _createMonitoredEmptyState(): HTMLDivElement {
     const wrapper = document.createElement('div');
     const emphasis = document.createElement('strong');
 
-    wrapper.className = 'list-group-item';
-    wrapper.style.padding = '30px';
+    wrapper.className = 'list-group-item rasid-monitored-empty';
+    wrapper.style.padding = '36px 20px';
     wrapper.style.textAlign = 'center';
-    wrapper.style.color = '#888';
+    wrapper.style.color = 'var(--rasid-text-muted, #888)';
     wrapper.style.border = 'none';
+    wrapper.style.background = 'transparent';
     wrapper.append(t('content.mostaql.no_monitored_prefix'));
     emphasis.textContent = t('content.mostaql.track');
+    emphasis.style.color = 'var(--rasid-primary, #2386c8)';
     wrapper.append(emphasis, t('content.mostaql.no_monitored_suffix'));
 
     return wrapper;
@@ -451,7 +582,9 @@ function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement 
     }
 
     const item = document.createElement('div');
-    item.className = 'list-group-item brd--b mrg--an';
+    item.className = 'list-group-item brd--b mrg--an rasid-monitored-item';
+    item.style.background = 'transparent';
+    item.style.borderColor = 'var(--rasid-border-subtle, #eee)';
 
     const title = document.createElement('h5');
     title.className = 'listing__title project__title mrg--bt-reset';
@@ -463,6 +596,7 @@ function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement 
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
     }
+    link.style.color = 'var(--rasid-text-primary, inherit)';
     link.textContent = job.title || t('common.untitled');
 
     const badge = document.createElement('span');
@@ -549,16 +683,19 @@ function _createBidStatsBar(config: {
 
     const countLabel = document.createElement('div');
     countLabel.className = 'pull-right';
+    countLabel.style.color = 'var(--rasid-text-primary, inherit)';
     countLabel.textContent = `${count} ${label}`;
 
     const percentLabel = document.createElement('div');
     percentLabel.className = 'pull-left';
+    percentLabel.style.color = 'var(--rasid-text-muted, inherit)';
     percentLabel.textContent = `${percentage}%`;
 
     clearfix.append(countLabel, percentLabel);
 
     const progress = document.createElement('div');
     progress.className = 'progress progress--slim';
+    progress.style.background = 'var(--rasid-progress-bg, #ebebeb)';
 
     const progressBar = document.createElement('div');
     progressBar.className = `progress-bar ${cssClass}`.trim();
@@ -664,6 +801,7 @@ function _createBidStatsCountdownCard(
     title.style.overflow = 'hidden';
     title.style.textOverflow = 'ellipsis';
     title.style.whiteSpace = 'nowrap';
+    title.style.color = 'var(--rasid-text-primary, inherit)';
     title.textContent = bid.title || t('bids.untitled_bid');
 
     const countdown = document.createElement('div');
@@ -680,6 +818,7 @@ function _createBidStatsCountdownCard(
 
     const progressWrapper = document.createElement('div');
     progressWrapper.className = 'progress progress--slim';
+    progressWrapper.style.background = 'var(--rasid-progress-bg, #ebebeb)';
 
     const progressBar = document.createElement('div');
     progressBar.className = 'progress-bar rasid-progress-bar';
