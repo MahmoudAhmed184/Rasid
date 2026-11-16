@@ -185,19 +185,19 @@ Purpose: Mostaql project/message ZIP export UI and payload creation.
 
 Functions:
 
-| Function                                                     | Purpose                                 | Inputs            | Outputs         | Side effects, errors, security                       |
-| ------------------------------------------------------------ | --------------------------------------- | ----------------- | --------------- | ---------------------------------------------------- |
-| `createIcon()` / `createActionText()`                        | Build export button DOM.                | icon/text         | elements        | DOM helpers.                                         |
-| `setExportButtonContent()` / `setExportButtonLoadingState()` | Update export button UI.                | button and labels | `void`          | DOM updates.                                         |
-| `getFilenameFromUrl(urlStr)`                                 | Derives filename from URL path.         | URL string        | filename        | Fallback-safe helper.                                |
-| `sanitizeFile(name, fallback)`                               | Sanitizes filename segment.             | name, fallback    | string          | Removes invalid chars.                               |
-| `escapeHtml(value)` / `escapeHtmlValue(value, fallback?)`    | Escapes text for generated HTML report. | value             | string          | Prevents executable HTML injection.                  |
-| `resolveMostaqlExportUrl(value)`                             | Validates export URL.                   | URL string/null   | URL/null        | Mostaql host allowlist.                              |
-| `isSafeLocalAssetPath(value)`                                | Checks safe local asset path.           | string/null       | boolean         | Rejects unsafe path values.                          |
-| `resolveReportAssetUrl(localPath, remoteUrl)`                | Chooses safe local or remote asset URL. | local/remote      | URL/null        | Used in generated report assets.                     |
-| `injectMessageExporter(downloads)`                           | Mounts message export button.           | download service  | `void`          | Exports chat/message data through ZIP download.      |
-| `injectProjectExporter(downloads)`                           | Mounts project export button.           | download service  | `void`          | Exports project details through ZIP download.        |
-| `executeExportAll(downloads)`                                | Runs combined export.                   | download service  | `Promise<void>` | Builds ZIP entries and requests background download. |
+| Function                                                     | Purpose                                 | Inputs            | Outputs            | Side effects, errors, security                       |
+| ------------------------------------------------------------ | --------------------------------------- | ----------------- | ------------------ | ---------------------------------------------------- |
+| `createIcon()` / `createActionText()`                        | Build export button DOM.                | icon/text         | elements           | DOM helpers.                                         |
+| `setExportButtonContent()` / `setExportButtonLoadingState()` | Update export button UI.                | button and labels | `void`             | DOM updates.                                         |
+| `getFilenameFromUrl(urlStr)`                                 | Derives filename from URL path.         | URL string        | filename           | Fallback-safe helper.                                |
+| `sanitizeFile(name, fallback)`                               | Sanitizes filename segment.             | name, fallback    | string             | Removes invalid chars.                               |
+| `escapeHtml(value)` / `escapeHtmlValue(value, fallback?)`    | Escapes text for generated HTML report. | value             | string             | Prevents executable HTML injection.                  |
+| `resolveMostaqlExportUrl(value)`                             | Validates export URL.                   | URL string/null   | URL/null           | Mostaql host allowlist.                              |
+| `isSafeLocalAssetPath(value)`                                | Checks safe local asset path.           | string/null       | boolean            | Rejects unsafe path values.                          |
+| `resolveReportAssetUrl(localPath, remoteUrl)`                | Chooses safe local or remote asset URL. | local/remote      | URL/null           | Used in generated report assets.                     |
+| `injectMessageExporter(downloads)`                           | Mounts message export button.           | download service  | disposer/undefined | Exports chat/message data through ZIP download.      |
+| `injectProjectExporter(downloads)`                           | Mounts project export button.           | download service  | disposer/undefined | Exports project details through ZIP download.        |
+| `executeExportAll(downloads)`                                | Runs combined export.                   | download service  | `Promise<void>`    | Builds ZIP entries and requests background download. |
 
 ## `src/platforms/mostaql/content/home.ts`
 

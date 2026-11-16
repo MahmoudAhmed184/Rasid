@@ -1,8 +1,8 @@
 import { browser } from 'wxt/browser';
 
 import { resolvePlatformUrl } from '../../../entities/platform/url';
-import { formatDate, getDirection, getLanguage, t } from '../../../shared/i18n';
-import type { PlatformContentServices } from '../../contracts';
+import { formatDate, getDirection, getLanguage, onLanguageChange, t } from '../../../shared/i18n';
+import type { PlatformContentServices, PlatformDisposer } from '../../contracts';
 import type { MostaqlBidDetails, MostaqlMyProposalData, MostaqlProjectDetailsData } from './data';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
 import { extractMyProposalFull, extractProjectDetailsFull } from './data';
@@ -171,14 +171,14 @@ function resolveReportAssetUrl(
     return resolveMostaqlExportUrl(remoteUrl);
 }
 
-export function injectMessageExporter(downloads: DownloadServices) {
+export function injectMessageExporter(downloads: DownloadServices): PlatformDisposer | undefined {
     const targetPanel = document.querySelector(MOSTAQL_SELECTORS.messages.metaPanel);
     if (!targetPanel) {
-        return;
+        return undefined;
     }
 
     if (document.getElementById('mostaql-export-chat-btn')) {
-        return;
+        return undefined;
     }
 
     const btn = document.createElement('button');
@@ -224,17 +224,32 @@ export function injectMessageExporter(downloads: DownloadServices) {
         })();
     });
 
+    const unsubscribeLang = onLanguageChange(() => {
+        if (!btn.isConnected) {
+            unsubscribeLang();
+            return;
+        }
+        if (!btn.disabled) {
+            setExportButtonContent(btn, 'fa fa-download', t('content.mostaql.export'));
+        }
+    });
+
     targetPanel.after(btn);
+
+    return () => {
+        unsubscribeLang();
+        btn.remove();
+    };
 }
 
-export function injectProjectExporter(downloads: DownloadServices) {
+export function injectProjectExporter(downloads: DownloadServices): PlatformDisposer | undefined {
     const buttonContainer = document.getElementById('mostaql-ext-btn-container');
     if (!buttonContainer) {
-        return;
+        return undefined;
     }
 
     if (document.getElementById('mostaql-export-project-btn')) {
-        return;
+        return undefined;
     }
 
     const btn = document.createElement('button');
@@ -284,7 +299,22 @@ export function injectProjectExporter(downloads: DownloadServices) {
         })();
     });
 
+    const unsubscribeLang = onLanguageChange(() => {
+        if (!btn.isConnected) {
+            unsubscribeLang();
+            return;
+        }
+        if (!btn.disabled) {
+            setExportButtonContent(btn, 'fa fa-download', t('content.mostaql.export'), true);
+        }
+    });
+
     buttonContainer.appendChild(btn);
+
+    return () => {
+        unsubscribeLang();
+        btn.remove();
+    };
 }
 
 async function executeExportAll(downloads: DownloadServices): Promise<void> {
