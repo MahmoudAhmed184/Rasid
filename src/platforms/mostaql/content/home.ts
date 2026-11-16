@@ -42,12 +42,12 @@ function resolveMostaqlProjectUrl(value: string | null | undefined): string | nu
 
 function _createRadarIcon(): SVGSVGElement {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '18');
-    svg.setAttribute('height', '18');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('fill', 'none');
     svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2.2');
+    svg.setAttribute('stroke-width', '1.6');
     svg.setAttribute('stroke-linecap', 'round');
     svg.setAttribute('stroke-linejoin', 'round');
 
@@ -60,22 +60,22 @@ function _createRadarIcon(): SVGSVGElement {
     lineV1.setAttribute('x1', '12');
     lineV1.setAttribute('y1', '2');
     lineV1.setAttribute('x2', '12');
-    lineV1.setAttribute('y2', '6');
+    lineV1.setAttribute('y2', '5');
 
     const lineV2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     lineV2.setAttribute('x1', '12');
-    lineV2.setAttribute('y1', '18');
+    lineV2.setAttribute('y1', '19');
     lineV2.setAttribute('x2', '12');
     lineV2.setAttribute('y2', '22');
 
     const lineH1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     lineH1.setAttribute('x1', '2');
     lineH1.setAttribute('y1', '12');
-    lineH1.setAttribute('x2', '6');
+    lineH1.setAttribute('x2', '5');
     lineH1.setAttribute('y2', '12');
 
     const lineH2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    lineH2.setAttribute('x1', '18');
+    lineH2.setAttribute('x1', '19');
     lineH2.setAttribute('y1', '12');
     lineH2.setAttribute('x2', '22');
     lineH2.setAttribute('y2', '12');
@@ -83,7 +83,7 @@ function _createRadarIcon(): SVGSVGElement {
     const centerDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     centerDot.setAttribute('cx', '12');
     centerDot.setAttribute('cy', '12');
-    centerDot.setAttribute('r', '2');
+    centerDot.setAttribute('r', '1.75');
     centerDot.setAttribute('fill', 'currentColor');
 
     svg.append(outerCircle, lineV1, lineV2, lineH1, lineH2, centerDot);
@@ -105,8 +105,6 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     const header = document.createElement('div');
     const title = document.createElement('h2');
     const titleIcon = document.createElement('i');
-    const brandBadge = document.createElement('span');
-    const clearfix = document.createElement('div');
     const actions = document.createElement('div');
     const analyticsButton = document.createElement('button');
     const analyticsIcon = document.createElement('i');
@@ -118,23 +116,23 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     box.lang = getLanguage();
     panel.className = 'panel panel-default rasid-tools-panel';
     panel.style.margin = '0 0 16px 0';
-    panel.style.borderRadius = '10px';
+    panel.style.borderRadius = '8px';
     panel.style.overflow = 'hidden';
-    panel.style.border = '1px solid var(--rasid-border, #e0e0e0)';
+    panel.style.border = '1px solid var(--rasid-border, rgba(0, 0, 0, 0.08))';
     panel.style.background = 'var(--rasid-bg-card, #fff)';
-    panel.style.boxShadow = 'var(--rasid-card-shadow, 0 2px 8px rgba(0,0,0,0.05))';
+    panel.style.boxShadow = 'var(--rasid-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))';
 
     header.className = 'heada rasid-tools-header';
     header.style.display = 'flex';
     header.style.alignItems = 'center';
     header.style.justifyContent = 'space-between';
     header.style.padding = '12px 16px';
-    header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
+    header.style.borderBottom = '1px solid var(--rasid-border-subtle, rgba(0, 0, 0, 0.05))';
     header.style.background = 'transparent';
 
     title.className = 'rasid-tools-title';
     title.style.margin = '0';
-    title.style.fontSize = '16px';
+    title.style.fontSize = '15px';
     title.style.fontWeight = '600';
     title.style.display = 'flex';
     title.style.alignItems = 'center';
@@ -145,18 +143,15 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     titleIcon.setAttribute('aria-hidden', 'true');
     titleIcon.replaceChildren(_createRadarIcon());
     titleIcon.style.color = 'var(--rasid-primary, #2386c8)';
-    titleIcon.style.marginInlineEnd = '10px';
+    titleIcon.style.marginInlineEnd = '8px';
     titleIcon.style.display = 'inline-flex';
     titleIcon.style.alignItems = 'center';
     titleIcon.style.justifyContent = 'center';
-
-    brandBadge.className = 'rasid-tools-badge';
 
     const updateLabels = () => {
         box.dir = getDirection();
         box.lang = getLanguage();
         title.replaceChildren(titleIcon, document.createTextNode(` ${t('content.mostaql.tools')}`));
-        brandBadge.textContent = getLanguage() === 'ar' ? 'راصد' : 'Rasid';
         analyticsButton.textContent = '';
         analyticsButton.append(analyticsIcon, ` ${t('content.mostaql.analytics')}`);
         monitoredButton.textContent = '';
@@ -165,49 +160,23 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
 
     updateLabels();
 
-    clearfix.className = 'clearfix';
-
     actions.className = 'rasid-tools-actions';
     actions.style.padding = '12px 16px';
     actions.style.display = 'flex';
-    actions.style.gap = '10px';
+    actions.style.gap = '8px';
 
     analyticsButton.id = 'rasid-show-analytics-btn';
-    analyticsButton.className = 'btn btn-sm btn-primary rasid-tools-btn rasid-tools-btn-primary';
+    analyticsButton.className = 'btn btn-sm rasid-tools-btn';
     analyticsButton.style.flex = '1';
-    analyticsButton.style.height = '38px';
-    analyticsButton.style.borderRadius = '8px';
-    analyticsButton.style.fontWeight = '600';
-    analyticsButton.style.fontSize = '13px';
-    analyticsButton.style.display = 'inline-flex';
-    analyticsButton.style.alignItems = 'center';
-    analyticsButton.style.justifyContent = 'center';
-    analyticsButton.style.gap = '8px';
-    analyticsButton.style.border = '1px solid var(--rasid-primary, #2386c8)';
-    analyticsButton.style.background = 'var(--rasid-primary, #2386c8)';
-    analyticsButton.style.color = '#ffffff';
-    analyticsButton.style.cursor = 'pointer';
     analyticsIcon.className = 'fa fa-bar-chart';
 
     monitoredButton.id = 'rasid-show-monitored-btn';
-    monitoredButton.className = 'btn btn-sm btn-default rasid-tools-btn rasid-tools-btn-secondary';
+    monitoredButton.className = 'btn btn-sm rasid-tools-btn';
     monitoredButton.style.flex = '1';
-    monitoredButton.style.height = '38px';
-    monitoredButton.style.borderRadius = '8px';
-    monitoredButton.style.fontWeight = '600';
-    monitoredButton.style.fontSize = '13px';
-    monitoredButton.style.display = 'inline-flex';
-    monitoredButton.style.alignItems = 'center';
-    monitoredButton.style.justifyContent = 'center';
-    monitoredButton.style.gap = '8px';
-    monitoredButton.style.border = '1px solid var(--rasid-btn-border, #d5d5d5)';
-    monitoredButton.style.background = 'var(--rasid-btn-bg, #f8f9fa)';
-    monitoredButton.style.color = 'var(--rasid-btn-color, #333)';
-    monitoredButton.style.cursor = 'pointer';
     monitoredIcon.className = 'fa fa-eye';
 
     actions.append(analyticsButton, monitoredButton);
-    header.append(title, brandBadge);
+    header.append(title);
     panel.append(header, actions);
     box.appendChild(panel);
     target.prepend(box);
@@ -287,11 +256,11 @@ function _injectAnalyticsModal() {
     card.style.maxWidth = '980px';
     card.style.margin = '40px auto';
     card.style.borderRadius = '12px';
-    card.style.padding = '24px 28px';
+    card.style.padding = '24px';
     card.style.position = 'relative';
     card.style.direction = getDirection();
     card.lang = getLanguage();
-    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 12px 48px rgba(0,0,0,0.3))';
+    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 16px 40px rgba(0,0,0,0.15))';
 
     header.className = 'rasid-modal-header';
     header.style.display = 'flex';
@@ -299,7 +268,7 @@ function _injectAnalyticsModal() {
     header.style.justifyContent = 'space-between';
     header.style.marginBottom = '20px';
     header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
-    header.style.paddingBottom = '14px';
+    header.style.paddingBottom = '16px';
 
     title.style.margin = '0';
     title.style.fontSize = '18px';
@@ -396,11 +365,11 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     card.style.maxWidth = '780px';
     card.style.margin = '40px auto';
     card.style.borderRadius = '12px';
-    card.style.padding = '24px 28px';
+    card.style.padding = '24px';
     card.style.position = 'relative';
     card.style.direction = getDirection();
     card.lang = getLanguage();
-    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 12px 48px rgba(0,0,0,0.3))';
+    card.style.boxShadow = 'var(--rasid-modal-shadow, 0 16px 40px rgba(0,0,0,0.15))';
 
     header.className = 'rasid-modal-header';
     header.style.display = 'flex';
@@ -408,7 +377,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     header.style.justifyContent = 'space-between';
     header.style.marginBottom = '20px';
     header.style.borderBottom = '1px solid var(--rasid-border-subtle, #eee)';
-    header.style.paddingBottom = '14px';
+    header.style.paddingBottom = '16px';
 
     title.style.margin = '0';
     title.style.fontSize = '18px';
@@ -429,7 +398,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     refreshButton.style.color = 'var(--rasid-btn-color, #333)';
     refreshButton.style.border = '1px solid var(--rasid-btn-border, #d5d5d5)';
     refreshButton.style.borderRadius = '6px';
-    refreshButton.style.padding = '4px 10px';
+    refreshButton.style.padding = '4px 12px';
     refreshIcon.className = 'fa fa-refresh';
     refreshButton.append(refreshIcon, ` ${t('bids.refresh')}`);
 
@@ -684,11 +653,13 @@ function _createBidStatsBar(config: {
     const countLabel = document.createElement('div');
     countLabel.className = 'pull-right';
     countLabel.style.color = 'var(--rasid-text-primary, inherit)';
+    countLabel.style.fontVariantNumeric = 'tabular-nums';
     countLabel.textContent = `${count} ${label}`;
 
     const percentLabel = document.createElement('div');
     percentLabel.className = 'pull-left';
     percentLabel.style.color = 'var(--rasid-text-muted, inherit)';
+    percentLabel.style.fontVariantNumeric = 'tabular-nums';
     percentLabel.textContent = `${percentage}%`;
 
     clearfix.append(countLabel, percentLabel);
