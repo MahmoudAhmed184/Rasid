@@ -1,4 +1,5 @@
 import { resolvePlatformUrl } from '../../../entities/platform/url';
+import { getDirection, getLanguage, t, onLanguageChange } from '../../../shared/i18n';
 import type {
     PlatformContentServices,
     PlatformDisposer,
@@ -62,16 +63,25 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     const monitoredIcon = document.createElement('i');
 
     box.id = 'mostaql-msg-tools';
+    box.dir = getDirection();
+    box.lang = getLanguage();
     panel.className = 'panel panel-default';
     panel.style.margin = '0 0 10px 0';
 
     header.className = 'heada';
 
-    title.className = 'heada__title pull-right vcenter';
-    title.style.fontSize = '13px';
-    titleIcon.className = 'fa fa-fw fa-plug';
-    titleIcon.style.color = '#2386c8';
-    title.append(titleIcon, ' أدوات راصد');
+    const updateLabels = () => {
+        box.dir = getDirection();
+        box.lang = getLanguage();
+        title.textContent = '';
+        title.append(titleIcon, ` ${t('content.mostaql.tools')}`);
+        analyticsButton.textContent = '';
+        analyticsButton.append(analyticsIcon, ` ${t('content.mostaql.analytics')}`);
+        monitoredButton.textContent = '';
+        monitoredButton.append(monitoredIcon, ` ${t('content.mostaql.monitored')}`);
+    };
+
+    updateLabels();
 
     clearfix.className = 'clearfix';
 
@@ -83,13 +93,11 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
     analyticsButton.className = 'btn btn-sm btn-primary';
     analyticsButton.style.flex = '1';
     analyticsIcon.className = 'fa fa-bar-chart';
-    analyticsButton.append(analyticsIcon, ' التحليلات');
 
     monitoredButton.id = 'rasid-show-monitored-btn';
     monitoredButton.className = 'btn btn-sm btn-default';
     monitoredButton.style.flex = '1';
     monitoredIcon.className = 'fa fa-eye';
-    monitoredButton.append(monitoredIcon, ' المراقَبة');
 
     actions.append(analyticsButton, monitoredButton);
     header.append(title, clearfix);
@@ -122,7 +130,16 @@ export function injectDashboardStats(tracking: TrackingServices): PlatformDispos
         _openMonitoredModal(tracking);
     });
 
+    const unsubscribeLang = onLanguageChange(() => {
+        updateLabels();
+        document.getElementById('rasid-analytics-modal')?.remove();
+        document.getElementById('rasid-monitored-modal')?.remove();
+        _injectAnalyticsModal();
+        _injectMonitoredModal(tracking);
+    });
+
     return () => {
+        unsubscribeLang();
         _stopSlotCountdowns();
         window._rasidStatsLoaded = false;
         box.remove();
@@ -160,7 +177,8 @@ function _injectAnalyticsModal() {
     card.style.borderRadius = '8px';
     card.style.padding = '28px';
     card.style.position = 'relative';
-    card.style.direction = 'rtl';
+    card.style.direction = getDirection();
+    card.lang = getLanguage();
     card.style.boxShadow = '0 8px 40px rgba(0,0,0,0.18)';
 
     header.style.display = 'flex';
@@ -175,8 +193,8 @@ function _injectAnalyticsModal() {
     title.style.fontWeight = '600';
     titleIcon.className = 'fa fa-bar-chart';
     titleIcon.style.color = '#2386c8';
-    titleIcon.style.marginLeft = '8px';
-    title.append(titleIcon, ' تحليلات العروض');
+    titleIcon.style.marginInlineEnd = '8px';
+    title.append(titleIcon, ` ${t('content.mostaql.analytics_title')}`);
 
     closeButton.id = 'rasid-analytics-close';
     closeButton.style.background = 'none';
@@ -196,7 +214,7 @@ function _injectAnalyticsModal() {
     loadingIcon.className = 'fa fa-spinner fa-spin fa-2x';
     loadingText.style.marginTop = '14px';
     loadingText.style.fontSize = '15px';
-    loadingText.textContent = 'جاري تحميل التحليلات...';
+    loadingText.textContent = t('content.mostaql.analytics_loading');
     loading.append(loadingIcon, loadingText);
 
     modalBody.appendChild(loading);
@@ -259,7 +277,8 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     card.style.borderRadius = '8px';
     card.style.padding = '28px';
     card.style.position = 'relative';
-    card.style.direction = 'rtl';
+    card.style.direction = getDirection();
+    card.lang = getLanguage();
     card.style.boxShadow = '0 8px 40px rgba(0,0,0,0.18)';
 
     header.style.display = 'flex';
@@ -274,8 +293,8 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     title.style.fontWeight = '600';
     titleIcon.className = 'fa fa-fw fa-eye';
     titleIcon.style.color = '#2386c8';
-    titleIcon.style.marginLeft = '8px';
-    title.append(titleIcon, ' المشاريع المراقبة');
+    titleIcon.style.marginInlineEnd = '8px';
+    title.append(titleIcon, ` ${t('content.mostaql.monitored_title')}`);
 
     actions.style.display = 'flex';
     actions.style.gap = '8px';
@@ -284,7 +303,7 @@ function _injectMonitoredModal(tracking: TrackingServices) {
     refreshButton.id = 'rasid-monitored-refresh';
     refreshButton.className = 'btn btn-xs btn-default';
     refreshIcon.className = 'fa fa-refresh';
-    refreshButton.append(refreshIcon, ' تحديث');
+    refreshButton.append(refreshIcon, ` ${t('bids.refresh')}`);
 
     closeButton.id = 'rasid-monitored-close';
     closeButton.style.background = 'none';
@@ -356,9 +375,9 @@ function _createMonitoredEmptyState(): HTMLDivElement {
     wrapper.style.textAlign = 'center';
     wrapper.style.color = '#888';
     wrapper.style.border = 'none';
-    wrapper.append('لا توجد مشاريع مراقبة. افتح أي مشروع واضغط ');
-    emphasis.textContent = 'مراقبة';
-    wrapper.append(emphasis, ' لإضافته.');
+    wrapper.append(t('content.mostaql.no_monitored_prefix'));
+    emphasis.textContent = t('content.mostaql.track');
+    wrapper.append(emphasis, t('content.mostaql.no_monitored_suffix'));
 
     return wrapper;
 }
@@ -376,18 +395,58 @@ function _createMonitoredMetaItem(iconClassName: string, text: string): HTMLLIEl
     return item;
 }
 
+function formatLocalizedProjectStatus(status: string | undefined): string {
+    if (!status) {
+        return t('common.open');
+    }
+    if (getLanguage() === 'ar') {
+        return status;
+    }
+    if (
+        status.includes('تنفيذ') ||
+        status.includes('جارٍ') ||
+        status.toLowerCase().includes('progress')
+    ) {
+        return t('common.in_progress');
+    }
+    if (status.includes('مكتمل') || status.toLowerCase().includes('completed')) {
+        return t('common.completed');
+    }
+    if (status.includes('مغلق') || status.toLowerCase().includes('closed')) {
+        return t('common.closed');
+    }
+    if (status.includes('ملغى') || status.toLowerCase().includes('cancel')) {
+        return t('common.cancelled');
+    }
+    return status;
+}
+
 function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement {
     const poster = job.clientName || '';
     const timeAgo = job.publishDate || '';
-    const bidsText = job.communications ? `${job.communications} تواصل` : '';
-    const budget = job.budget && job.budget !== 'غير محدد' ? job.budget : '';
-    const status = job.status || 'مفتوح';
+    const bidsText = job.communications
+        ? t('overview.communications', { count: job.communications })
+        : '';
+    const notSpecified = t('common.not_specified');
+    const budget =
+        job.budget && job.budget !== 'غير محدد' && job.budget !== notSpecified ? job.budget : '';
+    const status = formatLocalizedProjectStatus(job.status);
     let statusCls = 'label-prj-open';
 
-    if (status.includes('تنفيذ') || status.includes('جارٍ')) {
+    if (
+        status.includes('تنفيذ') ||
+        status.includes('جارٍ') ||
+        status.toLowerCase().includes('progress')
+    ) {
         statusCls = 'label-prj-processing';
     }
-    if (status.includes('مغلق') || status.includes('مكتمل') || status.includes('ملغى')) {
+    if (
+        status.includes('مغلق') ||
+        status.includes('مكتمل') ||
+        status.includes('ملغى') ||
+        status.toLowerCase().includes('closed') ||
+        status.toLowerCase().includes('completed')
+    ) {
         statusCls = 'label-prj-closed';
     }
 
@@ -404,12 +463,12 @@ function _createMonitoredProjectItem(job: TrackedProjectRecord): HTMLDivElement 
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
     }
-    link.textContent = job.title || 'بدون عنوان';
+    link.textContent = job.title || t('common.untitled');
 
     const badge = document.createElement('span');
     badge.className = `label ${statusCls}`;
     badge.style.fontSize = '10px';
-    badge.style.marginRight = '6px';
+    badge.style.marginInlineEnd = '6px';
     badge.textContent = status;
 
     title.append(link, badge);
@@ -594,7 +653,7 @@ function _createBidStatsCountdownCard(
 
     const projectsProgress = document.createElement('div');
     projectsProgress.className = 'projects-progress';
-    projectsProgress.title = `تاريخ التقديم: ${appliedAtStr}`;
+    projectsProgress.title = t('content.mostaql.applied_date', { date: appliedAtStr });
 
     const clearfix = document.createElement('div');
     clearfix.className = 'clearfix';
@@ -605,7 +664,7 @@ function _createBidStatsCountdownCard(
     title.style.overflow = 'hidden';
     title.style.textOverflow = 'ellipsis';
     title.style.whiteSpace = 'nowrap';
-    title.textContent = bid.title || 'عرض';
+    title.textContent = bid.title || t('bids.untitled_bid');
 
     const countdown = document.createElement('div');
     countdown.className = 'pull-left rasid-countdown';
@@ -640,14 +699,22 @@ function _renderBidStats(stats: MostaqlBidStatusStats): void {
 
     const STATUS_CONFIG: Record<string, { label: string; cssClass: string; href: string }> = {
         مكتمل: {
-            label: 'مكتملة',
+            label: t('bids.status_plural.completed'),
             cssClass: 'label-prj-completed',
             href: `${BIDS_URL}?status=completed`,
         },
-        مستبعد: { label: 'مستبعدة', cssClass: 'label-prj-lost', href: BIDS_URL },
-        مُغلق: { label: 'مُغلق', cssClass: 'label-prj-closed', href: BIDS_URL },
+        مستبعد: {
+            label: t('bids.status_plural.rejected'),
+            cssClass: 'label-prj-lost',
+            href: BIDS_URL,
+        },
+        مُغلق: {
+            label: t('bids.status_plural.closed'),
+            cssClass: 'label-prj-closed',
+            href: BIDS_URL,
+        },
         'بانتظار الموافقة': {
-            label: 'بانتظار الموافقة',
+            label: t('bids.status_plural.pending'),
             cssClass: 'label-prj-open',
             href: `${BIDS_URL}?status=pending`,
         },
@@ -671,9 +738,9 @@ function _renderBidStats(stats: MostaqlBidStatusStats): void {
 
     const overallColumn = _createBidStatsColumn({
         icon: 'fa-list-ul',
-        title: 'إجمالي العروض',
+        title: t('content.mostaql.stat_overall'),
         summaryBar: _createBidStatsBar({
-            label: 'إجمالي العروض',
+            label: t('content.mostaql.stat_overall'),
             count: overall.total,
             pct: 100,
             href: BIDS_URL,
@@ -683,9 +750,9 @@ function _renderBidStats(stats: MostaqlBidStatusStats): void {
 
     const last30Column = _createBidStatsColumn({
         icon: 'fa-calendar',
-        title: 'آخر 30 يوم',
+        title: t('content.mostaql.stat_last30'),
         summaryBar: _createBidStatsBar({
-            label: 'آخر 30 يوم (إجمالي)',
+            label: `${t('content.mostaql.stat_last30')} (${t('bids.stat.total_30d')})`,
             count: last30Days.total,
             pct: pct(last30Days.total, overall.total),
             cssClass: 'label-prj-open',
@@ -701,16 +768,16 @@ function _renderBidStats(stats: MostaqlBidStatusStats): void {
     const todayKeys = Object.keys(last1Day.byStatus);
     const todayColumn = _createBidStatsColumn({
         icon: 'fa-clock-o',
-        title: 'اليوم',
+        title: t('content.mostaql.stat_today'),
         summaryBar: _createBidStatsBar({
-            label: 'اليوم (إجمالي)',
+            label: `${t('content.mostaql.stat_today')} (${t('bids.stat.today_bids')})`,
             count: last1Day.total,
             pct: pct(last1Day.total, overall.total),
             cssClass: 'label-prj-processing',
             href: BIDS_URL,
         }),
         bars: buildBars(todayKeys, last1Day.byStatus, last1Day.total),
-        emptyMsg: 'لا توجد عروض اليوم',
+        emptyMsg: t('content.mostaql.no_bids_today'),
     });
 
     let countdownsSection: HTMLDivElement | null = null;
@@ -732,7 +799,7 @@ function _renderBidStats(stats: MostaqlBidStatusStats): void {
             const chunk = buckets[i];
             const countdownColumn = _createBidStatsColumn({
                 icon: 'fa-refresh',
-                title: 'حالة العروض اليومية',
+                title: t('content.mostaql.daily_bids_status'),
                 summaryBar: document.createElement('span'),
                 bars: chunk
                     .filter((bid) => 24 * 60 * 60 * 1000 - bid.ageMs > 0)
@@ -780,7 +847,7 @@ function _startSlotCountdowns() {
         document.querySelectorAll<HTMLElement>('.rasid-countdown').forEach((el) => {
             let msLeft = parseInt(el.getAttribute('data-ms-left') ?? '0', 10);
             if (isNaN(msLeft) || msLeft <= 0) {
-                el.textContent = 'متاح الآن!';
+                el.textContent = t('bids.available_now');
                 el.style.color = '#28a745';
                 const container = el.closest('.projects-progress');
                 if (container) {

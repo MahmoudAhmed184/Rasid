@@ -10,7 +10,6 @@
     background: rgba(10, 10, 10, 0.94);
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
     color: #ededed;
-    direction: rtl;
     font-family:
         'Cairo',
         -apple-system,
@@ -20,6 +19,14 @@
         sans-serif;
     backdrop-filter: blur(16px);
     -webkit-font-smoothing: antialiased;
+}
+
+#rasid-nafezly-panel[dir='rtl'] {
+    direction: rtl;
+}
+
+#rasid-nafezly-panel[dir='ltr'] {
+    direction: ltr;
 }
 
 .rasid-nafezly-panel__title {
@@ -62,8 +69,13 @@
     background-repeat: no-repeat;
     background-position: left 10px center;
     background-size: 12px;
-    padding-left: 28px;
+    padding-inline-start: 10px;
+    padding-inline-end: 28px;
     transition: border-color 140ms ease;
+}
+
+.rasid-nafezly-panel[dir='ltr'] .rasid-nafezly-panel__select {
+    background-position: right 10px center;
 }
 
 .rasid-nafezly-panel__select:focus {

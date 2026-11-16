@@ -1,6 +1,7 @@
 import type { PromptTemplate } from '../../../entities/prompt/model';
 import type { PlatformContentServices, PlatformDisposer } from '../../contracts';
 import { parseDurationDays } from '../../../shared/parsing/duration';
+import { getDirection, getLanguage, t, onLanguageChange } from '../../../shared/i18n';
 import { MOSTAQL_SELECTORS } from '../selectors';
 import { handleQuickBidClick, queueProposalAutofill } from './autofill';
 import { extractProjectData, getProjectDescription } from './data';
@@ -77,6 +78,8 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
         buttonContainer = document.createElement('div');
         buttonContainer.id = MOSTAQL_SELECTORS.sidebar.buttonContainerId;
         buttonContainer.className = 'mostaql-ext-sidebar-container';
+        buttonContainer.dir = getDirection();
+        buttonContainer.lang = getLanguage();
         metaCardBody.appendChild(buttonContainer);
     }
 
@@ -89,8 +92,8 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
         const trackBtn = document.createElement('button');
         trackBtn.id = 'track-project-btn';
         trackBtn.className = 'btn btn-success';
-        setActionButtonContent(trackBtn, 'fa fa-fw fa-eye', 'مراقبة');
-        trackBtn.title = 'مراقبة المشروع';
+        setActionButtonContent(trackBtn, 'fa fa-fw fa-eye', t('content.mostaql.track'));
+        trackBtn.title = t('content.mostaql.track');
 
         const projectId = getProjectId();
         if (isContextValid()) {
@@ -116,8 +119,8 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
         const quickBtn = document.createElement('button');
         quickBtn.id = 'header-quick-bid-btn';
         quickBtn.className = 'btn btn-success';
-        setActionButtonContent(quickBtn, 'fa fa-fw fa-bolt', 'سريع');
-        quickBtn.title = 'تعبئة العرض الافتراضي والميزانية الدنيا';
+        setActionButtonContent(quickBtn, 'fa fa-fw fa-bolt', t('content.mostaql.quick'));
+        quickBtn.title = t('content.mostaql.quick');
 
         quickBtn.addEventListener('click', () => {
             void handleQuickBidClick(services.proposals);
@@ -131,13 +134,15 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
         const group = document.createElement('div');
         group.id = MOSTAQL_SELECTORS.sidebar.promptGroupId;
         group.className = 'btn-group dropdown mostaql-custom-dropdown';
+        group.dir = getDirection();
+        group.lang = getLanguage();
 
         const mainBtn = document.createElement('button');
         mainBtn.id = 'chatgpt-main-btn';
         mainBtn.type = 'button';
         mainBtn.className = 'btn btn-primary';
-        setActionButtonContent(mainBtn, 'fa fa-fw fa-magic', 'ذكاء');
-        mainBtn.title = 'استشارة الذكاء الاصطناعي';
+        setActionButtonContent(mainBtn, 'fa fa-fw fa-magic', t('content.mostaql.ai'));
+        mainBtn.title = t('content.mostaql.ai');
         mainBtn.dataset.promptId = 'default_proposal';
         let opacityTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -210,7 +215,7 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                     editBtn.style.color = '#777';
                     editBtn.style.background = 'none';
                     editBtn.style.border = '0';
-                    editBtn.title = 'تعديل القالب';
+                    editBtn.title = t('content.mostaql.edit_template');
                     editBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -234,7 +239,7 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                 const addLi = document.createElement('li');
                 const addButton = document.createElement('button');
                 stylePromptMenuButton(addButton);
-                setInlineIconText(addButton, 'fa fa-plus', 'إضافة قالب جديد');
+                setInlineIconText(addButton, 'fa fa-plus', t('content.mostaql.add_template'));
                 addButton.addEventListener('click', (e) => {
                     e.preventDefault();
                     group.classList.remove('open');
@@ -248,7 +253,9 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                                     (prompts: readonly PromptTemplate[]) => {
                                         const p = prompts.find((x) => x.id === newId);
                                         if (p) {
-                                            mainBtn.title = `استخدام القالب: ${p.title}`;
+                                            mainBtn.title = t('content.mostaql.use_template', {
+                                                title: p.title,
+                                            });
                                         }
                                         renderMenu();
                                     }
@@ -273,7 +280,42 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
 
         buttonContainer.appendChild(group);
 
+        const unsubscribeLang = onLanguageChange(() => {
+            if (!buttonContainer) {
+                return;
+            }
+            buttonContainer.dir = getDirection();
+            buttonContainer.lang = getLanguage();
+            const trackBtn = document.getElementById(
+                'track-project-btn'
+            ) as HTMLButtonElement | null;
+            if (trackBtn) {
+                const isTracked = trackBtn.classList.contains('btn-danger');
+                if (isTracked) {
+                    setActionButtonContent(
+                        trackBtn,
+                        'fa fa-fw fa-eye-slash',
+                        t('content.mostaql.untrack')
+                    );
+                    trackBtn.title = t('content.mostaql.untrack');
+                } else {
+                    setActionButtonContent(trackBtn, 'fa fa-fw fa-eye', t('content.mostaql.track'));
+                    trackBtn.title = t('content.mostaql.track');
+                }
+            }
+            const quickBtn = document.getElementById(
+                'header-quick-bid-btn'
+            ) as HTMLButtonElement | null;
+            if (quickBtn) {
+                setActionButtonContent(quickBtn, 'fa fa-fw fa-bolt', t('content.mostaql.quick'));
+                quickBtn.title = t('content.mostaql.quick');
+            }
+            group.dir = getDirection();
+            group.lang = getLanguage();
+        });
+
         return () => {
+            unsubscribeLang();
             document.removeEventListener('click', handleDocumentClick);
             if (opacityTimer) {
                 clearTimeout(opacityTimer);
@@ -316,15 +358,15 @@ async function handleTrackClick(
 }
 
 function setButtonTracked(btn: HTMLButtonElement): void {
-    setActionButtonContent(btn, 'fa fa-fw fa-check-circle', 'مُراقبة');
+    setActionButtonContent(btn, 'fa fa-fw fa-check-circle', t('content.mostaql.tracked'));
     btn.className = 'btn btn-warning';
-    btn.title = 'إلغاء المراقبة';
+    btn.title = t('common.untrack');
 }
 
 function setButtonUntracked(btn: HTMLButtonElement): void {
-    setActionButtonContent(btn, 'fa fa-fw fa-eye', 'مراقبة');
+    setActionButtonContent(btn, 'fa fa-fw fa-eye', t('content.mostaql.track'));
     btn.className = 'btn btn-success';
-    btn.title = 'مراقبة هذا المشروع';
+    btn.title = t('content.mostaql.track');
 }
 
 function handleChatGptClick(services: PlatformContentServices, promptId?: string): void {
@@ -337,7 +379,7 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
     const description = getProjectDescription();
 
     if (!description) {
-        alert('لم يتم العثور على وصف المشروع.');
+        alert(t('content.mostaql.no_description'));
         return;
     }
 
@@ -351,11 +393,7 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
 
         if (promptId !== 'default_proposal') {
             console.error('Prompt ID not found:', promptId);
-            alert(
-                'خطأ: لم يتم العثور على القالب المحدد (ID: ' +
-                    promptId +
-                    '). تحقق من قائمة الأوامر.'
-            );
+            alert(t('content.mostaql.template_not_found', { id: promptId ?? '' }));
             return;
         }
 
@@ -404,7 +442,9 @@ function handleChatGptClick(services: PlatformContentServices, promptId?: string
         } catch (error) {
             console.error('Error generating proposal:', error);
             alert(
-                `خطأ: تعذر إنشاء العرض. ${error instanceof Error ? error.message : 'حاول مرة أخرى.'}`
+                t('content.mostaql.generate_error', {
+                    message: error instanceof Error ? error.message : t('common.unknown_error'),
+                })
             );
         }
     }

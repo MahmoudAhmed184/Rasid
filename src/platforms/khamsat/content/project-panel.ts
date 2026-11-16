@@ -1,4 +1,5 @@
 import type { PlatformContentServices, PlatformDisposer, PlatformPage } from '../../contracts';
+import { getDirection, getLanguage, t, onLanguageChange } from '../../../shared/i18n';
 import { KHAMSAT_SELECTORS } from '../selectors';
 import { extractKhamsatProposalSource } from './data';
 
@@ -26,17 +27,19 @@ function createPanelRoot(doc: Document): HTMLElement {
 
 export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): PlatformDisposer {
     const root = createPanelRoot(input.document);
+    root.dir = getDirection();
+    root.lang = getLanguage();
     const title = input.document.createElement('h3');
     title.className = 'rasid-khamsat-panel__title';
-    title.textContent = 'Rasid | راصد';
+    title.textContent = t('app.title');
 
     const subtitle = input.document.createElement('p');
     subtitle.className = 'rasid-khamsat-panel__subtitle';
-    subtitle.textContent = 'لوحة سريعة لطلبات خمسات: متابعة وتوليد رد جاهز.';
+    subtitle.textContent = t('content.khamsat.subtitle');
 
     const promptLabel = input.document.createElement('label');
     promptLabel.className = 'rasid-khamsat-panel__label';
-    promptLabel.textContent = 'قالب الرد';
+    promptLabel.textContent = t('content.khamsat.prompt_label');
 
     const promptSelect = input.document.createElement('select');
     promptSelect.className = 'rasid-khamsat-panel__select';
@@ -48,18 +51,18 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
     const trackButton = input.document.createElement('button');
     trackButton.type = 'button';
     trackButton.className = 'rasid-khamsat-panel__button rasid-khamsat-panel__button--ghost';
-    trackButton.textContent = 'متابعة';
+    trackButton.textContent = t('common.track');
 
     const generateButton = input.document.createElement('button');
     generateButton.type = 'button';
     generateButton.className = 'rasid-khamsat-panel__button rasid-khamsat-panel__button--primary';
-    generateButton.textContent = 'ولّد الرد';
+    generateButton.textContent = t('content.khamsat.generate_proposal');
     generateButton.disabled = true;
 
     const status = input.document.createElement('p');
     status.className = 'rasid-khamsat-panel__status';
     status.dataset.tone = 'info';
-    status.textContent = 'جارِ تحميل القوالب...';
+    status.textContent = t('content.khamsat.loading_templates');
 
     actions.appendChild(trackButton);
     actions.appendChild(generateButton);
@@ -81,7 +84,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
 
     function setTrackedState(tracked: boolean): void {
         trackButton.dataset.tracked = tracked ? 'true' : 'false';
-        trackButton.textContent = tracked ? 'إلغاء المتابعة' : 'متابعة';
+        trackButton.textContent = tracked ? t('common.untrack') : t('common.track');
     }
 
     function setBusy(busy: boolean): void {
@@ -121,11 +124,11 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
             promptSelect.value = preferredPrompt.id;
             generateButton.disabled = false;
             promptSelect.disabled = false;
-            setStatus('جاهز لتوليد الرد لهذا الطلب.', 'info');
+            setStatus(t('content.khamsat.ready'), 'info');
             return;
         }
 
-        setStatus('لا توجد قوالب محفوظة. أضف قالباً من لوحة التحكم أولاً.', 'error');
+        setStatus(t('content.khamsat.no_templates'), 'error');
     }
 
     async function handleTrackClick(): Promise<void> {
@@ -136,7 +139,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
         });
 
         if (!source) {
-            setStatus('تعذر استخراج بيانات الطلب الحالي للتتبع.', 'error');
+            setStatus(t('content.khamsat.track_error'), 'error');
             return;
         }
 
@@ -147,13 +150,13 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
             setTrackedState(result === 'tracked');
             setStatus(
                 result === 'tracked'
-                    ? 'تمت إضافة الطلب إلى المشاريع المتابعة.'
-                    : 'تمت إزالة الطلب من المشاريع المتابعة.',
+                    ? t('content.khamsat.tracked_toast')
+                    : t('content.khamsat.untracked_toast'),
                 'success'
             );
         } catch (error) {
             setStatus(
-                error instanceof Error ? error.message : 'تعذر تحديث حالة المتابعة.',
+                error instanceof Error ? error.message : t('content.khamsat.track_update_error'),
                 'error'
             );
         } finally {
@@ -167,7 +170,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
         const promptId = promptSelect.value;
 
         if (!promptId) {
-            setStatus('اختر قالباً قبل توليد الرد.', 'error');
+            setStatus(t('content.khamsat.select_template'), 'error');
             return;
         }
 
@@ -178,12 +181,12 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
         });
 
         if (!source) {
-            setStatus('تعذر استخراج عنوان الطلب أو وصفه الحالي.', 'error');
+            setStatus(t('content.khamsat.extract_error'), 'error');
             return;
         }
 
         setBusy(true);
-        setStatus('جارِ توليد الرد...', 'info');
+        setStatus(t('content.khamsat.generating'), 'info');
 
         try {
             const result = await input.services.proposals.generate(promptId, source.aiContext);
@@ -195,7 +198,7 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
 
             if (result.kind === 'bridge') {
                 await input.services.proposals.openBridgePrompt(result.prompt, result.chatUrl);
-                setStatus('تم فتح نافذة الذكاء الاصطناعي بالمطالبة الجاهزة.', 'success');
+                setStatus(t('content.khamsat.bridge_opened'), 'success');
                 return;
             }
 
@@ -208,10 +211,10 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
                 createdAt: Date.now(),
             });
 
-            setStatus('تم تجهيز الرد وسيُملأ تلقائياً عند ظهور مربع الرد.', 'success');
+            setStatus(t('content.khamsat.autofill_queued'), 'success');
         } catch (error) {
             setStatus(
-                error instanceof Error ? error.message : 'حدث خطأ أثناء توليد الرد.',
+                error instanceof Error ? error.message : t('content.khamsat.generate_error'),
                 'error'
             );
         } finally {
@@ -230,11 +233,28 @@ export function mountKhamsatProjectPanel(input: MountKhamsatProjectPanelInput): 
     });
 
     void Promise.all([loadPrompts(), refreshTrackingState()]).catch((error) => {
-        setStatus(error instanceof Error ? error.message : 'تعذر تجهيز لوحة خمسات.', 'error');
+        setStatus(
+            error instanceof Error ? error.message : t('content.khamsat.init_error'),
+            'error'
+        );
+    });
+
+    const unsubscribeLang = onLanguageChange(() => {
+        if (disposed) {
+            return;
+        }
+        root.dir = getDirection();
+        root.lang = getLanguage();
+        title.textContent = t('app.title');
+        subtitle.textContent = t('content.khamsat.subtitle');
+        promptLabel.textContent = t('content.khamsat.prompt_label');
+        setTrackedState(trackButton.dataset.tracked === 'true');
+        generateButton.textContent = t('content.khamsat.generate_proposal');
     });
 
     return () => {
         disposed = true;
+        unsubscribeLang();
         root.remove();
     };
 }
