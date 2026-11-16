@@ -527,4 +527,63 @@ describe('popup controller', () => {
         await vi.advanceTimersByTimeAsync(30_000);
         expect(monitoringRepository.getOverview).toHaveBeenCalledTimes(1);
     });
+
+    it('toggles language between Arabic and English, updating html attributes and texts', async () => {
+        const root = installTestDom(`
+            <button id="langToggleBtn"><span id="langToggleText">EN</span></button>
+            <h1 id="popupBrandTitle">Rasid</h1>
+            <p id="popupBrandTagline">راصد</p>
+            <button id="open-dashboard-btn"><span id="openDashboardBtnText"></span></button>
+            <button id="checkNowBtn"><span id="checkNowBtnText"></span></button>
+            <button id="toggleNotificationsBtn"><span id="toggleNotificationsBtnText"></span></button>
+            <button id="checkConnectionBtn"><span id="checkConnectionBtnText"></span></button>
+            <div id="connectionReport" class="hidden"></div>
+            <span id="lastCheck"></span>
+            <span id="todayCount"></span>
+            <span id="totalSeen"></span>
+        `);
+
+        let currentLang: 'ar' | 'en' = 'ar';
+        const language = {
+            getLanguage: vi.fn(async () => currentLang),
+            setLanguage: vi.fn(async (lang: 'ar' | 'en') => {
+                currentLang = lang;
+                return lang;
+            }),
+        };
+
+        const { bootstrapPopup } = await import('../../../../src/app/popup');
+        bootstrapPopup(root, {
+            monitoringRepository: {
+                getOverview: vi.fn(async () => createOverview()),
+                getNotificationsEnabled: vi.fn(async () => true),
+                setNotificationsEnabled: vi.fn(async (enabled: boolean) => enabled),
+            },
+            adminMessages: stubAdminMessages(),
+            language,
+        });
+
+        await vi.waitFor(() => expect(root.documentElement.lang).toBe('ar'));
+        expect(root.documentElement.dir).toBe('rtl');
+        expect(root.getElementById('langToggleText')?.textContent).toBe('EN');
+
+        // Click language toggle to switch to English
+        root.getElementById('langToggleBtn')?.click();
+
+        await vi.waitFor(() => expect(root.documentElement.lang).toBe('en'));
+        expect(root.documentElement.dir).toBe('ltr');
+        expect(root.getElementById('langToggleText')?.textContent).toBe('عربي');
+        expect(root.getElementById('openDashboardBtnText')?.textContent).toBe('Open Dashboard');
+        expect(root.getElementById('checkNowBtnText')?.textContent).toBe('Check Now');
+        expect(language.setLanguage).toHaveBeenCalledWith('en');
+
+        // Click language toggle to switch back to Arabic
+        root.getElementById('langToggleBtn')?.click();
+
+        await vi.waitFor(() => expect(root.documentElement.lang).toBe('ar'));
+        expect(root.documentElement.dir).toBe('rtl');
+        expect(root.getElementById('langToggleText')?.textContent).toBe('EN');
+        expect(root.getElementById('openDashboardBtnText')?.textContent).toBe('فتح لوحة التحكم');
+        expect(language.setLanguage).toHaveBeenCalledWith('ar');
+    });
 });

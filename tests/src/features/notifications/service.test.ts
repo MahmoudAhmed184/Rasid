@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createNotificationService } from '../../../../src/features/notifications/service';
 import type { ExtensionStorage } from '../../../../src/shared/storage/extension-storage';
+import { setLanguage } from '../../../../src/shared/i18n';
 import { fakeBrowser } from '../../../support/fake-browser';
 
 function createStorage() {
@@ -39,6 +40,7 @@ function useBrowserBuild(browser: 'chrome' | 'firefox'): void {
 describe('notification service', () => {
     afterEach(() => {
         vi.unstubAllEnvs();
+        setLanguage('ar');
     });
 
     it('stores sanitized click payloads and creates Arabic browser notifications', async () => {
@@ -72,6 +74,37 @@ describe('notification service', () => {
                 type: 'basic',
                 title: 'مشروع جديد: فرصة اختبار',
                 message: expect.stringContaining('وصف طويل'),
+            })
+        );
+    });
+
+    it('creates English job notifications when language is set to English', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(1_000);
+        vi.spyOn(Math, 'random').mockReturnValue(0.5);
+        const create = vi.spyOn(fakeBrowser.notifications, 'create');
+        const { storage } = createStorage();
+        (storage as unknown as ExtensionStorage).getLanguage = vi.fn(async () => 'en' as const);
+        const service = createNotificationService(storage as unknown as ExtensionStorage);
+
+        const ids = await service.showJobsNotification([
+            {
+                id: '123-en',
+                platformId: 'mostaql',
+                title: 'English Test Opportunity',
+                url: 'https://mostaql.com/project/123-en',
+                budget: '$500',
+                description: 'Long description in English',
+            },
+        ]);
+
+        expect(ids).toHaveLength(1);
+        const [id] = ids;
+        expect(create).toHaveBeenCalledWith(
+            id,
+            expect.objectContaining({
+                type: 'basic',
+                title: 'New Project: English Test Opportunity',
+                message: expect.stringContaining('Budget: $500'),
             })
         );
     });

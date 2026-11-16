@@ -113,6 +113,17 @@
                             <span class="slider" aria-hidden="true"></span>
                         </label>
                     </div>
+                    <div class="language-toggle-wrapper">
+                        <button
+                            id="langToggleBtn"
+                            class="lang-toggle-btn"
+                            type="button"
+                            aria-label="Toggle language"
+                        >
+                            <i class="fas fa-globe"></i>
+                            <span id="langToggleText">English</span>
+                        </button>
+                    </div>
                 </div>
             </aside>
 
@@ -137,7 +148,9 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="stat-today">0</span>
-                                <span class="label">مشاريع اليوم</span>
+                                <span class="label" id="overview-stat-today-label"
+                                    >مشاريع اليوم</span
+                                >
                             </div>
                         </div>
                         <div class="stat-card">
@@ -146,7 +159,9 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="stat-total">0</span>
-                                <span class="label">إجمالي المرصود</span>
+                                <span class="label" id="overview-stat-total-label"
+                                    >إجمالي المرصود</span
+                                >
                             </div>
                         </div>
                         <div class="stat-card">
@@ -155,7 +170,9 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="stat-last-time">-</span>
-                                <span class="label">آخر فحص</span>
+                                <span class="label" id="overview-stat-last-time-label"
+                                    >آخر فحص</span
+                                >
                             </div>
                         </div>
                         <div class="stat-card" id="connection-status-card">
@@ -166,7 +183,9 @@
                                 <span class="value value-compact" id="stat-connection"
                                     >جارٍ الاتصال...</span
                                 >
-                                <span class="label">حالة الاتصال</span>
+                                <span class="label" id="overview-stat-connection-label"
+                                    >حالة الاتصال</span
+                                >
                             </div>
                         </div>
                     </div>
@@ -174,10 +193,7 @@
                     <div class="settings-section">
                         <div class="section-header">
                             <i class="fas fa-eye"></i>
-                            <h3>
-                                المشاريع المراقبة
-                                <span class="section-eyebrow">آخر 7 مشاريع</span>
-                            </h3>
+                            <h3 id="overview-recent-heading">المشاريع المراقبة</h3>
                         </div>
                         <div id="recentProjectsList" class="recent-list">
                             <p class="help-text empty-state">
@@ -216,7 +232,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="bids-total-30d">-</span>
-                                <span class="label">عروض آخر 30 يوم</span>
+                                <span class="label" id="bids-stat-30d-label">عروض آخر 30 يوم</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -225,7 +241,9 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="bids-available-slots">-</span>
-                                <span class="label">عروض متاحة الآن</span>
+                                <span class="label" id="bids-stat-available-label"
+                                    >عروض متاحة الآن</span
+                                >
                             </div>
                         </div>
                         <div class="stat-card">
@@ -234,7 +252,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value value-compact" id="bids-next-available">-</span>
-                                <span class="label">أقرب عرض سيتاح</span>
+                                <span class="label" id="bids-stat-next-label">أقرب عرض سيتاح</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -243,7 +261,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="value" id="bids-today-count">-</span>
-                                <span class="label">عروض اليوم</span>
+                                <span class="label" id="bids-stat-today-label">عروض اليوم</span>
                             </div>
                         </div>
                     </div>
@@ -251,7 +269,9 @@
                     <div class="settings-section">
                         <div class="section-header">
                             <i class="fas fa-chart-pie"></i>
-                            <h3>توزيع الحالات <span class="bids-tracker-sub">آخر 30 يوم</span></h3>
+                            <h3 id="bidsStatusHeading">
+                                توزيع الحالات <span class="bids-tracker-sub">آخر 30 يوم</span>
+                            </h3>
                         </div>
                         <div id="bidsStatusGrid" class="bid-status-grid"></div>
                     </div>
@@ -259,7 +279,7 @@
                     <div class="settings-section">
                         <div class="section-header">
                             <i class="fas fa-stream"></i>
-                            <h3>
+                            <h3 id="bidsTimelineHeading">
                                 جدول العروض
                                 <span class="bids-tracker-sub"
                                     >العد التنازلي حتى انتهاء فترة الـ 30 يوم</span
@@ -293,7 +313,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-search"></i>
-                                <h3>الكلمات المفتاحية</h3>
+                                <h3 id="keywordsHeading">الكلمات المفتاحية</h3>
                             </div>
                             <div class="form-group">
                                 <label for="keywordsInclude">كلمات يجب توفرها (تضمين)</label>
@@ -327,7 +347,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-dollar-sign"></i>
-                                <h3>معايير المشروع</h3>
+                                <h3 id="financialHeading">معايير المشروع</h3>
                             </div>
                             <div class="form-group">
                                 <label for="minBudget">أدنى ميزانية ($)</label>
@@ -540,8 +560,32 @@
                     <div class="settings-grid">
                         <div class="settings-section">
                             <div class="section-header">
+                                <i class="fas fa-globe"></i>
+                                <h3 id="settingsLanguageHeading">لغة الواجهة</h3>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsLanguageSelect" id="settingsLanguageLabel"
+                                    >اختر لغة العرض</label
+                                >
+                                <select
+                                    id="settingsLanguageSelect"
+                                    class="form-control"
+                                    aria-describedby="settingsLanguageHelp"
+                                >
+                                    <option value="ar">العربية (Arabic)</option>
+                                    <option value="en">English (الإنجليزية)</option>
+                                </select>
+                                <p class="help-text" id="settingsLanguageHelp">
+                                    تغيير لغة العرض والاتجاه في لوحة التحكم والنافذة المنبثقة
+                                    والإشعارات.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="section-header">
                                 <i class="fas fa-robot"></i>
-                                <h3>الذكاء الاصطناعي</h3>
+                                <h3 id="aiSectionHeading">الذكاء الاصطناعي</h3>
                             </div>
                             <div class="form-group">
                                 <label for="aiExecutionMode">طريقة التنفيذ</label>
@@ -612,7 +656,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-satellite-dish"></i>
-                                <h3>وضع الإشعارات</h3>
+                                <h3 id="notificationModeHeading">وضع الإشعارات</h3>
                             </div>
                             <div class="form-group">
                                 <label for="notificationMode">طريقة استقبال المشاريع الجديدة</label>
@@ -638,7 +682,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-bell"></i>
-                                <h3>ساعات الهدوء</h3>
+                                <h3 id="quietHoursHeading">ساعات الهدوء</h3>
                             </div>
                             <div class="toggle-row">
                                 <span id="quietHoursEnabledLabel">تفعيل ساعات الهدوء</span>
@@ -667,7 +711,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-vial"></i>
-                                <h3>أدوات الفحص</h3>
+                                <h3 id="diagnosticsHeading">أدوات الفحص</h3>
                             </div>
                             <div class="action-row">
                                 <button
@@ -681,7 +725,7 @@
                                     <i class="fas fa-volume-up"></i> فحص الصوت
                                 </button>
                             </div>
-                            <p class="help-text">
+                            <p class="help-text" id="diagnosticsHelp">
                                 استخدم هذه الأزرار للتأكد من وصول التنبيهات وصوت الإشعار بشكل سليم.
                             </p>
                         </div>
@@ -689,7 +733,7 @@
                         <div class="settings-section">
                             <div class="section-header">
                                 <i class="fas fa-file-export"></i>
-                                <h3>النسخ الاحتياطي</h3>
+                                <h3 id="backupHeading">النسخ الاحتياطي</h3>
                             </div>
                             <div class="action-row">
                                 <button id="exportBackupBtn" class="btn-primary" type="button">

@@ -5,6 +5,7 @@ import type { RuntimeState } from '../../entities/runtime/model';
 import { DEFAULT_SIGNALR_URL } from '../../entities/runtime/signalr';
 import { DEFAULT_AI_CHAT_URL } from '../../entities/ai/chat-url';
 import { DEFAULT_MONITORED_PLATFORMS, type ExtensionSettings } from '../../entities/settings/model';
+import type { AppLanguage } from '../i18n/types';
 
 export interface StoredNotificationPayload {
     url: string;
@@ -28,6 +29,7 @@ export interface StoredState {
     prompts: PromptTemplate[];
     proposalTemplate: string;
     notificationsEnabled: boolean;
+    language?: AppLanguage;
     runtime: RuntimeState;
 }
 

@@ -1,5 +1,6 @@
 import type { PromptTemplate } from '../../entities/prompt/model';
 import type { PromptRepository } from '../../features/proposals/prompt-repository';
+import { t } from '../../shared/i18n';
 
 interface PromptManagerOptions {
     readonly onSaved?: () => void;
@@ -34,7 +35,7 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         const paragraph = root.createElement('p');
 
         paragraph.className = 'help-text empty-state';
-        paragraph.textContent = 'لا يوجد أوامر مضافة حالياً.';
+        paragraph.textContent = t('prompts.empty');
 
         return paragraph;
     }
@@ -79,8 +80,20 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         const actions = root.createElement('div');
         actions.className = 'prompt-card-actions';
         actions.append(
-            createIconButton(prompt, index, 'btn-edit-prompt', 'fas fa-edit', 'تعديل الأمر'),
-            createIconButton(prompt, index, 'btn-delete-prompt', 'fas fa-trash', 'حذف الأمر')
+            createIconButton(
+                prompt,
+                index,
+                'btn-edit-prompt',
+                'fas fa-edit',
+                t('prompts.action_edit')
+            ),
+            createIconButton(
+                prompt,
+                index,
+                'btn-delete-prompt',
+                'fas fa-trash',
+                t('prompts.action_delete')
+            )
         );
 
         header.append(title, actions);
@@ -207,12 +220,12 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         clearModalValidation();
 
         if (prompt) {
-            modalTitle.textContent = 'تعديل الأمر';
+            modalTitle.textContent = t('prompts.modal_edit_title');
             titleField.value = prompt.title;
             contentField.value = prompt.content;
             promptIdField.value = String(index);
         } else {
-            modalTitle.textContent = 'إضافة أمر جديد';
+            modalTitle.textContent = t('prompts.modal_add_title');
             titleField.value = '';
             contentField.value = '';
             promptIdField.value = '-1';
@@ -235,7 +248,7 @@ export function createPromptManager(root: Document, options: PromptManagerOption
     }
 
     async function deletePrompt(index: number) {
-        if (!window.confirm('هل أنت متأكد من حذف هذا الأمر؟')) {
+        if (!window.confirm(t('prompts.delete_confirm'))) {
             return;
         }
 
@@ -267,15 +280,15 @@ export function createPromptManager(root: Document, options: PromptManagerOption
         clearModalValidation();
 
         if (!title) {
-            setFieldError(titleField, titleError, 'يرجى إدخال عنوان الأمر.');
+            setFieldError(titleField, titleError, t('prompts.error_title_required'));
         }
 
         if (!content) {
-            setFieldError(contentField, contentError, 'يرجى إدخال نص الأمر.');
+            setFieldError(contentField, contentError, t('prompts.error_content_required'));
         }
 
         if (!title || !content) {
-            showModalStatus('راجع الحقول المطلوبة قبل حفظ الأمر.');
+            showModalStatus(t('prompts.error_check_fields'));
             (title ? contentField : titleField).reportValidity();
             return;
         }
@@ -299,7 +312,7 @@ export function createPromptManager(root: Document, options: PromptManagerOption
             options.onSaved?.();
         } catch (error) {
             console.error('Error saving prompt:', error);
-            showModalStatus('تعذر حفظ الأمر. تحقق من مساحة التخزين وحاول مجدداً.');
+            showModalStatus(t('prompts.error_save_failed'));
         }
     }
 

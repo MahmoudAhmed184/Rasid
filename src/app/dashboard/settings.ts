@@ -23,16 +23,19 @@ import {
 import type { BackupRepository } from '../../features/backup/repository';
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
 import type { SettingsRepository } from '../../features/settings/repository';
+import { t, getLanguage, setLanguage, type AppLanguage } from '../../shared/i18n';
 
 interface SettingsFormDependencies {
     readonly backupRepository: Pick<BackupRepository, 'exportAll' | 'importAll'>;
     readonly proposalRepository: Pick<ProposalRepository, 'setQuickTemplate'>;
-    readonly settingsRepository: Pick<SettingsRepository, 'get' | 'save' | 'update'>;
+    readonly settingsRepository: Pick<SettingsRepository, 'get' | 'save' | 'update'> &
+        Partial<Pick<SettingsRepository, 'getLanguage' | 'setLanguage'>>;
 }
 
 interface SettingsFormOptions {
     readonly repositories: SettingsFormDependencies;
     readonly onSaved?: () => void | Promise<void>;
+    readonly onLanguageChanged?: (lang: AppLanguage) => void;
 }
 
 type FormField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -471,6 +474,7 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
         setFieldValue('checkInterval', settings.interval || 1);
         setFieldValue('systemToggle', settings.systemEnabled !== false);
         setFieldValue('notificationMode', settings.notificationMode || 'auto');
+        setFieldValue('settingsLanguageSelect', settings.language || getLanguage());
         updateAiFieldsVisibility(aiExecutionMode);
         void updateChatGptPermissionStatus(settings.aiChatUrl);
     }
@@ -517,6 +521,10 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             ) as ExtensionSettings['notificationMode'],
             sound: baseSettings.sound !== false,
             minClientAge: Number(baseSettings.minClientAge ?? 0),
+            language:
+                (getFieldValue('settingsLanguageSelect') as AppLanguage) ||
+                baseSettings.language ||
+                getLanguage(),
         };
     }
 
@@ -586,10 +594,10 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
             const granted = await hasChatBridgePermission(targetUrl);
 
             if (granted) {
-                statusEl.textContent = 'صلاحية ChatGPT ممنوحة ✓';
+                statusEl.textContent = t('settings.chatgpt_permission_granted');
                 statusEl.className = 'help-text text-success';
             } else {
-                statusEl.textContent = 'صلاحية ChatGPT غير ممنوحة بعد (انقر للطلب).';
+                statusEl.textContent = t('settings.chatgpt_permission_needed');
                 statusEl.className = 'help-text text-warning';
             }
         } catch (error) {
@@ -949,6 +957,21 @@ export function createSettingsForm(root: Document, options: SettingsFormOptions)
 
         getField('aiChatUrl')?.addEventListener('input', () => {
             void updateChatGptPermissionStatus();
+        });
+
+        getField('settingsLanguageSelect')?.addEventListener('change', (event) => {
+            void (async () => {
+                const target = event.target as HTMLSelectElement;
+                const newLang = target.value as AppLanguage;
+                if (newLang === 'ar' || newLang === 'en') {
+                    setLanguage(newLang);
+                    if (settingsRepository.setLanguage) {
+                        await settingsRepository.setLanguage(newLang);
+                    }
+                    await settingsRepository.update({ language: newLang });
+                    options.onLanguageChanged?.(newLang);
+                }
+            })();
         });
 
         getField('aiChatUrl')?.addEventListener('change', () => {

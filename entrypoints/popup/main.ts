@@ -10,6 +10,10 @@ function mount(): void {
             getAdminMessages: () => repositories.extensionStorage.getAdminMessages(),
             markAdminMessagesRead: () => repositories.extensionStorage.markAdminMessagesRead(),
         },
+        language: {
+            getLanguage: () => repositories.extensionStorage.getLanguage(),
+            setLanguage: (lang) => repositories.extensionStorage.setLanguage(lang),
+        },
     });
 }
 

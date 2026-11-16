@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 
 import { resolvePlatformUrl } from '../../../entities/platform/url';
+import { formatDate, getDirection, getLanguage, t } from '../../../shared/i18n';
 import type { PlatformContentServices } from '../../contracts';
 import type { MostaqlBidDetails, MostaqlMyProposalData, MostaqlProjectDetailsData } from './data';
 import { MOSTAQL_SELECTORS, queryFirst } from '../selectors';
@@ -185,7 +186,7 @@ export function injectMessageExporter(downloads: DownloadServices) {
     btn.className = 'btn btn-primary btn-block';
     btn.style.marginTop = '15px';
     btn.style.marginBottom = '15px';
-    setExportButtonContent(btn, 'fa fa-download', 'تصدير');
+    setExportButtonContent(btn, 'fa fa-download', t('content.mostaql.export'));
     btn.title = '';
 
     let clickCount = 0;
@@ -213,7 +214,7 @@ export function injectMessageExporter(downloads: DownloadServices) {
                     btn.disabled = false;
                     btn.style.opacity = originalStyle.opacity;
                     btn.style.backgroundColor = originalStyle.bg;
-                    setExportButtonContent(btn, 'fa fa-download', 'تصدير');
+                    setExportButtonContent(btn, 'fa fa-download', t('content.mostaql.export'));
                 }
             } else {
                 clickTimer = setTimeout(() => {
@@ -239,8 +240,8 @@ export function injectProjectExporter(downloads: DownloadServices) {
     const btn = document.createElement('button');
     btn.id = 'mostaql-export-project-btn';
     btn.className = 'btn btn-primary';
-    btn.style.marginRight = '8px';
-    setExportButtonContent(btn, 'fa fa-download', 'تصدير', true);
+    btn.style.marginInlineEnd = '8px';
+    setExportButtonContent(btn, 'fa fa-download', t('content.mostaql.export'), true);
     btn.title = '';
 
     let clickCount = 0;
@@ -268,7 +269,12 @@ export function injectProjectExporter(downloads: DownloadServices) {
                     btn.disabled = false;
                     btn.style.opacity = originalStyle.opacity;
                     btn.style.backgroundColor = originalStyle.bg;
-                    setExportButtonContent(btn, 'fa fa-download', 'تصدير', true);
+                    setExportButtonContent(
+                        btn,
+                        'fa fa-download',
+                        t('content.mostaql.export'),
+                        true
+                    );
                 }
             } else {
                 clickTimer = setTimeout(() => {
@@ -285,8 +291,8 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
     const messages = document.querySelectorAll<HTMLElement>(MOSTAQL_SELECTORS.messages.items);
 
     let chatData: ChatMessage[] = [];
-    let textOutput = 'تصدير محادثة مستقل (بالتاريخ)\n\n';
-    let textOutputNoTime = 'تصدير محادثة مستقل (بدون تاريخ)\n\n';
+    let textOutput = t('content.mostaql.export_chat_date');
+    let textOutputNoTime = t('content.mostaql.export_chat_no_date');
     const mediaUrls: Attachment[] = [];
 
     if (messages.length > 0) {
@@ -428,7 +434,9 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
                 });
                 const attachmentsSection =
                     attachments.length > 0
-                        ? `\n[مرفقات: ${attachments.map((a) => a.name).join(', ')}]`
+                        ? t('content.mostaql.attachments', {
+                              names: attachments.map((a) => a.name).join(', '),
+                          })
                         : '';
                 textOutput += `[${currentTime || ''}] ${senderName}:\n${text.trim()}${attachmentsSection}\n\n`;
                 textOutputNoTime += `${senderName}:\n${text.trim()}${attachmentsSection}\n\n`;
@@ -534,7 +542,7 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
 
     function renderAttachmentHtml(attachment: Attachment): string {
         const attachmentUrl = resolveReportAssetUrl(attachment.localPath, attachment.url);
-        const attachmentName = attachment.name || 'مرفق';
+        const attachmentName = attachment.name || t('content.mostaql.attachment_fallback');
         const safeAttachmentName = escapeHtml(attachmentName);
         const safeAttachmentUrl = attachmentUrl ? escapeHtml(attachmentUrl) : '';
         const linkAttrs =
@@ -562,10 +570,10 @@ async function executeExportAll(downloads: DownloadServices): Promise<void> {
     }
 
     const html = `
-    <html dir="rtl" lang="ar">
+    <html dir="${getDirection()}" lang="${getLanguage()}">
     <head>
         <meta charset="UTF-8">
-        <title>تقرير مشروع مستقل - ${escapeHtml(discussionId)}</title>
+        <title>${t('export.report_title')} - ${escapeHtml(discussionId)}</title>
         <style>
             :root {
                 --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
@@ -631,40 +639,40 @@ ${EXPORT_ICON_SHIM_CSS}
     <body>
         <div class="container">
             <header>
-                <h1>تقرير عمل مشروع مستقل</h1>
-                <div class="date-stamp">${escapeHtml(new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))}</div>
+                <h1>${t('export.report_title')}</h1>
+                <div class="date-stamp">${escapeHtml(formatDate(new Date(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))}</div>
             </header>
 
             <section>
-                <h2>وصف وتفاصيل المشروع</h2>
+                <h2>${t('export.project_details')}</h2>
                 <div class="info-card">
                     <div class="info-grid">
-                        <div class="info-item full-width"><span class="info-label">اسم المشروع</span><span class="info-value">${escapeHtmlValue(pData.title)}</span></div>
-                        <div class="info-item"><span class="info-label">حالة المشروع</span><span class="info-value">${escapeHtmlValue(pData.status)}</span></div>
-                        <div class="info-item"><span class="info-label">الميزانية</span><span class="info-value">${escapeHtmlValue(pData.budget)}</span></div>
-                        <div class="info-item"><span class="info-label">مدة التنفيذ</span><span class="info-value">${escapeHtmlValue(pData.duration)}</span></div>
-                        <div class="info-item"><span class="info-label">صاحب العمل</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
-                        ${pData.category && pData.category !== 'غير معروف' && pData.category !== 'Unknown' ? `<div class="info-item"><span class="info-label">القسم</span><span class="info-value">${escapeHtml(pData.category)}</span></div>` : ''}
+                        <div class="info-item full-width"><span class="info-label">${t('export.project_name')}</span><span class="info-value">${escapeHtmlValue(pData.title)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.project_status')}</span><span class="info-value">${escapeHtmlValue(pData.status)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.budget')}</span><span class="info-value">${escapeHtmlValue(pData.budget)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.duration')}</span><span class="info-value">${escapeHtmlValue(pData.duration)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.client_name')}</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
+                        ${pData.category && pData.category !== 'غير معروف' && pData.category !== 'Unknown' ? `<div class="info-item"><span class="info-label">${t('export.category')}</span><span class="info-value">${escapeHtml(pData.category)}</span></div>` : ''}
                     </div>
                 </div>
-                <h3>نص الوصف:</h3>
-                <div class="content-box">${escapeHtmlValue(pData.description, 'لا يوجد وصف')}</div>
+                <h3>${t('export.description_title')}</h3>
+                <div class="content-box">${escapeHtmlValue(pData.description, t('export.no_description'))}</div>
                 <div class="tags-cloud">
                     ${(pData.tagsList ?? []).map((tag) => `<span class="tag-pill">${escapeHtml(tag)}</span>`).join('')}
                 </div>
             </section>
 
             <section>
-                <h2>معلومات صاحب العمل</h2>
+                <h2>${t('export.client_info')}</h2>
                 <div class="info-card">
                     <div class="info-grid col-3">
-                        <div class="info-item"><span class="info-label">اسم صاحب المشروع</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
-                        <div class="info-item"><span class="info-label">تاريخ التسجيل</span><span class="info-value">${escapeHtmlValue(pData.clientJoined)}</span></div>
-                        <div class="info-item"><span class="info-label">معدل التوظيف</span><span class="info-value">${escapeHtmlValue(pData.hiringRate)}</span></div>
-                        ${pData.clientTitle ? `<div class="info-item"><span class="info-label">المسمى الوظيفي</span><span class="info-value">${escapeHtml(pData.clientTitle)}</span></div>` : ''}
-                        <div class="info-item"><span class="info-label">المشاريع المفتوحة</span><span class="info-value">${escapeHtmlValue(pData.openProjects, '0')}</span></div>
-                        <div class="info-item"><span class="info-label">مشاريع قيد التنفيذ</span><span class="info-value">${escapeHtmlValue(pData.underwayProjects, '0')}</span></div>
-                        <div class="info-item"><span class="info-label">التواصلات الجارية</span><span class="info-value">${escapeHtmlValue(pData.ongoingCommunications, '0')}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.client_name')}</span><span class="info-value">${escapeHtmlValue(pData.clientName)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.registration_date')}</span><span class="info-value">${escapeHtmlValue(pData.clientJoined)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.hiring_rate')}</span><span class="info-value">${escapeHtmlValue(pData.hiringRate)}</span></div>
+                        ${pData.clientTitle ? `<div class="info-item"><span class="info-label">${t('export.client_type')}</span><span class="info-value">${escapeHtml(pData.clientTitle)}</span></div>` : ''}
+                        <div class="info-item"><span class="info-label">${t('export.open_projects')}</span><span class="info-value">${escapeHtmlValue(pData.openProjects, '0')}</span></div>
+                        <div class="info-item"><span class="info-label">${t('export.active_projects')}</span><span class="info-value">${escapeHtmlValue(pData.underwayProjects, '0')}</span></div>
+                        <div class="info-item"><span class="info-label">${t('content.mostaql.monitored')}</span><span class="info-value">${escapeHtmlValue(pData.ongoingCommunications, '0')}</span></div>
                     </div>
                 </div>
             </section>
@@ -675,16 +683,16 @@ ${EXPORT_ICON_SHIM_CSS}
                     (propData.duration && propData.duration !== '-'))
                     ? `
             <section>
-                <h2>العرض والاتفاق المالي</h2>
+                <h2>${t('content.mostaql.financial_agreement')}</h2>
                 <div class="info-card">
                     <div class="info-grid col-3">
-                        <div class="info-item"><span class="info-label">المقدم</span><span class="info-value">${escapeHtmlValue(propData.bidderName)}</span></div>
-                        <div class="info-item"><span class="info-label">المبلغ المتفق عليه</span><span class="info-value">${escapeHtmlValue(propData.price)}</span></div>
-                        <div class="info-item"><span class="info-label">المدة الزمنية</span><span class="info-value">${escapeHtmlValue(propData.duration)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('content.mostaql.bidder')}</span><span class="info-value">${escapeHtmlValue(propData.bidderName)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('content.mostaql.agreed_price')}</span><span class="info-value">${escapeHtmlValue(propData.price)}</span></div>
+                        <div class="info-item"><span class="info-label">${t('content.mostaql.duration')}</span><span class="info-value">${escapeHtmlValue(propData.duration)}</span></div>
                     </div>
                 </div>
-                <h3>نص العرض المقدم:</h3>
-                <div class="content-box">${escapeHtmlValue(propData.content, 'لا يوجد نص')}</div>
+                <h3>${t('content.mostaql.proposal_text')}</h3>
+                <div class="content-box">${escapeHtmlValue(propData.content, t('content.mostaql.no_text'))}</div>
             </section>
             `
                     : ''
@@ -695,7 +703,7 @@ ${EXPORT_ICON_SHIM_CSS}
                     ? `
             <div class="page-break"></div>
             <section>
-                <h2>سجل المناقشات والرسائل</h2>
+                <h2>${t('content.mostaql.discussions_history')}</h2>
                 <div class="chat-container">
                     ${chatData
                         .map(
@@ -720,8 +728,8 @@ ${EXPORT_ICON_SHIM_CSS}
                     : ''
             }
 
-            <div class="no-print" style="position:fixed; bottom:40px; left:40px; padding: 14px 22px; background: var(--primary); color:#fff; border-radius: 12px; font-family: var(--font-ui); font-weight:700; font-size:14px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4);">
-                استخدم أمر الطباعة في المتصفح لحفظ التقرير كملف PDF
+            <div class="no-print" style="position:fixed; bottom:40px; inset-inline-start:40px; padding: 14px 22px; background: var(--primary); color:#fff; border-radius: 12px; font-family: var(--font-ui); font-weight:700; font-size:14px; box-shadow: 0 10px 25px rgba(35, 134, 200, 0.4);">
+                ${t('content.mostaql.print_help')}
             </div>
         </div>
     </body>
@@ -733,22 +741,22 @@ ${EXPORT_ICON_SHIM_CSS}
         (propData.attachments && propData.attachments.length > 0);
 
     if (hasAttachments) {
-        let attachmentsListTxt = 'قائمة بجميع المرفقات والروابط المكتشفة\n';
+        let attachmentsListTxt = t('content.mostaql.attachments_list_title');
         attachmentsListTxt += '==========================================\n\n';
         if (pData.attachments && pData.attachments.length > 0) {
-            attachmentsListTxt += '--- ملفات ومرفقات المشروع ---\n';
+            attachmentsListTxt += t('content.mostaql.project_attachments');
             pData.attachments.forEach(
                 (a: Attachment) => (attachmentsListTxt += `${a.name}: ${a.url}\n`)
             );
             attachmentsListTxt += '\n';
         }
         if (mediaUrls && mediaUrls.length > 0) {
-            attachmentsListTxt += '--- ملفات ومرفقات المحادثة ---\n';
+            attachmentsListTxt += t('content.mostaql.chat_attachments');
             mediaUrls.forEach((a) => (attachmentsListTxt += `${a.name}: ${a.url}\n`));
             attachmentsListTxt += '\n';
         }
         if (propData.attachments && propData.attachments.length > 0) {
-            attachmentsListTxt += '--- ملفات ومرفقات عرضي ---\n';
+            attachmentsListTxt += t('content.mostaql.my_attachments');
             propData.attachments.forEach(
                 (a: Attachment) => (attachmentsListTxt += `${a.name}: ${a.url}\n`)
             );
@@ -765,13 +773,16 @@ ${EXPORT_ICON_SHIM_CSS}
     filesToZip.push({ name: `report.html`, content: html });
 
     if (pData.bids && pData.bids.length > 0) {
-        let bidsTxt = `عروض المستقلين الآخرين لجلسة: ${discussionId}\n`;
-        bidsTxt += `عدد العروض: ${pData.bids.length}\n==========================================\n\n`;
+        let bidsTxt = t('content.mostaql.other_bids_title', { id: discussionId });
+        bidsTxt += t('content.mostaql.bids_count', { count: pData.bids.length });
         pData.bids.forEach((bid: MostaqlBidDetails, i: number) => {
             bidsTxt += `${i + 1}. ${bid.name} (${bid.title})\n`;
-            bidsTxt += `الرابط: ${bid.link}\n`;
-            bidsTxt += `التوقيت: ${bid.timeText} (${bid.timeOffset || 'غير محدد'})\n`;
-            bidsTxt += `نص العرض:\n${bid.content}\n------------------------------------------\n\n`;
+            bidsTxt += t('content.mostaql.bid_link', { link: bid.link });
+            bidsTxt += t('content.mostaql.bid_time', {
+                time: bid.timeText,
+                offset: bid.timeOffset || t('common.not_specified'),
+            });
+            bidsTxt += t('content.mostaql.bid_content', { content: bid.content });
         });
         filesToZip.push({ name: `other_bids_details.txt`, content: bidsTxt });
     }
@@ -787,15 +798,13 @@ ${EXPORT_ICON_SHIM_CSS}
         try {
             await downloads.downloadZip(`${folderName}.zip`, filesToZip);
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'خطأ غير معروف.';
-            alert(`تعذر إنشاء ملف التصدير: ${message}`);
+            const message = error instanceof Error ? error.message : t('common.unknown_error');
+            alert(message);
             throw new Error(message, { cause: error });
         }
         return;
     } else {
-        alert(
-            'انتهت صلاحية جلسة الإضافة بسبب تحديثها. يرجى تحديث الصفحة (Refresh) والمحاولة مرة أخرى.'
-        );
+        alert(t('content.mostaql.session_expired'));
         throw new Error('Context invalidated');
     }
 }

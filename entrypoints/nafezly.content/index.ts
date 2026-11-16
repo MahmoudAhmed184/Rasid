@@ -6,11 +6,13 @@ import { createPlatformContentServices } from '../../src/app/content/createPlatf
 import { bootstrapPlatformContent } from '../../src/app/content/bootstrapPlatformContent';
 import { createPlatformContentRepositories } from '../../src/app/repositories/browser-repositories';
 import { nafezlyAdapter } from '../../src/platforms/nafezly';
+import { initStorageLanguage } from '../../src/shared/i18n';
 
 export default defineContentScript({
     matches: [...nafezlyAdapter.matches],
     runAt: 'document_idle',
     main() {
+        void initStorageLanguage();
         const repositories = createPlatformContentRepositories();
 
         bootstrapPlatformContent({

@@ -143,6 +143,46 @@ describe('settings storage normalization', () => {
         });
     });
 
+    it('persists language selection and falls back to navigator.language when unconfigured', async () => {
+        const originalNavigator = globalThis.navigator;
+
+        try {
+            // Unconfigured storage with English navigator
+            Object.defineProperty(globalThis, 'navigator', {
+                value: { language: 'en-US' },
+                configurable: true,
+            });
+
+            const storage1 = createMemoryStorage();
+            const settingsStorage1 = createSettingsStorage(storage1);
+            await expect(settingsStorage1.getLanguage()).resolves.toBe('en');
+
+            // Unconfigured storage with Arabic navigator
+            Object.defineProperty(globalThis, 'navigator', {
+                value: { language: 'ar-EG' },
+                configurable: true,
+            });
+            const storage2 = createMemoryStorage();
+            const settingsStorage2 = createSettingsStorage(storage2);
+            await expect(settingsStorage2.getLanguage()).resolves.toBe('ar');
+
+            // Explicitly set language in storage
+            await expect(settingsStorage2.setLanguage('en')).resolves.toBe('en');
+            await expect(settingsStorage2.getLanguage()).resolves.toBe('en');
+            expect(storage2.snapshot().language).toBe('en');
+
+            // Switching back to Arabic
+            await expect(settingsStorage2.setLanguage('ar')).resolves.toBe('ar');
+            await expect(settingsStorage2.getLanguage()).resolves.toBe('ar');
+            expect(storage2.snapshot().language).toBe('ar');
+        } finally {
+            Object.defineProperty(globalThis, 'navigator', {
+                value: originalNavigator,
+                configurable: true,
+            });
+        }
+    });
+
     it('propagates storage failures instead of silently losing settings updates', async () => {
         const storage = createMemoryStorage();
         const settingsStorage = createSettingsStorage(storage);

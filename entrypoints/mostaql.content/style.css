@@ -5,9 +5,8 @@
 
 /* Ensure the dropdown menu appears correctly */
 .mostaql-custom-dropdown .dropdown-menu {
-    right: 0;
-    left: auto;
-    text-align: right;
+    inset-inline-start: 0;
+    text-align: start;
     min-width: 200px;
     margin-top: 4px;
     padding: 6px;
@@ -85,26 +84,24 @@
     float: none !important;
 }
 
-/* RTL specific styling for the Split Button parts */
-/* Main Button (Right side in RTL) */
+/* Main Button */
 #chatgpt-main-btn {
-    border-top-left-radius: 0 !important;
-    border-bottom-left-radius: 0 !important;
-    margin-left: -1px !important;
+    border-start-end-radius: 0 !important;
+    border-end-end-radius: 0 !important;
+    margin-inline-end: -1px !important;
 }
 
-/* Toggle Button (Left side in RTL) */
+/* Toggle Button */
 #chatgpt-dropdown-toggle {
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
+    border-start-start-radius: 0 !important;
+    border-end-start-radius: 0 !important;
 }
 
 /* Modal Styling */
 #mostaql-prompt-modal {
     background-color: rgba(0, 0, 0, 0.75);
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
     z-index: 10000;
@@ -150,7 +147,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    text-align: right;
+    text-align: start;
 }
 
 .mostaql-form-label {
@@ -284,8 +281,8 @@
 /* Autofill Toast Notification */
 .mostaql-autofill-toast {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    inset-block-end: 24px;
+    inset-inline-end: 24px;
     background: rgba(10, 10, 10, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.14);
     color: #ffffff;
@@ -326,18 +323,18 @@
     font-weight: 600;
     color: #a1a1a1;
     margin-bottom: 6px;
-    text-align: right;
+    text-align: start;
 }
 
 .mostaql-stats-header i {
-    margin-left: 4px;
+    margin-inline-end: 4px;
 }
 
 .mostaql-stats-empty {
     font-size: 12px;
     color: #707070;
     display: block;
-    text-align: right;
+    text-align: start;
     padding: 4px 0;
 }
 

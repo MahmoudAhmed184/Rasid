@@ -5,33 +5,48 @@ import {
     type MostaqlHomepageBidStats,
     type MostaqlTimelineBid,
 } from '../../platforms/mostaql/bid-tracker';
+import { t, formatDate, formatTime, getLanguage } from '../../shared/i18n';
 
-const BID_STATUS_CONFIG = {
-    'بانتظار الموافقة': {
-        icon: 'fa-clock',
-        color: 'var(--warning)',
-        bg: 'var(--warning-soft)',
-        label: 'بانتظار الموافقة',
-    },
-    مكتمل: {
-        icon: 'fa-check-circle',
-        color: 'var(--success)',
-        bg: 'var(--success-soft)',
-        label: 'مكتملة',
-    },
-    مستبعد: {
-        icon: 'fa-times-circle',
-        color: 'var(--danger)',
-        bg: 'var(--danger-soft)',
-        label: 'مستبعدة',
-    },
-    مُغلق: {
-        icon: 'fa-ban',
+function getBidStatusConfig(statusKey: string) {
+    if (statusKey.includes('انتظار') || statusKey.includes('موافقة') || statusKey === 'Pending') {
+        return {
+            icon: 'fa-clock',
+            color: 'var(--warning)',
+            bg: 'var(--warning-soft)',
+            label: t('bids.status_plural.pending'),
+        };
+    }
+    if (statusKey.includes('مكتمل') || statusKey === 'Completed') {
+        return {
+            icon: 'fa-check-circle',
+            color: 'var(--success)',
+            bg: 'var(--success-soft)',
+            label: t('bids.status_plural.completed'),
+        };
+    }
+    if (statusKey.includes('مستبعد') || statusKey === 'Excluded' || statusKey === 'Rejected') {
+        return {
+            icon: 'fa-times-circle',
+            color: 'var(--danger)',
+            bg: 'var(--danger-soft)',
+            label: t('bids.status_plural.rejected'),
+        };
+    }
+    if (statusKey.includes('مُغلق') || statusKey.includes('مغلق') || statusKey === 'Closed') {
+        return {
+            icon: 'fa-ban',
+            color: 'var(--text-muted)',
+            bg: 'var(--surface-muted)',
+            label: t('bids.status_plural.closed'),
+        };
+    }
+    return {
+        icon: 'fa-question-circle',
         color: 'var(--text-muted)',
         bg: 'var(--surface-muted)',
-        label: 'مُغلقة',
-    },
-} as const;
+        label: statusKey,
+    };
+}
 
 function createIcon(doc: Document, iconClass: string): HTMLElement {
     const icon = doc.createElement('i');
@@ -77,6 +92,40 @@ function createHelpText(doc: Document, message: string): HTMLElement {
     return paragraph;
 }
 
+function formatBidStatus(status: string | null): string {
+    if (!status) {
+        return t('bids.status.pending');
+    }
+    if (getLanguage() === 'ar') {
+        return status;
+    }
+    if (
+        status.includes('انتظار') ||
+        status.includes('موافقة') ||
+        status.toLowerCase().includes('pending')
+    ) {
+        return t('bids.status.pending');
+    }
+    if (status.includes('مكتمل') || status.toLowerCase().includes('completed')) {
+        return t('bids.status.completed');
+    }
+    if (
+        status.includes('مستبعد') ||
+        status.toLowerCase().includes('excluded') ||
+        status.toLowerCase().includes('rejected')
+    ) {
+        return t('bids.status.rejected');
+    }
+    if (
+        status.includes('مُغلق') ||
+        status.includes('مغلق') ||
+        status.toLowerCase().includes('closed')
+    ) {
+        return t('bids.status.closed');
+    }
+    return status;
+}
+
 export function createBidTracker(root: Document) {
     const timelineContainer = root.getElementById('bidsTimelineList');
     const statusGrid = root.getElementById('bidsStatusGrid');
@@ -107,7 +156,7 @@ export function createBidTracker(root: Document) {
             createStateMessage(root, {
                 className: 'bids-loading',
                 iconClass: 'fa-spinner fa-spin',
-                title: 'جاري تحميل بيانات العروض...',
+                title: t('bids.loading'),
             })
         );
 
@@ -126,13 +175,16 @@ export function createBidTracker(root: Document) {
         const retryButton = root.createElement('button');
         retryButton.className = 'btn-secondary btn-retry-bids';
         retryButton.type = 'button';
-        retryButton.append(createIcon(root, 'fa-redo'), root.createTextNode(' إعادة المحاولة'));
+        retryButton.append(
+            createIcon(root, 'fa-redo'),
+            root.createTextNode(` ${t('common.retry')}`)
+        );
 
         timelineContainer.replaceChildren(
             createStateMessage(root, {
                 className: 'bids-error',
                 iconClass: 'fa-exclamation-triangle',
-                title: 'تعذر تحميل بيانات العروض',
+                title: t('bids.error'),
                 detail: message,
                 action: retryButton,
             })
@@ -157,7 +209,7 @@ export function createBidTracker(root: Document) {
 
     function formatCountdown(msLeft: number) {
         if (msLeft <= 0) {
-            return 'متاح الآن!';
+            return t('bids.available_now');
         }
 
         const totalSeconds = Math.floor(msLeft / 1000);
@@ -214,9 +266,11 @@ export function createBidTracker(root: Document) {
             const daysLeft = Math.floor(hoursLeft / 24);
             const remainingHours = hoursLeft % 24;
             nextEl.textContent =
-                daysLeft > 0 ? `${daysLeft} يوم ${remainingHours} ساعة` : `${remainingHours} ساعة`;
+                daysLeft > 0
+                    ? t('bids.days_hours', { days: daysLeft, hours: remainingHours })
+                    : t('bids.hours_only', { hours: remainingHours });
         } else if (nextEl) {
-            nextEl.textContent = 'متاح الآن!';
+            nextEl.textContent = t('bids.available_now');
         }
     }
 
@@ -228,7 +282,7 @@ export function createBidTracker(root: Document) {
         const statusKeys = Object.keys(byStatus);
 
         if (statusKeys.length === 0) {
-            statusGrid.replaceChildren(createHelpText(root, 'لا توجد بيانات حالات.'));
+            statusGrid.replaceChildren(createHelpText(root, t('bids.no_status_data')));
             return;
         }
 
@@ -237,12 +291,7 @@ export function createBidTracker(root: Document) {
         for (const statusKey of statusKeys) {
             const count = byStatus[statusKey];
             const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-            const config = BID_STATUS_CONFIG[statusKey as keyof typeof BID_STATUS_CONFIG] ?? {
-                icon: 'fa-question-circle',
-                color: 'var(--text-muted)',
-                bg: 'var(--surface-muted)',
-                label: statusKey,
-            };
+            const config = getBidStatusConfig(statusKey);
 
             const card = root.createElement('div');
             card.className = 'bid-status-card';
@@ -288,8 +337,8 @@ export function createBidTracker(root: Document) {
                 createStateMessage(root, {
                     className: 'bids-empty',
                     iconClass: 'fa-inbox',
-                    title: 'لا توجد عروض في آخر 30 يومًا',
-                    detail: 'جميع العروض متاحة للاستخدام!',
+                    title: t('bids.empty_title'),
+                    detail: t('bids.empty_detail'),
                 })
             );
             return;
@@ -300,13 +349,13 @@ export function createBidTracker(root: Document) {
         for (const [index, bid] of bids.entries()) {
             const percentage = Math.min(100, Math.round((bid.ageMs / MOSTAQL_BID_WINDOW_MS) * 100));
             const color = getCountdownColor(percentage);
-            const appliedDate = bid.published.toLocaleDateString('ar-EG', {
+            const appliedDate = formatDate(bid.published, {
                 day: 'numeric',
                 month: 'short',
                 year: 'numeric',
                 timeZone: 'UTC',
             });
-            const appliedTime = bid.published.toLocaleTimeString('ar-EG', {
+            const appliedTime = formatTime(bid.published, {
                 hour: '2-digit',
                 minute: '2-digit',
                 timeZone: 'UTC',
@@ -331,11 +380,11 @@ export function createBidTracker(root: Document) {
             titleLink.href = bid.url || '#';
             titleLink.target = '_blank';
             titleLink.rel = 'noreferrer';
-            titleLink.textContent = bid.title || 'عرض بدون عنوان';
+            titleLink.textContent = bid.title || t('bids.untitled_bid');
 
             const status = root.createElement('span');
             status.className = `bid-timeline-status ${getStatusCssClass(bid.status)}`;
-            status.textContent = bid.status || 'بانتظار';
+            status.textContent = formatBidStatus(bid.status);
 
             header.append(titleLink, status);
 

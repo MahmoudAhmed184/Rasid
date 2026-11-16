@@ -2,9 +2,10 @@ import { browser } from 'wxt/browser';
 
 import type { ProposalRepository } from '../../features/proposals/proposal-repository';
 import type { TrackedProjectRecord } from '../../platforms/contracts';
-import { getPlatformDisplayName, resolvePlatformId } from '../../platforms/platform-ids';
+import { resolvePlatformId } from '../../platforms/platform-ids';
 import { parseDurationDays } from '../../shared/parsing/duration';
 import { parseBudgetFloor } from '../../shared/parsing/numbers';
+import { getLanguage, t } from '../../shared/i18n';
 
 type TrackedProjectView = TrackedProjectRecord;
 
@@ -28,33 +29,75 @@ export function createTrackedProjectsPanel(root: Document, deps: TrackedProjects
 
     function createEmptyState(): HTMLParagraphElement {
         const paragraph = root.createElement('p');
-        const emphasis = root.createElement('strong');
-
         paragraph.className = 'help-text empty-state';
-        paragraph.append('لا توجد مشاريع مراقبة. افتح أي مشروع مدعوم واضغط ');
-        emphasis.textContent = 'متابعة';
-        paragraph.append(emphasis, ' لإضافته هنا.');
-
+        paragraph.textContent = t('overview.no_projects');
         return paragraph;
+    }
+
+    function formatDashboardProjectStatus(status: string | undefined): string {
+        if (!status) {
+            return t('common.open');
+        }
+        if (getLanguage() === 'ar') {
+            return status;
+        }
+        if (status.includes('مفتوح') || status.toLowerCase().includes('open')) {
+            return t('common.open');
+        }
+        if (
+            status.includes('تنفيذ') ||
+            status.includes('جارٍ') ||
+            status.toLowerCase().includes('progress')
+        ) {
+            return t('common.in_progress');
+        }
+        if (status.includes('مكتمل') || status.toLowerCase().includes('completed')) {
+            return t('common.completed');
+        }
+        if (status.includes('مغلق') || status.toLowerCase().includes('closed')) {
+            return t('common.closed');
+        }
+        if (status.includes('ملغى') || status.toLowerCase().includes('cancel')) {
+            return t('common.cancelled');
+        }
+        return status;
     }
 
     function createTrackedProjectCard(job: TrackedProjectView): HTMLDivElement {
         const platformId = resolvePlatformId(job.platformId, {
             url: job.url,
         });
-        const platformName = getPlatformDisplayName(platformId);
-        const budget = job.budget || 'غير محدد';
+        const platformName =
+            platformId === 'khamsat'
+                ? t('popup.marketplaces.khamsat')
+                : platformId === 'nafezly'
+                  ? t('popup.marketplaces.nafezly')
+                  : t('popup.marketplaces.mostaql');
+        const budget = job.budget || t('common.not_specified');
         const duration = job.duration || '';
         const poster = job.clientName || '';
         const timeAgo = job.publishDate || '';
-        const bidsText = job.communications ? `${job.communications} تواصل` : '';
-        const status = job.status || 'مفتوح';
+        const bidsText = job.communications
+            ? t('overview.communications', { count: job.communications })
+            : '';
+        const rawStatus = job.status || '';
+        const status = formatDashboardProjectStatus(job.status);
 
         let statusClass = 'mj-status-open';
-        if (status.includes('تنفيذ') || status.includes('جارٍ')) {
+        if (
+            rawStatus.includes('تنفيذ') ||
+            rawStatus.includes('جارٍ') ||
+            rawStatus.toLowerCase().includes('progress')
+        ) {
             statusClass = 'mj-status-processing';
         }
-        if (status.includes('مغلق') || status.includes('مكتمل') || status.includes('ملغى')) {
+        if (
+            rawStatus.includes('مغلق') ||
+            rawStatus.includes('مكتمل') ||
+            rawStatus.includes('ملغى') ||
+            rawStatus.toLowerCase().includes('closed') ||
+            rawStatus.toLowerCase().includes('completed')
+        ) {
             statusClass = 'mj-status-closed';
         }
 
@@ -68,7 +111,7 @@ export function createTrackedProjectsPanel(root: Document, deps: TrackedProjects
         link.href = job.url;
         link.target = '_blank';
         link.rel = 'noreferrer';
-        link.textContent = job.title || 'بدون عنوان';
+        link.textContent = job.title || t('common.untitled');
 
         const platformBadge = root.createElement('span');
         platformBadge.className = 'mj-platform-badge';
@@ -95,7 +138,7 @@ export function createTrackedProjectsPanel(root: Document, deps: TrackedProjects
             meta.appendChild(createMetaItem('fas fa-handshake', bidsText));
         }
 
-        if (budget !== 'غير محدد') {
+        if (budget && budget !== 'غير محدد' && budget !== t('common.not_specified')) {
             meta.appendChild(createMetaItem('fas fa-dollar-sign', budget));
         }
 
@@ -114,7 +157,7 @@ export function createTrackedProjectsPanel(root: Document, deps: TrackedProjects
 
         const applyIcon = root.createElement('i');
         applyIcon.className = 'fas fa-paper-plane';
-        applyButton.append(applyIcon, ' قدّم الآن');
+        applyButton.append(applyIcon, ` ${t('overview.autofill_btn')}`);
 
         actions.appendChild(applyButton);
         card.append(title, meta, actions);

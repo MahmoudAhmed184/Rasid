@@ -3,6 +3,7 @@ import type { StorageClient } from '../../browser/storage-client';
 import { STORAGE_FIELDS } from '../storage-keys';
 import { normalizeAiChatUrl } from '../../../entities/ai/chat-url';
 import { type AiSecretStorageModule, normalizeAiApiKey } from './ai-secret-storage';
+import { detectBrowserLanguage, type AppLanguage } from '../../i18n';
 import {
     DEFAULT_MONITORED_PLATFORMS,
     SUPPORTED_MONITORING_PLATFORM_IDS,
@@ -129,6 +130,7 @@ export function normalizeSettings(value: unknown): ExtensionSettings {
             DEFAULT_SETTINGS.quietHoursStart
         ),
         quietHoursEnd: normalizeTimeOfDay(value.quietHoursEnd, DEFAULT_SETTINGS.quietHoursEnd),
+        ...(value.language === 'en' || value.language === 'ar' ? { language: value.language } : {}),
     };
 }
 
@@ -160,6 +162,8 @@ export interface SettingsStorageModule {
     setNotificationsEnabled(enabled: boolean): Promise<boolean>;
     getProposalTemplate(): Promise<string>;
     setProposalTemplate(template: string): Promise<string>;
+    getLanguage(): Promise<AppLanguage>;
+    setLanguage(language: AppLanguage): Promise<AppLanguage>;
 }
 
 export function createSettingsStorage(
@@ -205,6 +209,10 @@ export function createSettingsStorage(
                 })
             );
 
+            if (patch.language === 'ar' || patch.language === 'en') {
+                await client.set({ [STORAGE_FIELDS.language]: patch.language });
+            }
+
             await client.set({ [STORAGE_FIELDS.settings]: next });
 
             return {
@@ -231,6 +239,27 @@ export function createSettingsStorage(
             const next = normalizeProposalTemplate(template);
             await client.set({ [STORAGE_FIELDS.proposalTemplate]: next });
             return next;
+        },
+        async getLanguage(): Promise<AppLanguage> {
+            const response = await client.get(STORAGE_FIELDS.language);
+            const stored = response[STORAGE_FIELDS.language];
+            if (stored === 'ar' || stored === 'en') {
+                return stored;
+            }
+            const settingsResponse = await client.get(STORAGE_FIELDS.settings);
+            const rawSettings = settingsResponse[STORAGE_FIELDS.settings];
+            if (
+                isObject(rawSettings) &&
+                (rawSettings.language === 'ar' || rawSettings.language === 'en')
+            ) {
+                return rawSettings.language;
+            }
+            return detectBrowserLanguage();
+        },
+        async setLanguage(language: AppLanguage): Promise<AppLanguage> {
+            const valid: AppLanguage = language === 'en' ? 'en' : 'ar';
+            await client.set({ [STORAGE_FIELDS.language]: valid });
+            return valid;
         },
     };
 }

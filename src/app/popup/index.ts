@@ -5,6 +5,14 @@ import './popup.css';
 import { requestCheckNow, requestDebugFetch } from '../background/background-messages';
 import type { MonitoringRepository } from '../../features/monitoring/repository';
 import type { AdminMessage } from '../../shared/storage/modules/admin-message-storage';
+import {
+    t,
+    getLanguage,
+    setLanguage,
+    getDirection,
+    formatDate,
+    type AppLanguage,
+} from '../../shared/i18n';
 
 const POPUP_REFRESH_INTERVAL_MS = 30_000;
 
@@ -13,12 +21,18 @@ interface AdminMessageDeps {
     markAdminMessagesRead(): Promise<void>;
 }
 
+interface LanguageDeps {
+    getLanguage(): Promise<AppLanguage>;
+    setLanguage(lang: AppLanguage): Promise<AppLanguage>;
+}
+
 interface PopupDependencies {
     readonly monitoringRepository: Pick<
         MonitoringRepository,
         'getOverview' | 'getNotificationsEnabled' | 'setNotificationsEnabled'
     >;
     readonly adminMessages: AdminMessageDeps;
+    readonly language?: LanguageDeps;
 }
 
 function getElement<T extends HTMLElement>(id: string): T | null {
@@ -39,41 +53,88 @@ function setButtonContent(button: HTMLButtonElement, iconClass: string, label: s
 
 function formatLastCheck(lastCheckValue: string | null | undefined): string {
     if (!lastCheckValue) {
-        return 'لم يتم الفحص بعد';
+        return t('popup.last_check_never');
     }
 
     const lastCheck = new Date(lastCheckValue);
 
     if (Number.isNaN(lastCheck.getTime())) {
-        return 'لم يتم الفحص بعد';
+        return t('popup.last_check_never');
     }
 
     const diffMinutes = Math.floor((Date.now() - lastCheck.getTime()) / 60000);
 
     if (diffMinutes < 1) {
-        return 'آخر فحص: الآن';
+        return t('popup.last_check_now');
     }
 
     if (diffMinutes < 60) {
-        return `آخر فحص: منذ ${diffMinutes} دقيقة`;
+        return t('popup.last_check_minutes', { count: diffMinutes });
     }
 
     if (diffMinutes < 1440) {
-        return `آخر فحص: منذ ${Math.floor(diffMinutes / 60)} ساعة`;
+        return t('popup.last_check_hours', { count: Math.floor(diffMinutes / 60) });
     }
 
-    return `آخر فحص: ${lastCheck.toLocaleDateString('ar-SA')}`;
+    return t('popup.last_check_date', { date: formatDate(lastCheck) });
 }
 
 function updateToggleUi(button: HTMLButtonElement, isEnabled: boolean) {
     if (isEnabled) {
         button.className = 'btn action secondary';
-        setButtonContent(button, 'fa-bell', 'الإشعارات: مفعلة');
+        setButtonContent(button, 'fa-bell', t('popup.notifications_enabled'));
         return;
     }
 
     button.className = 'btn action toggle-off';
-    setButtonContent(button, 'fa-bell-slash', 'الإشعارات: متوقفة');
+    setButtonContent(button, 'fa-bell-slash', t('popup.notifications_disabled'));
+}
+
+function applyPopupTranslations(root: Document = document): void {
+    const lang = getLanguage();
+    const dir = getDirection();
+
+    if (root.documentElement) {
+        root.documentElement.lang = lang;
+        root.documentElement.dir = dir;
+    }
+
+    const setText = (id: string, text: string) => {
+        const el = root.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setText('popupPageTitle', t('app.title'));
+    setText('popupBrandTitle', t('app.name'));
+    setText('popupBrandTagline', t('app.tagline'));
+    setText('langToggleText', lang === 'ar' ? 'EN' : 'عربي');
+    setText('adminMessagesTitle', t('popup.admin_title'));
+    setText('adminMessageLinkText', t('popup.admin_details'));
+    setText('todayCountLabel', t('popup.today_projects'));
+    setText('totalSeenLabel', t('popup.total_monitored'));
+    setText('openDashboardBtnText', t('popup.open_dashboard'));
+    setText('checkNowBtnText', t('popup.check_now'));
+    setText('checkConnectionBtnText', t('popup.check_connection'));
+    setText('footerMostaqlLink', t('popup.marketplaces.mostaql'));
+    setText('footerKhamsatLink', t('popup.marketplaces.khamsat'));
+    setText('footerNafezlyLink', t('popup.marketplaces.nafezly'));
+
+    const dismissBtn = root.getElementById('dismissAdminMessageBtn');
+    if (dismissBtn) {
+        dismissBtn.setAttribute('aria-label', t('popup.admin_dismiss'));
+    }
+
+    const statsPanel = root.getElementById('statsPanelSection');
+    if (statsPanel) {
+        statsPanel.setAttribute('aria-label', t('popup.total_monitored'));
+    }
+
+    const mainActions = root.getElementById('mainActionsSection');
+    if (mainActions) {
+        mainActions.setAttribute('aria-label', t('dashboard.nav.overview'));
+    }
 }
 
 function showPopupStatus(tone: 'success' | 'error' | 'info', message: string) {
@@ -214,7 +275,7 @@ function createPopupController(deps: PopupDependencies) {
         button.disabled = true;
         button.setAttribute('aria-busy', 'true');
         button.classList.add('is-loading');
-        setButtonContent(button, 'fa-sync-alt', 'جاري الفحص...');
+        setButtonContent(button, 'fa-sync-alt', t('popup.checking'));
         hidePopupStatus();
 
         try {
@@ -229,32 +290,27 @@ function createPopupController(deps: PopupDependencies) {
 
                 showPopupStatus(
                     'error',
-                    errors
-                        ? `تعذر تنفيذ الفحص: ${errors}`
-                        : 'تعذر تنفيذ الفحص لأن كل مصادر المراقبة فشلت.'
+                    errors ? t('popup.check_failed', { errors }) : t('popup.check_failed_all')
                 );
                 return;
             }
 
-            showPopupStatus('success', 'تم الفحص وتحديث الإحصائيات.');
+            showPopupStatus('success', t('popup.check_success'));
         } catch (error) {
             console.error('Error checking now:', error);
-            showPopupStatus(
-                'error',
-                'تعذر تنفيذ الفحص الآن. أعد المحاولة أو افتح لوحة التحكم للتحقق من حالة الاتصال.'
-            );
+            showPopupStatus('error', t('popup.check_failed_generic'));
         } finally {
             button.disabled = false;
             button.setAttribute('aria-busy', 'false');
             button.classList.remove('is-loading');
-            setButtonContent(button, 'fa-sync-alt', 'فحص الآن');
+            setButtonContent(button, 'fa-sync-alt', t('popup.check_now'));
         }
     }
 
     async function handleDiagnostics(button: HTMLButtonElement, report: HTMLElement) {
         button.disabled = true;
         button.setAttribute('aria-busy', 'true');
-        setButtonContent(button, 'fa-plug', 'جاري التشخيص...');
+        setButtonContent(button, 'fa-plug', t('popup.checking_connection'));
         report.className = 'connection-report hidden';
 
         try {
@@ -264,20 +320,24 @@ function createPopupController(deps: PopupDependencies) {
 
             if (response.success) {
                 report.className = 'connection-report success';
-                report.textContent = `✓ الاتصال ناجح. تم جلب ${response.length ?? 0} بايت من المصادر المفعلة.`;
+                report.textContent = t('popup.diagnostics_success', {
+                    bytes: response.length ?? 0,
+                });
             } else {
                 report.className = 'connection-report error';
-                report.textContent = `✗ فشل الاتصال: ${response.error ?? 'خطأ غير معروف'}. تأكد من تفعيل منصة واحدة على الأقل وفتحها عند الحاجة.`;
+                report.textContent = t('popup.diagnostics_failed', {
+                    error: response.error ?? t('common.unknown_error'),
+                });
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'خطأ غير معروف';
+            const message = error instanceof Error ? error.message : t('common.unknown_error');
             report.className = 'connection-report error';
             report.classList.remove('hidden');
-            report.textContent = `✗ فشل الاتصال: ${message}. تأكد من تفعيل منصة واحدة على الأقل وفتحها عند الحاجة.`;
+            report.textContent = t('popup.diagnostics_failed', { error: message });
         } finally {
             button.disabled = false;
             button.setAttribute('aria-busy', 'false');
-            setButtonContent(button, 'fa-plug', 'فحص الاتصال بالمصادر');
+            setButtonContent(button, 'fa-plug', t('popup.check_connection'));
         }
     }
 
@@ -291,10 +351,13 @@ function createPopupController(deps: PopupDependencies) {
 
             await deps.monitoringRepository.setNotificationsEnabled(newState);
             updateToggleUi(button, newState);
-            showPopupStatus('success', newState ? 'تم تفعيل الإشعارات.' : 'تم إيقاف الإشعارات.');
+            showPopupStatus(
+                'success',
+                newState ? t('popup.notifications_on_toast') : t('popup.notifications_off_toast')
+            );
         } catch (error) {
             console.error('Error toggling notifications:', error);
-            showPopupStatus('error', 'تعذر تغيير حالة الإشعارات. حاول مرة أخرى.');
+            showPopupStatus('error', t('popup.notifications_error'));
             await syncNotificationToggle(deps).catch((syncError: unknown) => {
                 console.error('Error resyncing notification toggle:', syncError);
             });
@@ -331,9 +394,31 @@ function createPopupController(deps: PopupDependencies) {
         getElement<HTMLButtonElement>('dismissAdminMessageBtn')?.addEventListener('click', () => {
             void dismissAdminMessages();
         });
+
+        getElement<HTMLButtonElement>('langToggleBtn')?.addEventListener('click', () => {
+            void (async () => {
+                const nextLang = getLanguage() === 'ar' ? 'en' : 'ar';
+                setLanguage(nextLang);
+                if (deps.language) {
+                    await deps.language.setLanguage(nextLang);
+                }
+                applyPopupTranslations(document);
+                await syncNotificationToggle(deps);
+                await loadStats(deps);
+            })();
+        });
     }
 
     async function init() {
+        if (deps.language) {
+            try {
+                const storedLang = await deps.language.getLanguage();
+                setLanguage(storedLang);
+            } catch (err) {
+                console.warn('[popup] failed to load language:', err);
+            }
+        }
+        applyPopupTranslations(document);
         bindEvents();
         await Promise.all([loadStats(deps), syncNotificationToggle(deps), loadAdminMessages()]);
 

@@ -70,13 +70,23 @@ export function createTabController(root: Document, options: TabControllerOption
             });
 
             item.addEventListener('keydown', (event) => {
+                const isLtr = root.documentElement.getAttribute('dir') === 'ltr';
+                const nextDirection = isLtr ? 1 : -1;
+                const prevDirection = isLtr ? -1 : 1;
+
                 switch (event.key) {
                     case 'ArrowRight':
+                        event.preventDefault();
+                        focusRelativeTab(item, nextDirection);
+                        break;
+                    case 'ArrowLeft':
+                        event.preventDefault();
+                        focusRelativeTab(item, prevDirection);
+                        break;
                     case 'ArrowUp':
                         event.preventDefault();
                         focusRelativeTab(item, -1);
                         break;
-                    case 'ArrowLeft':
                     case 'ArrowDown':
                         event.preventDefault();
                         focusRelativeTab(item, 1);

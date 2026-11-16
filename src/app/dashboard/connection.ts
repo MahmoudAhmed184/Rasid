@@ -1,5 +1,6 @@
 import { isSignalRFallbackState } from '../../entities/runtime/model';
 import type { MonitoringRepository } from '../../features/monitoring/repository';
+import { t } from '../../shared/i18n';
 
 interface ConnectionStatusPanelDependencies {
     readonly monitoringRepository: Pick<MonitoringRepository, 'getOverview'>;
@@ -37,24 +38,24 @@ export function createConnectionStatusPanel(
         const isFallbackActive = isSignalRFallbackState(runtimeSignalr);
 
         if (mode === 'polling') {
-            statusEl.textContent = 'استعلام دوري';
+            statusEl.textContent = t('overview.status.polling');
             setStatusIcon(root, iconEl, 'blue', 'fa-sync-alt');
             return;
         }
 
         if (isConnected) {
-            statusEl.textContent = 'اتصال مباشر';
+            statusEl.textContent = t('overview.status.connected');
             setStatusIcon(root, iconEl, 'green', 'fa-wifi');
             return;
         }
 
         if (isFallbackActive) {
-            statusEl.textContent = 'وضع الاستعلام';
+            statusEl.textContent = t('overview.status.fallback');
             setStatusIcon(root, iconEl, 'orange', 'fa-sync-alt');
             return;
         }
 
-        statusEl.textContent = 'غير متصل';
+        statusEl.textContent = t('overview.status.disconnected');
         setStatusIcon(root, iconEl, 'purple', 'fa-plug');
     }
 
