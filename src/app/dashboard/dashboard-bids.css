@@ -1,7 +1,7 @@
 .bids-tracker-period {
     display: inline-flex;
     align-items: center;
-    margin-right: 8px;
+    margin-inline-end: 8px;
     padding: 2px 8px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -228,7 +228,7 @@
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     font-weight: 500;
-    text-align: left;
+    text-align: start;
     white-space: nowrap;
     direction: ltr;
 }

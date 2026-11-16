@@ -8,6 +8,8 @@ import { createPromptManager } from './prompts';
 import { createTrackedProjectsPanel } from './projects';
 import { createSettingsForm } from './settings';
 import { createTabController } from './tabs';
+import { applyDashboardTranslations } from './i18n';
+import { formatTime, getLanguage, setLanguage, type AppLanguage } from '../../shared/i18n';
 import type { BackupRepository } from '../../features/backup/repository';
 import type { MonitoringRepository } from '../../features/monitoring/repository';
 import type { PromptRepository } from '../../features/proposals/prompt-repository';
@@ -23,7 +25,8 @@ interface DashboardDependencies {
         ProposalRepository,
         'getQuickTemplate' | 'setQuickTemplate' | 'queueAutofill'
     >;
-    readonly settingsRepository: Pick<SettingsRepository, 'get' | 'save' | 'update'>;
+    readonly settingsRepository: Pick<SettingsRepository, 'get' | 'save' | 'update'> &
+        Partial<Pick<SettingsRepository, 'getLanguage' | 'setLanguage'>>;
     readonly trackingRepository: Pick<TrackingRepository, 'list'>;
 }
 
@@ -49,9 +52,7 @@ function updateOverviewStats(
     }
 
     if (lastTimeEl) {
-        lastTimeEl.textContent = stats.lastCheck
-            ? new Date(stats.lastCheck).toLocaleTimeString('ar-EG')
-            : '-';
+        lastTimeEl.textContent = stats.lastCheck ? formatTime(new Date(stats.lastCheck)) : '-';
     }
 }
 
@@ -70,6 +71,10 @@ function createDashboardApp(root: Document, deps: DashboardDependencies) {
         },
         onSaved: () => {
             void connectionPanel.load();
+        },
+        onLanguageChanged: (newLang) => {
+            applyDashboardTranslations(root, newLang);
+            void loadData();
         },
     });
     const promptManager = createPromptManager(root, {
@@ -94,6 +99,14 @@ function createDashboardApp(root: Document, deps: DashboardDependencies) {
             deps.promptRepository.list(),
         ]);
 
+        const activeLang: AppLanguage =
+            settings.language ||
+            (deps.settingsRepository.getLanguage
+                ? await deps.settingsRepository.getLanguage()
+                : getLanguage());
+        setLanguage(activeLang);
+        applyDashboardTranslations(root, activeLang);
+
         const visibleTrackedProjects = trackedProjects.sort((left, right) =>
             String(right.lastChecked ?? '').localeCompare(String(left.lastChecked ?? ''))
         );
@@ -116,6 +129,22 @@ function createDashboardApp(root: Document, deps: DashboardDependencies) {
         promptManager.bind();
         bidTracker.bind();
         tabs.bind();
+
+        root.getElementById('langToggleBtn')?.addEventListener('click', () => {
+            void (async () => {
+                const nextLang: AppLanguage = getLanguage() === 'ar' ? 'en' : 'ar';
+                setLanguage(nextLang);
+                if (deps.settingsRepository.setLanguage) {
+                    await deps.settingsRepository.setLanguage(nextLang);
+                }
+                await deps.settingsRepository.update({ language: nextLang });
+                applyDashboardTranslations(root, nextLang);
+                const currentSettings = await deps.settingsRepository.get();
+                settingsForm.apply({ ...currentSettings, language: nextLang });
+                await Promise.all([loadData(), connectionPanel.load()]);
+                void bidTracker.refresh();
+            })();
+        });
 
         await Promise.all([loadData(), connectionPanel.load()]);
     }
