@@ -236,6 +236,15 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                 divLi.className = 'divider';
                 menuList.appendChild(divLi);
 
+                if (mainBtn.dataset.promptId && mainBtn.dataset.promptId !== 'default_proposal') {
+                    const activePrompt = prompts.find((x) => x.id === mainBtn.dataset.promptId);
+                    if (activePrompt) {
+                        mainBtn.title = t('content.mostaql.use_template', {
+                            title: activePrompt.title,
+                        });
+                    }
+                }
+
                 const addLi = document.createElement('li');
                 const addButton = document.createElement('button');
                 stylePromptMenuButton(addButton);
@@ -290,17 +299,11 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                 'track-project-btn'
             ) as HTMLButtonElement | null;
             if (trackBtn) {
-                const isTracked = trackBtn.classList.contains('btn-danger');
+                const isTracked = trackBtn.classList.contains('btn-warning');
                 if (isTracked) {
-                    setActionButtonContent(
-                        trackBtn,
-                        'fa fa-fw fa-eye-slash',
-                        t('content.mostaql.untrack')
-                    );
-                    trackBtn.title = t('content.mostaql.untrack');
+                    setButtonTracked(trackBtn);
                 } else {
-                    setActionButtonContent(trackBtn, 'fa fa-fw fa-eye', t('content.mostaql.track'));
-                    trackBtn.title = t('content.mostaql.track');
+                    setButtonUntracked(trackBtn);
                 }
             }
             const quickBtn = document.getElementById(
@@ -310,6 +313,11 @@ export function injectTrackButton(services: PlatformContentServices): PlatformDi
                 setActionButtonContent(quickBtn, 'fa fa-fw fa-bolt', t('content.mostaql.quick'));
                 quickBtn.title = t('content.mostaql.quick');
             }
+            setActionButtonContent(mainBtn, 'fa fa-fw fa-magic', t('content.mostaql.ai'));
+            if (!mainBtn.dataset.promptId || mainBtn.dataset.promptId === 'default_proposal') {
+                mainBtn.title = t('content.mostaql.ai');
+            }
+            renderMenu();
             group.dir = getDirection();
             group.lang = getLanguage();
         });

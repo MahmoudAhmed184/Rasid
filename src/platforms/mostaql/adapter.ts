@@ -58,10 +58,12 @@ interface MostaqlProjectData {
     readonly attachments?: ProjectAttachment[];
 }
 
-const injectMessageExporter: (downloads: PlatformContentServices['downloads']) => void =
-    injectMessageExporterUnsafe;
-const injectProjectExporter: (downloads: PlatformContentServices['downloads']) => void =
-    injectProjectExporterUnsafe;
+const injectMessageExporter: (
+    downloads: PlatformContentServices['downloads']
+) => PlatformDisposer | undefined = injectMessageExporterUnsafe;
+const injectProjectExporter: (
+    downloads: PlatformContentServices['downloads']
+) => PlatformDisposer | undefined = injectProjectExporterUnsafe;
 const injectDashboardStats: (
     tracking: PlatformContentServices['tracking']
 ) => PlatformDisposer | undefined = injectDashboardStatsUnsafe;
@@ -179,11 +181,14 @@ const mostaqlUi = [
             }
 
             const disposeTrackButton = injectTrackButton(input.services);
-            injectProjectExporter(input.services.downloads);
+            const disposeProjectExporter = injectProjectExporter(input.services.downloads);
 
             return {
                 kind: 'mounted',
-                dispose: disposeTrackButton,
+                dispose: () => {
+                    disposeTrackButton?.();
+                    disposeProjectExporter?.();
+                },
             } satisfies PlatformContributionMountResult;
         },
     },
@@ -197,10 +202,11 @@ const mostaqlUi = [
                 } satisfies PlatformContributionMountResult;
             }
 
-            injectMessageExporter(input.services.downloads);
+            const disposeMessageExporter = injectMessageExporter(input.services.downloads);
 
             return {
                 kind: 'mounted',
+                dispose: disposeMessageExporter,
             } satisfies PlatformContributionMountResult;
         },
     },
