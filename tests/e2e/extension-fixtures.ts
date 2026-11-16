@@ -20,7 +20,8 @@ export function expectChromeBuildAvailable(): void {
 export async function launchChromiumExtension(): Promise<LoadedExtensionContext> {
     expectChromeBuildAvailable();
 
-    const userDataDir = mkdtempSync(resolve(tmpdir(), 'rasid-extension-'));
+    const baseTmp = existsSync('/tmp') ? '/tmp' : tmpdir();
+    const userDataDir = mkdtempSync(resolve(baseTmp, 'r-ext-'));
     const heliumPath =
         process.env.RASID_E2E_CHROMIUM_PATH ||
         (existsSync('/usr/bin/helium-browser') ? '/usr/bin/helium-browser' : undefined);
@@ -29,6 +30,10 @@ export async function launchChromiumExtension(): Promise<LoadedExtensionContext>
         channel: heliumPath ? undefined : 'chromium',
         executablePath: heliumPath,
         headless: false,
+        env: {
+            ...process.env,
+            TMPDIR: '/tmp',
+        },
         args: [
             '--headless=new',
             `--disable-extensions-except=${chromeExtensionPath}`,

@@ -63,7 +63,7 @@ describe('Firefox release smoke', () => {
             return;
         }
 
-        expect(background).not.toContain('عرض تفاصيل المشروع');
+        expect(background).not.toContain('notification.view_details');
         expect(background).not.toMatch(/\bbuttons\b/);
     });
 
@@ -77,7 +77,7 @@ describe('Firefox release smoke', () => {
             return;
         }
 
-        expect(background).toContain('عرض تفاصيل المشروع');
+        expect(background).toContain('notification.view_details');
         expect(background).toMatch(/\bbuttons\b/);
     });
 

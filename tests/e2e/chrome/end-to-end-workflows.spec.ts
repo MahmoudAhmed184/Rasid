@@ -38,6 +38,11 @@ test.describe('Helium E2E: Popups, Permissions, Workflows & ChatGPT Integration'
             await page.goto(`chrome-extension://${extensionId}/popup.html`);
             await page.waitForLoadState('domcontentloaded');
 
+            if ((await page.locator('html').getAttribute('lang')) !== 'ar') {
+                await page.locator('#langToggleBtn').click();
+                await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+            }
+
             // 1. Verify Popup header & brand
             await expect(page.locator('.brand-copy h1')).toHaveText('Rasid');
             await expect(page.locator('.brand-copy p')).toContainText('راصد');
