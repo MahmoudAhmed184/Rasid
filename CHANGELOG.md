@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.3.0 - 2026-11-16
+
+This release adds bilingual English and Arabic support across all extension surfaces, lowers the background check interval to 1 minute, and adapts injected Mostaql widgets to dark mode.
+
+### Release artifacts
+
+- Chrome MV3 extension package: `rasid-v1.3.0-chrome-mv3.zip`.
+- Firefox MV3 extension package: `rasid-v1.3.0-firefox-mv3.zip`.
+- Firefox review source package: `rasid-v1.3.0-firefox-sources.zip`.
+- SHA-256 checksum manifest: `SHA256SUMS.txt`.
+- Build and manifest evidence: `release-evidence.json`.
+
+### Added and improved
+
+- **Bilingual localization.** Added an internationalization module that supports English and Arabic. The extension popup and dashboard include a language switcher that updates text labels and switches document direction between left to right and right to left in real time. Extension notifications format timestamps and localized strings using the active language.
+- **Platform script localization.** Injected action buttons and proposal panels on Mostaql, Khamsat, and Nafezly translate immediately when the user changes language. On Mostaql, the project action bar updates AI prompt and export button labels to match the selected language.
+- **Monitoring check frequency.** Lowered the minimum and default periodic check interval to 1 minute. This reduces the wait time between periodic job checks and SignalR fallback updates.
+- **Theme support on Mostaql.** Replaced hardcoded card backgrounds and text styles in Mostaql injected widgets with CSS variables. Modal dialogs and dashboard tools adapt to light and dark theme modes. Button styles, spacing, and numbers use neutral borders and tabular numerals.
+- **Multilingual end-to-end tests.** Added Playwright tests with screenshot assertions covering both Arabic and English dashboard views.
+
 ## v1.2.1 - 2026-11-14
 
 Maintenance and bug-fix release addressing Firefox/Gecko user-gesture permission loss, manifest optional permission alignment, notification delivery staggering, and UI/scraping refinements.
