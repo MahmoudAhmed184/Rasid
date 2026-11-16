@@ -1,5 +1,6 @@
 import type { AiProviderId } from '../ai/model';
 import type { PlatformId } from '../platform/model';
+import type { AppLanguage } from '../../shared/i18n/types';
 
 export type NotificationMode = 'auto' | 'signalr' | 'polling';
 export type AiExecutionMode = 'bridge' | 'direct';
@@ -41,6 +42,7 @@ export interface ExtensionSettings {
     quietHoursEnabled: boolean;
     quietHoursStart: string;
     quietHoursEnd: string;
+    language?: AppLanguage;
 }
 
 export function clampPollingInterval(

@@ -12,7 +12,12 @@ describe('settings repository', () => {
                 ...DEFAULT_SETTINGS,
                 ...patch,
             })),
-        } satisfies Pick<ExtensionStorage, 'getSettings' | 'updateSettings'>;
+            getLanguage: vi.fn(async () => 'en' as const),
+            setLanguage: vi.fn(async (lang) => lang),
+        } satisfies Pick<
+            ExtensionStorage,
+            'getSettings' | 'updateSettings' | 'getLanguage' | 'setLanguage'
+        >;
         const repository = createSettingsRepository(storage as unknown as ExtensionStorage);
 
         await expect(repository.get()).resolves.toBe(DEFAULT_SETTINGS);
@@ -20,6 +25,10 @@ describe('settings repository', () => {
         await expect(repository.save({ ...DEFAULT_SETTINGS, interval: 8 })).resolves.toMatchObject({
             interval: 8,
         });
+        await expect(repository.getLanguage()).resolves.toBe('en');
+        await expect(repository.setLanguage('ar')).resolves.toBe('ar');
         expect(storage.updateSettings).toHaveBeenCalledTimes(2);
+        expect(storage.getLanguage).toHaveBeenCalledTimes(1);
+        expect(storage.setLanguage).toHaveBeenCalledWith('ar');
     });
 });

@@ -34,6 +34,7 @@ import type { ExtensionStats } from '../../entities/monitoring/model';
 import type { PromptTemplate } from '../../entities/prompt/model';
 import type { RuntimeState, SignalRState } from '../../entities/runtime/model';
 import type { ExtensionSettings } from '../../entities/settings/model';
+import type { AppLanguage } from '../i18n/types';
 
 export type { IngestedJobsResult } from './modules/monitoring-storage';
 export type { RuntimeStatePatch } from './modules/runtime-storage';
@@ -50,6 +51,8 @@ export interface ExtensionStorage {
     setPrompts(prompts: PromptTemplate[]): Promise<PromptTemplate[]>;
     getProposalTemplate(): Promise<string>;
     setProposalTemplate(template: string): Promise<string>;
+    getLanguage(): Promise<AppLanguage>;
+    setLanguage(language: AppLanguage): Promise<AppLanguage>;
     getTrackedProjects(): Promise<Record<string, TrackedProject>>;
     setTrackedProjects(
         projects: Record<string, TrackedProject>
@@ -201,6 +204,8 @@ export function createExtensionStorage(
         setPrompts: (prompts) => promptStorage.setPrompts(prompts),
         getProposalTemplate: () => settingsStorage.getProposalTemplate(),
         setProposalTemplate: (template) => settingsStorage.setProposalTemplate(template),
+        getLanguage: () => settingsStorage.getLanguage(),
+        setLanguage: (lang) => settingsStorage.setLanguage(lang),
         getTrackedProjects: () => trackingStorage.getTrackedProjects(),
         setTrackedProjects: (projects) => trackingStorage.setTrackedProjects(projects),
         getRuntimeState: () => runtimeStorage.getRuntimeState(),
