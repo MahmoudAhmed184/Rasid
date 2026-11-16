@@ -11,10 +11,10 @@ import { DEFAULT_SETTINGS } from '../../../../src/shared/storage/schema';
 
 describe('settings entity model', () => {
     it.each([
-        ['below minimum', -5, 3],
+        ['below minimum', -5, 1],
         ['fractional', 3.9, 3],
         ['above maximum', 999, 30],
-        ['non numeric', 'nope', 3],
+        ['non numeric', 'nope', 1],
     ] as const)('clamps polling interval for %s', (_label, value, expected) => {
         expect(clampPollingInterval(value)).toBe(expected);
     });

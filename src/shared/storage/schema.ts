@@ -82,7 +82,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     aiModel: '',
     aiApiKey: '',
     aiSystemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
-    interval: 3,
+    interval: 1,
     notificationMode: 'auto',
     aiChatUrl: DEFAULT_AI_CHAT_URL,
     minBudget: 0,
