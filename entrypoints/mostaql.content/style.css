@@ -311,6 +311,81 @@
     color: #22c55e;
 }
 
+/* ── Theme variables for Rasid injected tools ──────────────── */
+:root {
+    --rasid-bg-card: #ffffff;
+    --rasid-bg-modal: #ffffff;
+    --rasid-text-primary: #171717;
+    --rasid-text-secondary: #525252;
+    --rasid-text-muted: #737373;
+    --rasid-border: rgba(0, 0, 0, 0.08);
+    --rasid-border-subtle: rgba(0, 0, 0, 0.05);
+    --rasid-btn-bg: #f8f9fa;
+    --rasid-btn-color: #262626;
+    --rasid-btn-border: rgba(0, 0, 0, 0.12);
+    --rasid-btn-hover-bg: #f0f2f5;
+    --rasid-btn-hover-border: rgba(0, 0, 0, 0.2);
+    --rasid-primary: #2386c8;
+    --rasid-primary-hover: #1c72ac;
+    --rasid-primary-subtle: rgba(35, 134, 200, 0.06);
+    --rasid-status-danger: #dc2626;
+    --rasid-status-success: #16a34a;
+    --rasid-progress-bg: #edf0f3;
+    --rasid-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --rasid-modal-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+[data-bs-theme='dark'],
+[data-theme='dark'],
+html.dark,
+body.dark {
+    --rasid-bg-card: #28282a;
+    --rasid-bg-modal: #232325;
+    --rasid-text-primary: #ededed;
+    --rasid-text-secondary: #a1a1a6;
+    --rasid-text-muted: #85858b;
+    --rasid-border: rgba(255, 255, 255, 0.08);
+    --rasid-border-subtle: rgba(255, 255, 255, 0.05);
+    --rasid-btn-bg: #323235;
+    --rasid-btn-color: #ededed;
+    --rasid-btn-border: rgba(255, 255, 255, 0.1);
+    --rasid-btn-hover-bg: #3b3b40;
+    --rasid-btn-hover-border: rgba(255, 255, 255, 0.18);
+    --rasid-primary: #2386c8;
+    --rasid-primary-hover: #389de0;
+    --rasid-primary-subtle: rgba(35, 134, 200, 0.1);
+    --rasid-status-danger: #e5484d;
+    --rasid-status-success: #4cc38a;
+    --rasid-progress-bg: #38383c;
+    --rasid-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --rasid-modal-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-bs-theme='light']):not([data-theme='light']) {
+        --rasid-bg-card: #28282a;
+        --rasid-bg-modal: #232325;
+        --rasid-text-primary: #ededed;
+        --rasid-text-secondary: #a1a1a6;
+        --rasid-text-muted: #85858b;
+        --rasid-border: rgba(255, 255, 255, 0.08);
+        --rasid-border-subtle: rgba(255, 255, 255, 0.05);
+        --rasid-btn-bg: #323235;
+        --rasid-btn-color: #ededed;
+        --rasid-btn-border: rgba(255, 255, 255, 0.1);
+        --rasid-btn-hover-bg: #3b3b40;
+        --rasid-btn-hover-border: rgba(255, 255, 255, 0.18);
+        --rasid-primary: #2386c8;
+        --rasid-primary-hover: #389de0;
+        --rasid-primary-subtle: rgba(35, 134, 200, 0.1);
+        --rasid-status-danger: #e5484d;
+        --rasid-status-success: #4cc38a;
+        --rasid-progress-bg: #38383c;
+        --rasid-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --rasid-modal-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+    }
+}
+
 /* ── Bid Stats Dashboard ───────────────────────────────────── */
 #mostaql-bid-stats {
     padding-top: 10px;
@@ -319,10 +394,10 @@
 }
 
 .mostaql-stats-header {
-    font-size: 11px;
-    font-weight: 600;
-    color: #a1a1a1;
-    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--rasid-text-secondary, #a1a1a6);
+    margin-bottom: 8px;
     text-align: start;
 }
 
@@ -332,10 +407,110 @@
 
 .mostaql-stats-empty {
     font-size: 12px;
-    color: #707070;
+    color: var(--rasid-text-muted, #85858b);
     display: block;
     text-align: start;
     padding: 4px 0;
+}
+
+.rasid-tools-icon::before {
+    content: none !important;
+    display: none !important;
+}
+
+.rasid-tools-btn {
+    background-color: var(--rasid-btn-bg) !important;
+    border: 1px solid var(--rasid-btn-border) !important;
+    color: var(--rasid-btn-color) !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease !important;
+}
+
+.rasid-tools-btn i {
+    color: var(--rasid-primary) !important;
+    font-size: 14px !important;
+    transition: color 150ms ease !important;
+}
+
+.rasid-tools-btn:hover {
+    background-color: var(--rasid-btn-hover-bg) !important;
+    border-color: var(--rasid-btn-hover-border) !important;
+    color: var(--rasid-text-primary) !important;
+}
+
+.rasid-tools-btn:focus-visible {
+    outline: 2px solid var(--rasid-primary) !important;
+    outline-offset: 1px !important;
+}
+
+.rasid-modal-close {
+    transition: color 150ms ease !important;
+}
+
+.rasid-modal-close:hover {
+    color: var(--rasid-text-primary) !important;
+}
+
+.rasid-refresh-btn {
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease !important;
+}
+
+.rasid-refresh-btn:hover {
+    background-color: var(--rasid-btn-hover-bg) !important;
+    border-color: var(--rasid-btn-hover-border) !important;
+    color: var(--rasid-text-primary) !important;
+}
+
+#rasid-monitored-modal-body .rasid-monitored-item {
+    transition: background-color 150ms ease !important;
+}
+
+#rasid-monitored-modal-body .rasid-monitored-item:hover {
+    background-color: var(--rasid-primary-subtle) !important;
+}
+
+#rasid-monitored-modal-body .rasid-monitored-item a:hover {
+    color: var(--rasid-primary) !important;
+}
+
+.progress-bar.progress-bar-danger {
+    background-color: var(--rasid-status-danger, #dc2626) !important;
+}
+
+.progress-bar.progress-bar-success {
+    background-color: var(--rasid-status-success, #16a34a) !important;
+}
+
+#rasid-analytics-modal a.progress__bar {
+    text-decoration: none;
+    display: block;
+    border-radius: 6px;
+    padding: 4px 6px;
+    margin: -4px -6px 6px;
+    transition: background-color 0.15s ease;
+}
+
+#rasid-analytics-modal a.progress__bar:hover {
+    background-color: rgba(35, 134, 200, 0.06);
+}
+
+#rasid-analytics-modal a.progress__bar:hover .pull-right {
+    color: var(--rasid-primary) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
